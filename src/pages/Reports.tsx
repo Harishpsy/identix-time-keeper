@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Users, CalendarCheck, Clock, AlertTriangle, Download } from "lucide-react";
+import { Users, CalendarCheck, Clock, AlertTriangle, Download, FileText } from "lucide-react";
 import { format, endOfMonth } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -62,6 +64,36 @@ export default function Reports() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const [year, mon] = month.split("-").map(Number);
+    const monthName = format(new Date(year, mon - 1, 1), "MMMM yyyy");
+
+    doc.setFontSize(18);
+    doc.text("Attendance Report", 14, 20);
+    doc.setFontSize(12);
+    doc.text(monthName, 14, 28);
+    doc.setFontSize(10);
+    doc.text(`Present: ${stats.present}  |  Late: ${stats.late}  |  Absent: ${stats.absent}  |  Total: ${stats.totalDays}`, 14, 35);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [["Employee", "Date", "First In", "Last Out", "Status", "Late (mins)"]],
+      body: summaries.map((s) => [
+        s.profiles?.full_name || "—",
+        format(new Date(s.date), "dd MMM yyyy"),
+        s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—",
+        s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
+        s.status,
+        s.late_minutes || 0,
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    doc.save(`attendance-report-${month}.pdf`);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -72,6 +104,9 @@ export default function Reports() {
           </div>
           <div className="flex gap-3">
             <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-auto" />
+            <Button variant="outline" onClick={downloadPDF}>
+              <FileText className="w-4 h-4 mr-2" />PDF
+            </Button>
             <Button variant="outline" onClick={downloadCSV}>
               <Download className="w-4 h-4 mr-2" />CSV
             </Button>

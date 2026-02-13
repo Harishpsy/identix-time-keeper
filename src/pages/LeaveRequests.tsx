@@ -68,14 +68,13 @@ export default function LeaveRequests() {
 
   const handleSubmit = async () => {
     if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
-    if (!form.submitted_to) { toast.error("Please select who to submit to"); return; }
 
     const { error } = await supabase.from("leave_requests").insert({
       user_id: user?.id,
       date: form.date,
       type: form.type as any,
       reason: form.reason,
-      submitted_to: form.submitted_to,
+      ...(form.submitted_to ? { submitted_to: form.submitted_to } : {}),
     });
 
     if (error) toast.error(error.message);

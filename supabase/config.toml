@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-employee]
 verify_jwt = false
+
+[functions.mark-absent]
+verify_jwt = false

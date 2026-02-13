@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Plus, Pencil, Trash2, Loader2, DollarSign } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format, parse } from "date-fns";
 
@@ -18,9 +19,27 @@ interface PayrollRecord {
   user_id: string;
   month: string;
   basic_salary: number;
-  allowances: number;
-  deductions: number;
+  hra: number;
+  dearness_allowance: number;
+  conveyance_allowance: number;
+  medical_allowance: number;
+  special_allowance: number;
+  overtime: number;
+  bonus: number;
+  other_earnings: number;
+  epf_employee: number;
+  esi_employee: number;
+  professional_tax: number;
+  tds: number;
+  loan_recovery: number;
+  other_deductions: number;
+  gross_earnings: number;
+  total_deductions: number;
   net_salary: number;
+  epf_employer: number;
+  esi_employer: number;
+  paid_days: number;
+  lop_days: number;
   notes: string | null;
   created_at: string;
 }
@@ -31,6 +50,30 @@ interface Employee {
   email: string;
 }
 
+const defaultForm = {
+  user_id: "",
+  basic_salary: "",
+  hra: "0",
+  dearness_allowance: "0",
+  conveyance_allowance: "0",
+  medical_allowance: "0",
+  special_allowance: "0",
+  overtime: "0",
+  bonus: "0",
+  other_earnings: "0",
+  epf_employee: "0",
+  esi_employee: "0",
+  professional_tax: "0",
+  tds: "0",
+  loan_recovery: "0",
+  other_deductions: "0",
+  epf_employer: "0",
+  esi_employer: "0",
+  paid_days: "30",
+  lop_days: "0",
+  notes: "",
+};
+
 export default function Payroll() {
   const [records, setRecords] = useState<PayrollRecord[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -39,30 +82,15 @@ export default function Payroll() {
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
-
-  const [form, setForm] = useState({
-    user_id: "",
-    basic_salary: "",
-    allowances: "0",
-    deductions: "0",
-    notes: "",
-  });
+  const [form, setForm] = useState({ ...defaultForm });
 
   const fetchData = async () => {
     const monthDate = `${selectedMonth}-01`;
     const [{ data: payrollData }, { data: empData }] = await Promise.all([
-      supabase
-        .from("payroll")
-        .select("*")
-        .eq("month", monthDate)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("is_active", true)
-        .order("full_name"),
+      supabase.from("payroll").select("*").eq("month", monthDate).order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, full_name, email").eq("is_active", true).order("full_name"),
     ]);
-    setRecords((payrollData as PayrollRecord[]) || []);
+    setRecords((payrollData as unknown as PayrollRecord[]) || []);
     setEmployees(empData || []);
   };
 
@@ -71,36 +99,51 @@ export default function Payroll() {
   const getEmployeeName = (userId: string) =>
     employees.find((e) => e.id === userId)?.full_name || "Unknown";
 
-  const resetForm = () => {
-    setForm({ user_id: "", basic_salary: "", allowances: "0", deductions: "0", notes: "" });
-    setEditingId(null);
-  };
+  const resetForm = () => { setForm({ ...defaultForm }); setEditingId(null); };
 
-  const openCreate = () => {
-    resetForm();
-    setDialogOpen(true);
-  };
+  const openCreate = () => { resetForm(); setDialogOpen(true); };
 
   const openEdit = (rec: PayrollRecord) => {
     setEditingId(rec.id);
     setForm({
       user_id: rec.user_id,
       basic_salary: rec.basic_salary.toString(),
-      allowances: rec.allowances.toString(),
-      deductions: rec.deductions.toString(),
+      hra: rec.hra.toString(),
+      dearness_allowance: rec.dearness_allowance.toString(),
+      conveyance_allowance: rec.conveyance_allowance.toString(),
+      medical_allowance: rec.medical_allowance.toString(),
+      special_allowance: rec.special_allowance.toString(),
+      overtime: rec.overtime.toString(),
+      bonus: rec.bonus.toString(),
+      other_earnings: rec.other_earnings.toString(),
+      epf_employee: rec.epf_employee.toString(),
+      esi_employee: rec.esi_employee.toString(),
+      professional_tax: rec.professional_tax.toString(),
+      tds: rec.tds.toString(),
+      loan_recovery: rec.loan_recovery.toString(),
+      other_deductions: rec.other_deductions.toString(),
+      epf_employer: rec.epf_employer.toString(),
+      esi_employer: rec.esi_employer.toString(),
+      paid_days: rec.paid_days.toString(),
+      lop_days: rec.lop_days.toString(),
       notes: rec.notes || "",
     });
     setDialogOpen(true);
   };
+
+  const n = (v: string) => parseFloat(v) || 0;
+
+  const grossPreview = n(form.basic_salary) + n(form.hra) + n(form.dearness_allowance) + n(form.conveyance_allowance) + n(form.medical_allowance) + n(form.special_allowance) + n(form.overtime) + n(form.bonus) + n(form.other_earnings);
+  const deductionsPreview = n(form.epf_employee) + n(form.esi_employee) + n(form.professional_tax) + n(form.tds) + n(form.loan_recovery) + n(form.other_deductions);
+  const netPreview = grossPreview - deductionsPreview;
 
   const handleSave = async () => {
     if (!form.user_id || !form.basic_salary) {
       toast.error("Employee and basic salary are required");
       return;
     }
-    const basicSalary = parseFloat(form.basic_salary);
-    if (isNaN(basicSalary) || basicSalary < 0) {
-      toast.error("Please enter a valid salary amount");
+    if (n(form.basic_salary) < 0) {
+      toast.error("Basic salary must be positive");
       return;
     }
 
@@ -109,9 +152,25 @@ export default function Payroll() {
     const payload = {
       user_id: form.user_id,
       month: monthDate,
-      basic_salary: basicSalary,
-      allowances: parseFloat(form.allowances) || 0,
-      deductions: parseFloat(form.deductions) || 0,
+      basic_salary: n(form.basic_salary),
+      hra: n(form.hra),
+      dearness_allowance: n(form.dearness_allowance),
+      conveyance_allowance: n(form.conveyance_allowance),
+      medical_allowance: n(form.medical_allowance),
+      special_allowance: n(form.special_allowance),
+      overtime: n(form.overtime),
+      bonus: n(form.bonus),
+      other_earnings: n(form.other_earnings),
+      epf_employee: n(form.epf_employee),
+      esi_employee: n(form.esi_employee),
+      professional_tax: n(form.professional_tax),
+      tds: n(form.tds),
+      loan_recovery: n(form.loan_recovery),
+      other_deductions: n(form.other_deductions),
+      epf_employer: n(form.epf_employer),
+      esi_employer: n(form.esi_employer),
+      paid_days: parseInt(form.paid_days) || 30,
+      lop_days: parseInt(form.lop_days) || 0,
       notes: form.notes.trim() || null,
     };
 
@@ -123,13 +182,10 @@ export default function Payroll() {
     }
 
     if (error) {
-      if (error.code === "23505") {
-        toast.error("Payroll entry already exists for this employee and month");
-      } else {
-        toast.error(error.message || "Failed to save payroll");
-      }
+      if (error.code === "23505") toast.error("Payroll entry already exists for this employee and month");
+      else toast.error(error.message || "Failed to save");
     } else {
-      toast.success(editingId ? "Payroll updated" : "Payroll entry created");
+      toast.success(editingId ? "Payroll updated" : "Payroll created");
       setDialogOpen(false);
       resetForm();
       fetchData();
@@ -140,21 +196,22 @@ export default function Payroll() {
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("payroll").delete().eq("id", id);
     if (error) toast.error("Failed to delete");
-    else { toast.success("Payroll entry deleted"); fetchData(); }
+    else { toast.success("Deleted"); fetchData(); }
   };
 
-  const filtered = records.filter((r) => {
-    const name = getEmployeeName(r.user_id).toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const filtered = records.filter((r) =>
+    getEmployeeName(r.user_id).toLowerCase().includes(search.toLowerCase())
+  );
 
-  const netPreview = (parseFloat(form.basic_salary) || 0) + (parseFloat(form.allowances) || 0) - (parseFloat(form.deductions) || 0);
-
-  // Employees without payroll for this month
   const employeesWithPayroll = new Set(records.map((r) => r.user_id));
-  const availableEmployees = editingId
-    ? employees
-    : employees.filter((e) => !employeesWithPayroll.has(e.id));
+  const availableEmployees = editingId ? employees : employees.filter((e) => !employeesWithPayroll.has(e.id));
+
+  const NumField = ({ label, field }: { label: string; field: keyof typeof form }) => (
+    <div className="space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Input type="number" min="0" step="0.01" value={form[field]} onChange={(e) => setForm({ ...form, [field]: e.target.value })} className="h-8 text-sm" />
+    </div>
+  );
 
   return (
     <DashboardLayout>
@@ -162,53 +219,100 @@ export default function Payroll() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
-            <p className="text-muted-foreground mt-1">Manage employee salaries</p>
+            <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button onClick={openCreate}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Payroll Entry
+                Add Payroll
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingId ? "Edit Payroll" : "New Payroll Entry"}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Employee *</Label>
-                  <Select value={form.user_id} onValueChange={(val) => setForm({ ...form, user_id: val })} disabled={!!editingId}>
-                    <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-                    <SelectContent>
-                      {(editingId ? employees : availableEmployees).map((e) => (
-                        <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Basic Salary *</Label>
-                  <Input type="number" min="0" step="0.01" value={form.basic_salary} onChange={(e) => setForm({ ...form, basic_salary: e.target.value })} placeholder="e.g. 5000" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Allowances</Label>
-                    <Input type="number" min="0" step="0.01" value={form.allowances} onChange={(e) => setForm({ ...form, allowances: e.target.value })} />
+              <div className="space-y-5 pt-2">
+                {/* Employee & Days */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Employee *</Label>
+                    <Select value={form.user_id} onValueChange={(val) => setForm({ ...form, user_id: val })} disabled={!!editingId}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select employee" /></SelectTrigger>
+                      <SelectContent>
+                        {(editingId ? employees : availableEmployees).map((e) => (
+                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Deductions</Label>
-                    <Input type="number" min="0" step="0.01" value={form.deductions} onChange={(e) => setForm({ ...form, deductions: e.target.value })} />
+                  <NumField label="Paid Days" field="paid_days" />
+                  <NumField label="LOP Days" field="lop_days" />
+                </div>
+
+                <Separator />
+
+                {/* Earnings */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Earnings</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <NumField label="Basic Salary *" field="basic_salary" />
+                    <NumField label="HRA" field="hra" />
+                    <NumField label="Dearness Allowance (DA)" field="dearness_allowance" />
+                    <NumField label="Conveyance Allowance" field="conveyance_allowance" />
+                    <NumField label="Medical Allowance" field="medical_allowance" />
+                    <NumField label="Special Allowance" field="special_allowance" />
+                    <NumField label="Overtime" field="overtime" />
+                    <NumField label="Bonus" field="bonus" />
+                    <NumField label="Other Earnings" field="other_earnings" />
+                  </div>
+                  <div className="mt-2 text-right text-sm font-medium text-foreground">
+                    Gross Earnings: <span className="font-bold">₹{grossPreview.toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="rounded-lg bg-muted p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Net Salary</p>
-                  <p className="text-xl font-bold text-foreground">{netPreview.toFixed(2)}</p>
+
+                <Separator />
+
+                {/* Deductions */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Deductions</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <NumField label="EPF (Employee)" field="epf_employee" />
+                    <NumField label="ESI (Employee)" field="esi_employee" />
+                    <NumField label="Professional Tax" field="professional_tax" />
+                    <NumField label="TDS / Income Tax" field="tds" />
+                    <NumField label="Loan Recovery" field="loan_recovery" />
+                    <NumField label="Other Deductions" field="other_deductions" />
+                  </div>
+                  <div className="mt-2 text-right text-sm font-medium text-foreground">
+                    Total Deductions: <span className="font-bold">₹{deductionsPreview.toFixed(2)}</span>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Notes</Label>
-                  <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." rows={2} />
+
+                <Separator />
+
+                {/* Employer Contributions */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Employer Contributions</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <NumField label="EPF (Employer)" field="epf_employer" />
+                    <NumField label="ESI (Employer)" field="esi_employer" />
+                  </div>
                 </div>
+
+                <Separator />
+
+                {/* Net Salary */}
+                <div className="rounded-lg bg-primary/10 p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Net Salary (Take Home)</p>
+                  <p className="text-2xl font-bold text-primary">₹{netPreview.toFixed(2)}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Notes</Label>
+                  <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." rows={2} className="text-sm" />
+                </div>
+
                 <Button className="w-full" onClick={handleSave} disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   {editingId ? "Update" : "Create"} Payroll Entry
@@ -223,12 +327,7 @@ export default function Payroll() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
           </div>
-          <Input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="w-44"
-          />
+          <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-44" />
         </div>
 
         <Card className="border-border/50">
@@ -238,11 +337,11 @@ export default function Payroll() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
-                    <TableHead className="text-right">Basic Salary</TableHead>
-                    <TableHead className="text-right">Allowances</TableHead>
+                    <TableHead className="text-right">Basic</TableHead>
+                    <TableHead className="text-right">Gross</TableHead>
                     <TableHead className="text-right">Deductions</TableHead>
                     <TableHead className="text-right">Net Salary</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead className="text-center">Days</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -257,11 +356,11 @@ export default function Payroll() {
                     filtered.map((rec) => (
                       <TableRow key={rec.id}>
                         <TableCell className="font-medium">{getEmployeeName(rec.user_id)}</TableCell>
-                        <TableCell className="text-right font-mono">{Number(rec.basic_salary).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono">{Number(rec.allowances).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono">{Number(rec.deductions).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono font-semibold">{Number(rec.net_salary).toFixed(2)}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">{rec.notes || "—"}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm font-semibold">₹{Number(rec.net_salary).toFixed(2)}</TableCell>
+                        <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Button variant="ghost" size="sm" onClick={() => openEdit(rec)} title="Edit">

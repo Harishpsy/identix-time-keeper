@@ -12,6 +12,7 @@ import Shifts from "./pages/Shifts";
 import LeaveRequests from "./pages/LeaveRequests";
 import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
+import MyPayslips from "./pages/MyPayslips";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/leave" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin", "subadmin"]}><Reports /></ProtectedRoute>} />
             <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
+            <Route path="/my-payslips" element={<ProtectedRoute><MyPayslips /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

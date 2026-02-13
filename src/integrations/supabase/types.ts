@@ -160,38 +160,92 @@ export type Database = {
       }
       payroll: {
         Row: {
-          allowances: number
           basic_salary: number
+          bonus: number
+          conveyance_allowance: number
           created_at: string
-          deductions: number
+          dearness_allowance: number
+          epf_employee: number
+          epf_employer: number
+          esi_employee: number
+          esi_employer: number
+          gross_earnings: number | null
+          hra: number
           id: string
+          loan_recovery: number
+          lop_days: number
+          medical_allowance: number
           month: string
           net_salary: number | null
           notes: string | null
+          other_deductions: number
+          other_earnings: number
+          overtime: number
+          paid_days: number
+          professional_tax: number
+          special_allowance: number
+          tds: number
+          total_deductions: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          allowances?: number
           basic_salary?: number
+          bonus?: number
+          conveyance_allowance?: number
           created_at?: string
-          deductions?: number
+          dearness_allowance?: number
+          epf_employee?: number
+          epf_employer?: number
+          esi_employee?: number
+          esi_employer?: number
+          gross_earnings?: number | null
+          hra?: number
           id?: string
+          loan_recovery?: number
+          lop_days?: number
+          medical_allowance?: number
           month: string
           net_salary?: number | null
           notes?: string | null
+          other_deductions?: number
+          other_earnings?: number
+          overtime?: number
+          paid_days?: number
+          professional_tax?: number
+          special_allowance?: number
+          tds?: number
+          total_deductions?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          allowances?: number
           basic_salary?: number
+          bonus?: number
+          conveyance_allowance?: number
           created_at?: string
-          deductions?: number
+          dearness_allowance?: number
+          epf_employee?: number
+          epf_employer?: number
+          esi_employee?: number
+          esi_employer?: number
+          gross_earnings?: number | null
+          hra?: number
           id?: string
+          loan_recovery?: number
+          lop_days?: number
+          medical_allowance?: number
           month?: string
           net_salary?: number | null
           notes?: string | null
+          other_deductions?: number
+          other_earnings?: number
+          overtime?: number
+          paid_days?: number
+          professional_tax?: number
+          special_allowance?: number
+          tds?: number
+          total_deductions?: number | null
           updated_at?: string
           user_id?: string
         }

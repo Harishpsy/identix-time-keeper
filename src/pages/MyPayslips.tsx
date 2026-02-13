@@ -1,0 +1,223 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Download, FileText } from "lucide-react";
+import { toast } from "sonner";
+import { format, parse } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+interface PayrollRecord {
+  id: string;
+  user_id: string;
+  month: string;
+  basic_salary: number;
+  hra: number;
+  dearness_allowance: number;
+  conveyance_allowance: number;
+  medical_allowance: number;
+  special_allowance: number;
+  overtime: number;
+  bonus: number;
+  other_earnings: number;
+  epf_employee: number;
+  esi_employee: number;
+  professional_tax: number;
+  tds: number;
+  loan_recovery: number;
+  other_deductions: number;
+  gross_earnings: number;
+  total_deductions: number;
+  net_salary: number;
+  paid_days: number;
+  lop_days: number;
+  notes: string | null;
+}
+
+export default function MyPayslips() {
+  const { user, profile } = useAuth();
+  const [records, setRecords] = useState<PayrollRecord[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchPayroll = async () => {
+      const { data } = await supabase
+        .from("payroll")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("month", { ascending: false });
+      setRecords((data as unknown as PayrollRecord[]) || []);
+    };
+    fetchPayroll();
+  }, [user]);
+
+  const downloadPayslip = (rec: PayrollRecord) => {
+    const monthLabel = format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy");
+    const empName = profile?.full_name || "Employee";
+
+    const doc = new jsPDF();
+    const pw = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(41, 128, 185);
+    doc.rect(0, 0, pw, 35, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.text("PAYSLIP", pw / 2, 16, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(monthLabel, pw / 2, 24, { align: "center" });
+    doc.text("Confidential", pw / 2, 30, { align: "center" });
+
+    // Employee Info
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.text(`Employee Name: ${empName}`, 14, 45);
+    doc.text(`Email: ${profile?.email || ""}`, 14, 52);
+    doc.text(`Paid Days: ${rec.paid_days - rec.lop_days} / ${rec.paid_days}`, pw - 14, 45, { align: "right" });
+    doc.text(`LOP Days: ${rec.lop_days}`, pw - 14, 52, { align: "right" });
+
+    // Earnings & Deductions side by side
+    const earnings = [
+      ["Basic Salary", rec.basic_salary],
+      ["HRA", rec.hra],
+      ["Dearness Allowance", rec.dearness_allowance],
+      ["Conveyance Allowance", rec.conveyance_allowance],
+      ["Medical Allowance", rec.medical_allowance],
+      ["Special Allowance", rec.special_allowance],
+      ["Overtime", rec.overtime],
+      ["Bonus", rec.bonus],
+      ["Other Earnings", rec.other_earnings],
+    ].filter(([, v]) => Number(v) > 0);
+
+    const deductions = [
+      ["EPF (Employee)", rec.epf_employee],
+      ["ESI (Employee)", rec.esi_employee],
+      ["Professional Tax", rec.professional_tax],
+      ["TDS / Income Tax", rec.tds],
+      ["Loan Recovery", rec.loan_recovery],
+      ["Other Deductions", rec.other_deductions],
+    ].filter(([, v]) => Number(v) > 0);
+
+    const maxRows = Math.max(earnings.length, deductions.length);
+    const tableBody: (string | number)[][] = [];
+    for (let i = 0; i < maxRows; i++) {
+      tableBody.push([
+        (earnings[i]?.[0] as string) || "",
+        earnings[i] ? `₹${Number(earnings[i][1]).toFixed(2)}` : "",
+        (deductions[i]?.[0] as string) || "",
+        deductions[i] ? `₹${Number(deductions[i][1]).toFixed(2)}` : "",
+      ]);
+    }
+    // Totals row
+    tableBody.push([
+      "Gross Earnings",
+      `₹${Number(rec.gross_earnings).toFixed(2)}`,
+      "Total Deductions",
+      `₹${Number(rec.total_deductions).toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: 60,
+      head: [["Earnings", "Amount (₹)", "Deductions", "Amount (₹)"]],
+      body: tableBody,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [41, 128, 185], fontStyle: "bold" },
+      columnStyles: {
+        1: { halign: "right" },
+        3: { halign: "right" },
+      },
+      didParseCell: (data) => {
+        // Bold the totals row
+        if (data.row.index === tableBody.length - 1) {
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fillColor = [235, 245, 255];
+        }
+      },
+    });
+
+    const finalY = (doc as any).lastAutoTable?.finalY || 160;
+
+    // Net Salary box
+    doc.setFillColor(41, 128, 185);
+    doc.roundedRect(14, finalY + 8, pw - 28, 20, 3, 3, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text("Net Salary (Take Home)", 20, finalY + 20);
+    doc.setFontSize(16);
+    doc.text(`₹${Number(rec.net_salary).toFixed(2)}`, pw - 20, finalY + 21, { align: "right" });
+
+    // Footer
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(8);
+    doc.text("This is a system-generated payslip. No signature required.", pw / 2, finalY + 38, { align: "center" });
+
+    doc.save(`payslip-${empName.replace(/\s+/g, "-").toLowerCase()}-${format(parse(rec.month, "yyyy-MM-dd", new Date()), "yyyy-MM")}.pdf`);
+    toast.success("Payslip downloaded");
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">My Payslips</h1>
+          <p className="text-muted-foreground mt-1">View and download your salary payslips</p>
+        </div>
+
+        <Card className="border-border/50">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Month</TableHead>
+                    <TableHead className="text-right">Basic</TableHead>
+                    <TableHead className="text-right">Gross</TableHead>
+                    <TableHead className="text-right">Deductions</TableHead>
+                    <TableHead className="text-right">Net Salary</TableHead>
+                    <TableHead className="text-center">Days</TableHead>
+                    <TableHead>Download</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {records.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        No payslips available yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    records.map((rec) => (
+                      <TableRow key={rec.id}>
+                        <TableCell className="font-medium">
+                          {format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-sm font-semibold">₹{Number(rec.net_salary).toFixed(2)}</TableCell>
+                        <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => downloadPayslip(rec)} title="Download Payslip">
+                            <Download className="w-4 h-4 mr-1" />
+                            PDF
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}

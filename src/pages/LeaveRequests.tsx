@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X, CalendarDays } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Check, X, CalendarDays, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-
-const leaveTypes = ["sick", "casual", "annual", "permission", "other"] as const;
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/10 text-warning",
@@ -23,13 +21,25 @@ const statusColors: Record<string, string> = {
   rejected: "bg-destructive/10 text-destructive",
 };
 
+const leaveColorMap: Record<string, string> = {
+  sick: "text-destructive",
+  casual: "text-warning",
+  annual: "text-primary",
+};
+
 export default function LeaveRequests() {
   const { user, role } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
   const [approvers, setApprovers] = useState<any[]>([]);
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
+  const [leaveSettings, setLeaveSettings] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "casual" as string, reason: "", submitted_to: "" });
+  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "" });
+
+  const fetchLeaveSettings = async () => {
+    const { data } = await supabase.from("leave_settings").select("*").order("leave_type");
+    setLeaveSettings(data || []);
+  };
 
   const fetchApprovers = async () => {
     const { data } = await supabase
@@ -54,11 +64,8 @@ export default function LeaveRequests() {
 
     if (role === "employee") {
       query = query.eq("user_id", user?.id);
-    } else {
-      // Admins see all; subadmins see requests submitted to them
-      if (role === "subadmin") {
-        query = query.eq("submitted_to", user?.id);
-      }
+    } else if (role === "subadmin") {
+      query = query.eq("submitted_to", user?.id);
     }
 
     const { data } = await query;
@@ -77,10 +84,25 @@ export default function LeaveRequests() {
     setLeaveBalance(data);
   };
 
-  useEffect(() => { fetchRequests(); fetchApprovers(); fetchLeaveBalance(); }, [user, role]);
+  useEffect(() => {
+    fetchLeaveSettings();
+    fetchRequests();
+    fetchApprovers();
+    fetchLeaveBalance();
+  }, [user, role]);
+
+  // Enabled leave types for the apply dialog
+  const enabledTypes = leaveSettings.filter((s) => s.is_enabled);
+  // All types including permission/other
+  const allApplyTypes = [
+    ...enabledTypes.map((s) => s.leave_type),
+    "permission",
+    "other",
+  ];
 
   const handleSubmit = async () => {
     if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
+    if (!form.type) { toast.error("Please select a leave type"); return; }
 
     const { error } = await supabase.from("leave_requests").insert({
       user_id: user?.id,
@@ -91,7 +113,12 @@ export default function LeaveRequests() {
     });
 
     if (error) toast.error(error.message);
-    else { toast.success("Leave request submitted"); setDialogOpen(false); setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "casual", reason: "", submitted_to: "" }); fetchRequests(); }
+    else {
+      toast.success("Leave request submitted");
+      setDialogOpen(false);
+      setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "" });
+      fetchRequests();
+    }
   };
 
   const handleApproval = async (id: string, status: "approved" | "rejected") => {
@@ -101,7 +128,17 @@ export default function LeaveRequests() {
       .eq("id", id);
 
     if (error) toast.error(error.message);
-    else { toast.success(`Request ${status}`); fetchRequests(); }
+    else { toast.success(`Request ${status}`); fetchRequests(); fetchLeaveBalance(); }
+  };
+
+  const handleSettingUpdate = async (id: string, field: string, value: any) => {
+    const { error } = await supabase
+      .from("leave_settings")
+      .update({ [field]: value })
+      .eq("id", id);
+
+    if (error) toast.error(error.message);
+    else { toast.success("Setting updated"); fetchLeaveSettings(); }
   };
 
   return (
@@ -119,40 +156,83 @@ export default function LeaveRequests() {
           )}
         </div>
 
-        {role === "employee" && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { label: "Sick Leave", total: leaveBalance?.sick_total ?? 12, used: leaveBalance?.sick_used ?? 0, color: "text-destructive" },
-              { label: "Casual Leave", total: leaveBalance?.casual_total ?? 12, used: leaveBalance?.casual_used ?? 0, color: "text-warning" },
-              { label: "Annual Leave", total: leaveBalance?.annual_total ?? 15, used: leaveBalance?.annual_used ?? 0, color: "text-primary" },
-            ].map((item) => (
-              <Card key={item.label} className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg bg-muted ${item.color}`}>
-                      <CalendarDays className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-muted-foreground">{item.label}</p>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-bold text-foreground">{item.total - item.used}</span>
-                        <span className="text-xs text-muted-foreground">/ {item.total} remaining</span>
+        {/* Admin: Leave Settings */}
+        {role === "admin" && (
+          <Card className="border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Settings className="w-5 h-5" /> Leave Settings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {leaveSettings.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-muted/30">
+                    <div className="space-y-2 flex-1">
+                      <p className="font-medium capitalize text-foreground">{s.leave_type} Leave</p>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground">Days:</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          className="w-20 h-8 text-sm"
+                          value={s.total_days}
+                          onChange={(e) => handleSettingUpdate(s.id, "total_days", parseInt(e.target.value) || 0)}
+                        />
                       </div>
                     </div>
+                    <div className="flex flex-col items-center gap-1">
+                      <Switch
+                        checked={s.is_enabled}
+                        onCheckedChange={(v) => handleSettingUpdate(s.id, "is_enabled", v)}
+                      />
+                      <span className="text-xs text-muted-foreground">{s.is_enabled ? "Enabled" : "Disabled"}</span>
+                    </div>
                   </div>
-                  <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${item.used / item.total > 0.8 ? 'bg-destructive' : 'bg-primary'}`}
-                      style={{ width: `${Math.min((item.used / item.total) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{item.used} used</p>
-                </CardContent>
-              </Card>
-            ))}
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Employee: Leave Balance Cards */}
+        {role === "employee" && enabledTypes.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {enabledTypes.map((s) => {
+              const usedKey = `${s.leave_type}_used` as string;
+              const used = leaveBalance?.[usedKey] ?? 0;
+              const total = s.total_days;
+              const color = leaveColorMap[s.leave_type] || "text-primary";
+              return (
+                <Card key={s.id} className="border-border/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg bg-muted ${color}`}>
+                        <CalendarDays className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground capitalize">{s.leave_type} Leave</p>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-bold text-foreground">{total - used}</span>
+                          <span className="text-xs text-muted-foreground">/ {total} remaining</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${used / total > 0.8 ? 'bg-destructive' : 'bg-primary'}`}
+                        style={{ width: `${total > 0 ? Math.min((used / total) * 100, 100) : 0}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{used} used</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
 
+        {/* Leave Requests Table */}
         <Card className="border-border/50">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -170,37 +250,37 @@ export default function LeaveRequests() {
                 </TableHeader>
                 <TableBody>
                   {requests.length === 0 ? (
-                     <TableRow>
-                       <TableCell colSpan={role === "admin" ? 7 : role === "employee" ? 5 : 6} className="text-center text-muted-foreground py-8">
-                         No leave requests
-                       </TableCell>
-                     </TableRow>
-                   ) : requests.map((r) => (
-                     <TableRow key={r.id}>
-                       {role !== "employee" && <TableCell className="font-medium">{r.profiles?.full_name || "—"}</TableCell>}
-                       <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
-                       <TableCell className="capitalize">{r.type}</TableCell>
-                       <TableCell className="max-w-48 truncate">{r.reason}</TableCell>
-                       <TableCell>{r.approver?.full_name || "—"}</TableCell>
-                       <TableCell>
-                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
-                           {r.status}
-                         </span>
-                       </TableCell>
-                       {(role === "admin" || role === "subadmin") && (
-                         <TableCell>
-                           {r.status === "pending" && (
-                             <div className="flex gap-1">
-                               <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "approved")}>
-                                 <Check className="w-4 h-4 text-success" />
-                               </Button>
-                               <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "rejected")}>
-                                 <X className="w-4 h-4 text-destructive" />
-                               </Button>
-                             </div>
-                           )}
-                         </TableCell>
-                       )}
+                    <TableRow>
+                      <TableCell colSpan={role === "admin" ? 7 : role === "employee" ? 5 : 6} className="text-center text-muted-foreground py-8">
+                        No leave requests
+                      </TableCell>
+                    </TableRow>
+                  ) : requests.map((r) => (
+                    <TableRow key={r.id}>
+                      {role !== "employee" && <TableCell className="font-medium">{r.profiles?.full_name || "—"}</TableCell>}
+                      <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="capitalize">{r.type}</TableCell>
+                      <TableCell className="max-w-48 truncate">{r.reason}</TableCell>
+                      <TableCell>{r.approver?.full_name || "—"}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
+                          {r.status}
+                        </span>
+                      </TableCell>
+                      {(role === "admin" || role === "subadmin") && (
+                        <TableCell>
+                          {r.status === "pending" && (
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "approved")}>
+                                <Check className="w-4 h-4 text-success" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "rejected")}>
+                                <X className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -209,6 +289,7 @@ export default function LeaveRequests() {
           </CardContent>
         </Card>
 
+        {/* Apply Leave Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -222,9 +303,9 @@ export default function LeaveRequests() {
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
-                    {leaveTypes.map((t) => (
+                    {allApplyTypes.map((t) => (
                       <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
                     ))}
                   </SelectContent>

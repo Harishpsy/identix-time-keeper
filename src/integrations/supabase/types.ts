@@ -218,6 +218,30 @@ export type Database = {
           },
         ]
       }
+      leave_settings: {
+        Row: {
+          id: string
+          is_enabled: boolean
+          leave_type: string
+          total_days: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          is_enabled?: boolean
+          leave_type: string
+          total_days?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          is_enabled?: boolean
+          leave_type?: string
+          total_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payroll: {
         Row: {
           basic_salary: number

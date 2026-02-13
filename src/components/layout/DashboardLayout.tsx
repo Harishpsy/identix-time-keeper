@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
   { label: "Attendance", href: "/attendance", icon: <Clock className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
   { label: "Employees", href: "/employees", icon: <Users className="w-5 h-5" />, roles: ["admin"] },
+  { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["admin"] },
   { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin"] },
   { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
   { label: "Reports", href: "/reports", icon: <FileText className="w-5 h-5" />, roles: ["admin", "subadmin"] },

@@ -1,0 +1,112 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
+export default function Departments() {
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+  const [name, setName] = useState("");
+
+  const fetchDepartments = async () => {
+    const { data } = await supabase.from("departments").select("*").order("name");
+    setDepartments(data || []);
+  };
+
+  useEffect(() => { fetchDepartments(); }, []);
+
+  const handleSave = async () => {
+    if (!name.trim()) { toast.error("Department name is required"); return; }
+
+    if (editing) {
+      const { error } = await supabase.from("departments").update({ name: name.trim() }).eq("id", editing.id);
+      if (error) toast.error(error.message);
+      else { toast.success("Department updated"); setDialogOpen(false); setEditing(null); fetchDepartments(); }
+    } else {
+      const { error } = await supabase.from("departments").insert({ name: name.trim() });
+      if (error) toast.error(error.message);
+      else { toast.success("Department created"); setDialogOpen(false); fetchDepartments(); }
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from("departments").delete().eq("id", id);
+    if (error) toast.error(error.message);
+    else { toast.success("Department deleted"); fetchDepartments(); }
+  };
+
+  const openEdit = (dept: any) => {
+    setEditing(dept);
+    setName(dept.name);
+    setDialogOpen(true);
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    setName("");
+    setDialogOpen(true);
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Department Management</h1>
+            <p className="text-muted-foreground mt-1">Create and manage departments</p>
+          </div>
+          <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add Department</Button>
+        </div>
+
+        <Card className="border-border/50">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Department Name</TableHead>
+                  <TableHead className="w-32">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {departments.length === 0 ? (
+                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-8">No departments configured</TableCell></TableRow>
+                ) : departments.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-medium">{d.name}</TableCell>
+                    <TableCell className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editing ? "Edit Department" : "Add Department"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>Department Name</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" />
+              </div>
+              <Button className="w-full" onClick={handleSave}>{editing ? "Update" : "Create"} Department</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </DashboardLayout>
+  );
+}

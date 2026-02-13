@@ -171,6 +171,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          permission_hours: number | null
           reason: string | null
           status: Database["public"]["Enums"]["leave_status"]
           submitted_to: string | null
@@ -184,6 +185,7 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
+          permission_hours?: number | null
           reason?: string | null
           status?: Database["public"]["Enums"]["leave_status"]
           submitted_to?: string | null
@@ -197,6 +199,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          permission_hours?: number | null
           reason?: string | null
           status?: Database["public"]["Enums"]["leave_status"]
           submitted_to?: string | null

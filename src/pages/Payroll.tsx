@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Search, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { format, parse } from "date-fns";
 
@@ -80,6 +80,7 @@ export default function Payroll() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [form, setForm] = useState({ ...defaultForm });
@@ -240,6 +241,83 @@ export default function Payroll() {
     else { toast.success("Deleted"); fetchData(); }
   };
 
+  const handleGenerateAll = async () => {
+    setGenerating(true);
+    const monthDate = `${selectedMonth}-01`;
+    
+    // Get employees who already have payroll this month
+    const existingUserIds = new Set(records.map((r) => r.user_id));
+    
+    // Get employees who DON'T have payroll this month yet
+    const missingEmployees = employees.filter((e) => !existingUserIds.has(e.id));
+    
+    if (missingEmployees.length === 0) {
+      toast.info("All active employees already have payroll for this month");
+      setGenerating(false);
+      return;
+    }
+
+    // For each missing employee, fetch their latest payroll record
+    const insertPayloads: any[] = [];
+    let skippedCount = 0;
+
+    for (const emp of missingEmployees) {
+      const { data } = await supabase
+        .from("payroll")
+        .select("*")
+        .eq("user_id", emp.id)
+        .order("month", { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        const prev = data[0] as unknown as PayrollRecord;
+        insertPayloads.push({
+          user_id: emp.id,
+          month: monthDate,
+          basic_salary: prev.basic_salary,
+          hra: prev.hra,
+          dearness_allowance: prev.dearness_allowance,
+          conveyance_allowance: prev.conveyance_allowance,
+          medical_allowance: prev.medical_allowance,
+          special_allowance: prev.special_allowance,
+          overtime: 0,
+          bonus: 0,
+          other_earnings: 0,
+          epf_employee: prev.epf_employee,
+          esi_employee: prev.esi_employee,
+          professional_tax: prev.professional_tax,
+          tds: prev.tds,
+          loan_recovery: prev.loan_recovery,
+          other_deductions: prev.other_deductions,
+          epf_employer: prev.epf_employer,
+          esi_employer: prev.esi_employer,
+          paid_days: prev.paid_days,
+          lop_days: 0,
+          notes: "Auto-generated from previous month",
+        });
+      } else {
+        skippedCount++;
+      }
+    }
+
+    if (insertPayloads.length > 0) {
+      const { error } = await supabase.from("payroll").insert(insertPayloads);
+      if (error) {
+        toast.error("Failed to generate payroll: " + error.message);
+      } else {
+        toast.success(`Payroll generated for ${insertPayloads.length} employee(s)`);
+        if (skippedCount > 0) {
+          toast.info(`${skippedCount} employee(s) skipped — no previous payroll record found. Add them manually.`);
+        }
+        fetchData();
+      }
+    } else {
+      toast.warning("No employees with previous payroll data found. Please add payroll manually for first-time entries.");
+    }
+
+    setGenerating(false);
+  };
+
   const filtered = records.filter((r) =>
     getEmployeeName(r.user_id).toLowerCase().includes(search.toLowerCase())
   );
@@ -262,7 +340,12 @@ export default function Payroll() {
             <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
             <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleGenerateAll} disabled={generating}>
+              {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
+              Generate All Payroll
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button onClick={openCreate}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -361,6 +444,7 @@ export default function Payroll() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <div className="flex gap-3 flex-wrap">

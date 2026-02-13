@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
   // Update profile with additional fields (trigger already created basic profile)
   const updates: Record<string, any> = {};
   if (biometric_id !== undefined && biometric_id !== null && biometric_id !== "") {
-    updates.biometric_id = parseInt(biometric_id, 10);
+    updates.biometric_id = String(biometric_id).trim();
   }
   if (department_id) updates.department_id = department_id;
   if (shift_id) updates.shift_id = shift_id;

@@ -9,8 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, UserCheck, UserX, Loader2, Pencil, Check, X } from "lucide-react";
+import { Search, Plus, UserCheck, UserX, Loader2, Pencil, Check, X, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { format, startOfMonth, endOfMonth } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function Employees() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -147,6 +150,52 @@ export default function Employees() {
 
   const getDeptName = (id: string | null) => departments.find((d) => d.id === id)?.name || "—";
   const getShiftName = (id: string | null) => shifts.find((s) => s.id === id)?.name || "—";
+
+  const downloadEmployeePDF = async (empId: string, empName: string) => {
+    const now = new Date();
+    const start = format(startOfMonth(now), "yyyy-MM-dd");
+    const end = format(endOfMonth(now), "yyyy-MM-dd");
+    const monthName = format(now, "MMMM yyyy");
+
+    const { data } = await supabase
+      .from("daily_summaries")
+      .select("*")
+      .eq("user_id", empId)
+      .gte("date", start)
+      .lte("date", end)
+      .order("date", { ascending: false });
+
+    const records = data || [];
+    const present = records.filter((s) => s.status === "present").length;
+    const late = records.filter((s) => s.status === "late").length;
+    const absent = records.filter((s) => s.status === "absent").length;
+
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("Attendance Report", 14, 20);
+    doc.setFontSize(12);
+    doc.text(`${empName} — ${monthName}`, 14, 28);
+    doc.setFontSize(10);
+    doc.text(`Present: ${present}  |  Late: ${late}  |  Absent: ${absent}  |  Total: ${records.length}`, 14, 35);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [["Date", "First In", "Last Out", "Duration", "Status", "Late (mins)"]],
+      body: records.map((s) => [
+        format(new Date(s.date), "dd MMM yyyy"),
+        s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—",
+        s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
+        s.total_duration || "—",
+        s.status,
+        s.late_minutes || 0,
+      ]),
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    doc.save(`attendance-${empName.replace(/\s+/g, "-").toLowerCase()}-${format(now, "yyyy-MM")}.pdf`);
+    toast.success(`PDF downloaded for ${empName}`);
+  };
 
   return (
     <DashboardLayout>
@@ -332,10 +381,13 @@ export default function Employees() {
                               </>
                             ) : (
                               <>
-                                <Button variant="ghost" size="sm" onClick={() => startEdit(emp)}>
+                                <Button variant="ghost" size="sm" onClick={() => startEdit(emp)} title="Edit">
                                   <Pencil className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => toggleActive(emp.id, emp.is_active)}>
+                                <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
+                                  <FileText className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => toggleActive(emp.id, emp.is_active)} title={emp.is_active ? "Deactivate" : "Activate"}>
                                   {emp.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                                 </Button>
                               </>

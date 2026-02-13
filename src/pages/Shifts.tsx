@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ export default function Shifts() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", start_time: "09:00", end_time: "18:00", grace_period_mins: 15 });
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchShifts = async () => {
     const { data } = await supabase.from("shifts").select("*").order("name");
@@ -37,10 +39,12 @@ export default function Shifts() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("shifts").delete().eq("id", id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("shifts").delete().eq("id", deleteTarget.id);
     if (error) toast.error(error.message);
     else { toast.success("Shift deleted"); fetchShifts(); }
+    setDeleteTarget(null);
   };
 
   const openEdit = (shift: any) => {
@@ -89,7 +93,7 @@ export default function Shifts() {
                     <TableCell>{s.grace_period_mins} mins</TableCell>
                     <TableCell className="flex gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(s)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(s.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(s)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -126,6 +130,21 @@ export default function Shifts() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Shift</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

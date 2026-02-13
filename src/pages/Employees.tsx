@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, UserCheck, UserX, Loader2 } from "lucide-react";
+import { Search, Plus, UserCheck, UserX, Loader2, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Employees() {
@@ -20,6 +20,8 @@ export default function Employees() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ biometric_id: "", department_id: "", shift_id: "" });
 
   // New employee form
   const [form, setForm] = useState({
@@ -64,6 +66,30 @@ export default function Employees() {
       .eq("user_id", userId);
     if (error) toast.error("Failed to update role");
     else { toast.success("Role updated"); fetchEmployees(); }
+  };
+
+  const startEdit = (emp: any) => {
+    setEditingId(emp.id);
+    setEditForm({
+      biometric_id: emp.biometric_id?.toString() || "",
+      department_id: emp.department_id || "",
+      shift_id: emp.shift_id || "",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const saveEdit = async (id: string) => {
+    const updates: Record<string, any> = {
+      biometric_id: editForm.biometric_id ? parseInt(editForm.biometric_id, 10) : null,
+      department_id: editForm.department_id || null,
+      shift_id: editForm.shift_id || null,
+    };
+    const { error } = await supabase.from("profiles").update(updates).eq("id", id);
+    if (error) toast.error("Failed to update profile");
+    else { toast.success("Profile updated"); setEditingId(null); fetchEmployees(); }
   };
 
   const handleCreate = async () => {
@@ -220,44 +246,99 @@ export default function Employees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((emp) => (
-                    <TableRow key={emp.id}>
-                      <TableCell className="font-medium">{emp.full_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{emp.email}</TableCell>
-                      <TableCell className="font-mono text-sm">{emp.biometric_id || "—"}</TableCell>
-                      <TableCell className="text-sm">{getDeptName(emp.department_id)}</TableCell>
-                      <TableCell className="text-sm">{getShiftName(emp.shift_id)}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={roles[emp.id] || "employee"}
-                          onValueChange={(val) => updateRole(emp.id, val)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="subadmin">Sub-Admin</SelectItem>
-                            <SelectItem value="employee">Employee</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={emp.is_active ? "default" : "secondary"} className="text-xs">
-                          {emp.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleActive(emp.id, emp.is_active)}
-                        >
-                          {emp.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map((emp) => {
+                    const isEditing = editingId === emp.id;
+                    return (
+                      <TableRow key={emp.id}>
+                        <TableCell className="font-medium">{emp.full_name}</TableCell>
+                        <TableCell className="text-muted-foreground">{emp.email}</TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              value={editForm.biometric_id}
+                              onChange={(e) => setEditForm({ ...editForm, biometric_id: e.target.value })}
+                              className="w-24 h-8 font-mono text-sm"
+                              placeholder="ID"
+                            />
+                          ) : (
+                            <span className="font-mono text-sm">{emp.biometric_id || "—"}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Select value={editForm.department_id} onValueChange={(val) => setEditForm({ ...editForm, department_id: val })}>
+                              <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select" /></SelectTrigger>
+                              <SelectContent>
+                                {departments.map((d) => (
+                                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-sm">{getDeptName(emp.department_id)}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Select value={editForm.shift_id} onValueChange={(val) => setEditForm({ ...editForm, shift_id: val })}>
+                              <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select" /></SelectTrigger>
+                              <SelectContent>
+                                {shifts.map((s) => (
+                                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-sm">{getShiftName(emp.shift_id)}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={roles[emp.id] || "employee"}
+                            onValueChange={(val) => updateRole(emp.id, val)}
+                          >
+                            <SelectTrigger className="w-32 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="subadmin">Sub-Admin</SelectItem>
+                              <SelectItem value="employee">Employee</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={emp.is_active ? "default" : "secondary"} className="text-xs">
+                            {emp.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {isEditing ? (
+                              <>
+                                <Button variant="ghost" size="sm" onClick={() => saveEdit(emp.id)}>
+                                  <Check className="w-4 h-4 text-green-600" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                                  <X className="w-4 h-4 text-destructive" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button variant="ghost" size="sm" onClick={() => startEdit(emp)}>
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => toggleActive(emp.id, emp.is_active)}>
+                                  {emp.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

@@ -9,38 +9,22 @@ import { Fingerprint, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    if (isLogin) {
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Welcome back!");
-        navigate("/");
-      }
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast.error(error.message);
     } else {
-      if (!fullName.trim()) {
-        toast.error("Full name is required");
-        setLoading(false);
-        return;
-      }
-      const { error } = await signUp(email, password, fullName);
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Account created! Please check your email to verify.");
-      }
+      toast.success("Welcome back!");
+      navigate("/");
     }
     setLoading(false);
   };
@@ -60,25 +44,13 @@ const Auth = () => {
 
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl">{isLogin ? "Sign In" : "Create Account"}</CardTitle>
+            <CardTitle className="text-xl">Sign In</CardTitle>
             <CardDescription>
-              {isLogin ? "Enter your credentials to access the dashboard" : "Register for a new account"}
+              Enter your credentials to access the dashboard
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="John Doe"
-                    required={!isLogin}
-                  />
-                </div>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -104,18 +76,9 @@ const Auth = () => {
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {isLogin ? "Sign In" : "Create Account"}
+                Sign In
               </Button>
             </form>
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-primary hover:underline"
-              >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-              </button>
-            </div>
           </CardContent>
         </Card>
       </div>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Download, FileText } from "lucide-react";
 import { toast } from "sonner";
-import { format, parse } from "date-fns";
+import { format, parse, addMonths, setDate, isBefore } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -186,14 +186,23 @@ export default function MyPayslips() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {records.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No payslips available yet
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    records.map((rec) => (
+                  {(() => {
+                    const now = new Date();
+                    const visibleRecords = records.filter((rec) => {
+                      const payrollMonth = parse(rec.month, "yyyy-MM-dd", new Date());
+                      const availableFrom = setDate(addMonths(payrollMonth, 1), 10);
+                      return !isBefore(now, availableFrom);
+                    });
+                    if (visibleRecords.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            No payslips available yet. Payslips are released on the 10th of each month.
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    return visibleRecords.map((rec) => (
                       <TableRow key={rec.id}>
                         <TableCell className="font-medium">
                           {format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy")}
@@ -210,8 +219,8 @@ export default function MyPayslips() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </TableBody>
               </Table>
             </div>

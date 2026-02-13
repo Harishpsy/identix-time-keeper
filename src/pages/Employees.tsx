@@ -35,6 +35,7 @@ export default function Employees() {
     department_id: "",
     shift_id: "",
     role: "employee",
+    date_of_joining: "",
   });
 
   const fetchEmployees = async () => {
@@ -124,6 +125,7 @@ export default function Employees() {
           biometric_id: form.biometric_id || null,
           department_id: form.department_id || null,
           shift_id: form.shift_id || null,
+          date_of_joining: form.date_of_joining || null,
           role: form.role,
         },
       });
@@ -135,7 +137,7 @@ export default function Employees() {
       } else {
         toast.success("Employee created successfully");
         setDialogOpen(false);
-        setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee" });
+        setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "" });
         fetchEmployees();
       }
     } catch (err: any) {
@@ -234,6 +236,10 @@ export default function Employees() {
                 <div className="space-y-2">
                    <Label htmlFor="emp-bio">Employee ID</Label>
                   <Input id="emp-bio" value={form.biometric_id} onChange={(e) => setForm({ ...form, biometric_id: e.target.value })} placeholder="e.g. CC01" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="emp-doj">Date of Joining</Label>
+                  <Input id="emp-doj" type="date" value={form.date_of_joining} onChange={(e) => setForm({ ...form, date_of_joining: e.target.value })} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">

@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { email, password, full_name, biometric_id, department_id, shift_id, role } = await req.json();
+  const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining } = await req.json();
 
   // Validate required fields
   if (!email || !password || !full_name) {
@@ -97,6 +97,7 @@ Deno.serve(async (req) => {
   }
   if (department_id) updates.department_id = department_id;
   if (shift_id) updates.shift_id = shift_id;
+  if (date_of_joining) updates.date_of_joining = date_of_joining;
 
   if (Object.keys(updates).length > 0) {
     await supabaseAdmin

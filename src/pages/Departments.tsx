@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ export default function Departments() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [name, setName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchDepartments = async () => {
     const { data } = await supabase.from("departments").select("*").order("name");
@@ -37,10 +39,12 @@ export default function Departments() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("departments").delete().eq("id", id);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("departments").delete().eq("id", deleteTarget.id);
     if (error) toast.error(error.message);
     else { toast.success("Department deleted"); fetchDepartments(); }
+    setDeleteTarget(null);
   };
 
   const openEdit = (dept: any) => {
@@ -83,7 +87,7 @@ export default function Departments() {
                     <TableCell className="font-medium">{d.name}</TableCell>
                     <TableCell className="flex gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(d.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -106,6 +110,21 @@ export default function Departments() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Department</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

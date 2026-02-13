@@ -439,10 +439,23 @@ export default function Payroll() {
             <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
             <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button variant="outline" onClick={handleGenerateAll} disabled={generating}>
               {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
               Generate All Payroll
+            </Button>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const monthDate = `${selectedMonth}-01`;
+                const { error } = await supabase.from("payroll").update({ released: true } as any).eq("month", monthDate).eq("released", false);
+                if (error) { toast.error("Failed to release payslips"); return; }
+                toast.success("All payslips released for " + format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy"));
+                fetchData();
+              }}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Release All
             </Button>
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>

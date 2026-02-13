@@ -93,8 +93,14 @@ export default function Employees() {
   };
 
   const handleCreate = async () => {
-    if (!form.full_name.trim() || !form.email.trim() || !form.password.trim()) {
+    const trimmedEmail = form.email.trim().toLowerCase();
+    if (!form.full_name.trim() || !trimmedEmail || !form.password.trim()) {
       toast.error("Name, email and password are required");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error("Please enter a valid email address");
       return;
     }
     if (form.password.length < 6) {
@@ -108,7 +114,7 @@ export default function Employees() {
       const res = await supabase.functions.invoke("create-employee", {
         body: {
           full_name: form.full_name.trim(),
-          email: form.email.trim(),
+          email: trimmedEmail,
           password: form.password,
           biometric_id: form.biometric_id || null,
           department_id: form.department_id || null,

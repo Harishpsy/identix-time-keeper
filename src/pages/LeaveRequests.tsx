@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Check, X, CalendarDays, Settings, Trash2 } from "lucide-react";
+import { Plus, Check, X, CalendarDays, Settings, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -35,6 +35,7 @@ export default function LeaveRequests() {
   const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [leaveSettings, setLeaveSettings] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "" });
 
   const fetchLeaveSettings = async () => {
@@ -105,21 +106,48 @@ export default function LeaveRequests() {
     if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
     if (!form.type) { toast.error("Please select a leave type"); return; }
 
-    const { error } = await supabase.from("leave_requests").insert({
-      user_id: user?.id,
-      date: form.date,
-      type: form.type as any,
-      reason: form.reason,
-      ...(form.submitted_to ? { submitted_to: form.submitted_to } : {}),
-    });
+    if (editingId) {
+      const { error } = await supabase.from("leave_requests").update({
+        date: form.date,
+        type: form.type as any,
+        reason: form.reason,
+        ...(form.submitted_to ? { submitted_to: form.submitted_to } : { submitted_to: null }),
+      }).eq("id", editingId).eq("user_id", user?.id).eq("status", "pending");
 
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Leave request submitted");
-      setDialogOpen(false);
-      setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "" });
-      fetchRequests();
+      if (error) toast.error(error.message);
+      else {
+        toast.success("Leave request updated");
+        closeDialog();
+        fetchRequests();
+      }
+    } else {
+      const { error } = await supabase.from("leave_requests").insert({
+        user_id: user?.id,
+        date: form.date,
+        type: form.type as any,
+        reason: form.reason,
+        ...(form.submitted_to ? { submitted_to: form.submitted_to } : {}),
+      });
+
+      if (error) toast.error(error.message);
+      else {
+        toast.success("Leave request submitted");
+        closeDialog();
+        fetchRequests();
+      }
     }
+  };
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setEditingId(null);
+    setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "" });
+  };
+
+  const openEditDialog = (r: any) => {
+    setEditingId(r.id);
+    setForm({ date: r.date, type: r.type, reason: r.reason || "", submitted_to: r.submitted_to || "" });
+    setDialogOpen(true);
   };
 
   const handleApproval = async (id: string, status: "approved" | "rejected") => {
@@ -298,6 +326,10 @@ export default function LeaveRequests() {
                       {role === "employee" && (
                         <TableCell>
                           {r.status === "pending" && (
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openEditDialog(r)}>
+                                <Pencil className="w-4 h-4 text-muted-foreground" />
+                              </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm">
@@ -319,6 +351,7 @@ export default function LeaveRequests() {
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
+                            </div>
                           )}
                         </TableCell>
                       )}
@@ -331,10 +364,10 @@ export default function LeaveRequests() {
         </Card>
 
         {/* Apply Leave Dialog */}
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setDialogOpen(true); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Apply for Leave</DialogTitle>
+              <DialogTitle>{editingId ? "Edit Leave Request" : "Apply for Leave"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
@@ -367,7 +400,7 @@ export default function LeaveRequests() {
                 <Label>Reason</Label>
                 <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Explain your leave reason..." />
               </div>
-              <Button className="w-full" onClick={handleSubmit}>Submit Request</Button>
+              <Button className="w-full" onClick={handleSubmit}>{editingId ? "Update Request" : "Submit Request"}</Button>
             </div>
           </DialogContent>
         </Dialog>

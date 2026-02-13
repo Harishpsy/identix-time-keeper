@@ -114,6 +114,56 @@ export type Database = {
         }
         Relationships: []
       }
+      leave_balances: {
+        Row: {
+          annual_total: number
+          annual_used: number
+          casual_total: number
+          casual_used: number
+          created_at: string
+          id: string
+          sick_total: number
+          sick_used: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          annual_total?: number
+          annual_used?: number
+          casual_total?: number
+          casual_used?: number
+          created_at?: string
+          id?: string
+          sick_total?: number
+          sick_used?: number
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          annual_total?: number
+          annual_used?: number
+          casual_total?: number
+          casual_used?: number
+          created_at?: string
+          id?: string
+          sick_total?: number
+          sick_used?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_balances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_requests: {
         Row: {
           approved_at: string | null

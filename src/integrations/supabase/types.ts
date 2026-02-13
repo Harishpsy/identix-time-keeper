@@ -158,6 +158,53 @@ export type Database = {
           },
         ]
       }
+      payroll: {
+        Row: {
+          allowances: number
+          basic_salary: number
+          created_at: string
+          deductions: number
+          id: string
+          month: string
+          net_salary: number | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowances?: number
+          basic_salary?: number
+          created_at?: string
+          deductions?: number
+          id?: string
+          month: string
+          net_salary?: number | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowances?: number
+          basic_salary?: number
+          created_at?: string
+          deductions?: number
+          id?: string
+          month?: string
+          net_salary?: number | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           biometric_id: number | null

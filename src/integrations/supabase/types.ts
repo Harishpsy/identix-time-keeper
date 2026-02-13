@@ -153,6 +153,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "leave_requests_submitted_to_fkey"
+            columns: ["submitted_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "leave_requests_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false

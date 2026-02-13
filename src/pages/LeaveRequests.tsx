@@ -26,37 +26,60 @@ const statusColors: Record<string, string> = {
 export default function LeaveRequests() {
   const { user, role } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
+  const [approvers, setApprovers] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "casual" as string, reason: "" });
+  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "casual" as string, reason: "", submitted_to: "" });
+
+  const fetchApprovers = async () => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .in("role", ["admin", "subadmin"]);
+    if (!data) return;
+    const ids = [...new Set(data.map((r) => r.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", ids)
+      .eq("is_active", true);
+    setApprovers(profiles || []);
+  };
 
   const fetchRequests = async () => {
     let query = supabase
       .from("leave_requests")
-      .select("*, profiles!leave_requests_user_id_fkey(full_name)")
+      .select("*, profiles!leave_requests_user_id_fkey(full_name), approver:profiles!leave_requests_submitted_to_fkey(full_name)")
       .order("created_at", { ascending: false });
 
     if (role === "employee") {
       query = query.eq("user_id", user?.id);
+    } else {
+      // Admins see all; subadmins see requests submitted to them
+      if (role === "subadmin") {
+        query = query.eq("submitted_to", user?.id);
+      }
     }
 
     const { data } = await query;
     setRequests(data || []);
   };
 
-  useEffect(() => { fetchRequests(); }, [user, role]);
+  useEffect(() => { fetchRequests(); fetchApprovers(); }, [user, role]);
 
   const handleSubmit = async () => {
     if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
+    if (!form.submitted_to) { toast.error("Please select who to submit to"); return; }
 
     const { error } = await supabase.from("leave_requests").insert({
       user_id: user?.id,
       date: form.date,
       type: form.type as any,
       reason: form.reason,
+      submitted_to: form.submitted_to,
     });
 
     if (error) toast.error(error.message);
-    else { toast.success("Leave request submitted"); setDialogOpen(false); setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "casual", reason: "" }); fetchRequests(); }
+    else { toast.success("Leave request submitted"); setDialogOpen(false); setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "casual", reason: "", submitted_to: "" }); fetchRequests(); }
   };
 
   const handleApproval = async (id: string, status: "approved" | "rejected") => {
@@ -94,42 +117,44 @@ export default function LeaveRequests() {
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Reason</TableHead>
+                    <TableHead>Submitted To</TableHead>
                     <TableHead>Status</TableHead>
-                    {role === "admin" && <TableHead>Actions</TableHead>}
+                    {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {requests.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={role === "admin" ? 6 : role === "employee" ? 4 : 5} className="text-center text-muted-foreground py-8">
-                        No leave requests
-                      </TableCell>
-                    </TableRow>
-                  ) : requests.map((r) => (
-                    <TableRow key={r.id}>
-                      {role !== "employee" && <TableCell className="font-medium">{r.profiles?.full_name || "—"}</TableCell>}
-                      <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell className="capitalize">{r.type}</TableCell>
-                      <TableCell className="max-w-48 truncate">{r.reason}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
-                          {r.status}
-                        </span>
-                      </TableCell>
-                      {role === "admin" && (
-                        <TableCell>
-                          {r.status === "pending" && (
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "approved")}>
-                                <Check className="w-4 h-4 text-success" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "rejected")}>
-                                <X className="w-4 h-4 text-destructive" />
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      )}
+                     <TableRow>
+                       <TableCell colSpan={role === "admin" ? 7 : role === "employee" ? 5 : 6} className="text-center text-muted-foreground py-8">
+                         No leave requests
+                       </TableCell>
+                     </TableRow>
+                   ) : requests.map((r) => (
+                     <TableRow key={r.id}>
+                       {role !== "employee" && <TableCell className="font-medium">{r.profiles?.full_name || "—"}</TableCell>}
+                       <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
+                       <TableCell className="capitalize">{r.type}</TableCell>
+                       <TableCell className="max-w-48 truncate">{r.reason}</TableCell>
+                       <TableCell>{r.approver?.full_name || "—"}</TableCell>
+                       <TableCell>
+                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
+                           {r.status}
+                         </span>
+                       </TableCell>
+                       {(role === "admin" || role === "subadmin") && (
+                         <TableCell>
+                           {r.status === "pending" && (
+                             <div className="flex gap-1">
+                               <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "approved")}>
+                                 <Check className="w-4 h-4 text-success" />
+                               </Button>
+                               <Button variant="ghost" size="sm" onClick={() => handleApproval(r.id, "rejected")}>
+                                 <X className="w-4 h-4 text-destructive" />
+                               </Button>
+                             </div>
+                           )}
+                         </TableCell>
+                       )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -155,6 +180,17 @@ export default function LeaveRequests() {
                   <SelectContent>
                     {leaveTypes.map((t) => (
                       <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Submit To</Label>
+                <Select value={form.submitted_to} onValueChange={(v) => setForm({ ...form, submitted_to: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select approver" /></SelectTrigger>
+                  <SelectContent>
+                    {approvers.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -123,6 +123,7 @@ export type Database = {
           id: string
           reason: string | null
           status: Database["public"]["Enums"]["leave_status"]
+          submitted_to: string | null
           type: Database["public"]["Enums"]["leave_type"]
           user_id: string
         }
@@ -134,6 +135,7 @@ export type Database = {
           id?: string
           reason?: string | null
           status?: Database["public"]["Enums"]["leave_status"]
+          submitted_to?: string | null
           type?: Database["public"]["Enums"]["leave_type"]
           user_id: string
         }
@@ -145,6 +147,7 @@ export type Database = {
           id?: string
           reason?: string | null
           status?: Database["public"]["Enums"]["leave_status"]
+          submitted_to?: string | null
           type?: Database["public"]["Enums"]["leave_type"]
           user_id?: string
         }

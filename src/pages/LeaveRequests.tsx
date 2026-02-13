@@ -36,7 +36,7 @@ export default function LeaveRequests() {
   const [leaveSettings, setLeaveSettings] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "" });
+  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "" });
 
   const fetchLeaveSettings = async () => {
     const { data } = await supabase.from("leave_settings").select("*").order("leave_type");
@@ -103,12 +103,14 @@ export default function LeaveRequests() {
   ];
 
   const handleSubmit = async () => {
-    if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
+    if (!form.date || !form.to_date || !form.reason.trim()) { toast.error("Dates and reason are required"); return; }
+    if (form.to_date < form.date) { toast.error("To date must be on or after from date"); return; }
     if (!form.type) { toast.error("Please select a leave type"); return; }
 
     if (editingId) {
       const { error } = await supabase.from("leave_requests").update({
         date: form.date,
+        to_date: form.to_date,
         type: form.type as any,
         reason: form.reason,
         ...(form.submitted_to ? { submitted_to: form.submitted_to } : { submitted_to: null }),
@@ -124,6 +126,7 @@ export default function LeaveRequests() {
       const { error } = await supabase.from("leave_requests").insert({
         user_id: user?.id,
         date: form.date,
+        to_date: form.to_date,
         type: form.type as any,
         reason: form.reason,
         ...(form.submitted_to ? { submitted_to: form.submitted_to } : {}),
@@ -141,12 +144,12 @@ export default function LeaveRequests() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingId(null);
-    setForm({ date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "" });
+    setForm({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "" });
   };
 
   const openEditDialog = (r: any) => {
     setEditingId(r.id);
-    setForm({ date: r.date, type: r.type, reason: r.reason || "", submitted_to: r.submitted_to || "" });
+    setForm({ date: r.date, to_date: r.to_date || r.date, type: r.type, reason: r.reason || "", submitted_to: r.submitted_to || "" });
     setDialogOpen(true);
   };
 
@@ -281,7 +284,8 @@ export default function LeaveRequests() {
                 <TableHeader>
                   <TableRow>
                     {role !== "employee" && <TableHead>Employee</TableHead>}
-                    <TableHead>Date</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Submitted To</TableHead>
@@ -301,6 +305,7 @@ export default function LeaveRequests() {
                     <TableRow key={r.id}>
                       {role !== "employee" && <TableCell className="font-medium">{r.profiles?.full_name || "—"}</TableCell>}
                       <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell>{r.to_date ? format(new Date(r.to_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="capitalize">{r.type}</TableCell>
                       <TableCell className="max-w-48 truncate">{r.reason}</TableCell>
                       <TableCell>{r.approver?.full_name || "—"}</TableCell>
@@ -370,9 +375,15 @@ export default function LeaveRequests() {
               <DialogTitle>{editingId ? "Edit Leave Request" : "Apply for Leave"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>From Date</Label>
+                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>To Date</Label>
+                  <Input type="date" value={form.to_date} min={form.date} onChange={(e) => setForm({ ...form, to_date: e.target.value })} />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Type</Label>

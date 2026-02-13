@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Attendance from "./pages/Attendance";
 import Employees from "./pages/Employees";
 import Shifts from "./pages/Shifts";
+import Departments from "./pages/Departments";
 import LeaveRequests from "./pages/LeaveRequests";
 import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
@@ -53,6 +54,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
             <Route path="/employees" element={<ProtectedRoute allowedRoles={["admin"]}><Employees /></ProtectedRoute>} />
+            <Route path="/departments" element={<ProtectedRoute allowedRoles={["admin"]}><Departments /></ProtectedRoute>} />
             <Route path="/shifts" element={<ProtectedRoute allowedRoles={["admin"]}><Shifts /></ProtectedRoute>} />
             <Route path="/leave" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin", "subadmin"]}><Reports /></ProtectedRoute>} />

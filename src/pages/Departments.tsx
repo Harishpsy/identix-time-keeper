@@ -8,19 +8,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function Departments() {
   const [departments, setDepartments] = useState<any[]>([]);
+  const [empCounts, setEmpCounts] = useState<Record<string, number>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [name, setName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchDepartments = async () => {
-    const { data } = await supabase.from("departments").select("*").order("name");
-    setDepartments(data || []);
+    const [{ data: deps }, { data: profiles }] = await Promise.all([
+      supabase.from("departments").select("*").order("name"),
+      supabase.from("profiles").select("department_id").not("department_id", "is", null),
+    ]);
+    setDepartments(deps || []);
+    const counts: Record<string, number> = {};
+    profiles?.forEach((p: any) => { counts[p.department_id] = (counts[p.department_id] || 0) + 1; });
+    setEmpCounts(counts);
   };
 
   useEffect(() => { fetchDepartments(); }, []);
@@ -75,16 +83,23 @@ export default function Departments() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Department Name</TableHead>
+                   <TableHead>Department Name</TableHead>
+                  <TableHead className="w-40">Employees</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {departments.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground py-8">No departments configured</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No departments configured</TableCell></TableRow>
                 ) : departments.map((d) => (
                   <TableRow key={d.id}>
                     <TableCell className="font-medium">{d.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="gap-1">
+                        <Users className="w-3 h-3" />
+                        {empCounts[d.id] || 0}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="flex gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}><Trash2 className="w-4 h-4 text-destructive" /></Button>

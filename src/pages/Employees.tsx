@@ -24,7 +24,7 @@ export default function Employees() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ biometric_id: "", department_id: "", shift_id: "" });
+  const [editForm, setEditForm] = useState({ biometric_id: "", department_id: "", shift_id: "", date_of_joining: "" });
 
   // New employee form
   const [form, setForm] = useState({
@@ -77,6 +77,7 @@ export default function Employees() {
       biometric_id: emp.biometric_id?.toString() || "",
       department_id: emp.department_id || "",
       shift_id: emp.shift_id || "",
+      date_of_joining: emp.date_of_joining || "",
     });
   };
 
@@ -89,6 +90,7 @@ export default function Employees() {
       biometric_id: editForm.biometric_id?.trim() || null,
       department_id: editForm.department_id || null,
       shift_id: editForm.shift_id || null,
+      date_of_joining: editForm.date_of_joining || null,
     };
     const { error } = await supabase.from("profiles").update(updates).eq("id", id);
     if (error) toast.error("Failed to update profile");
@@ -292,7 +294,8 @@ export default function Employees() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Employee ID</TableHead>
+                     <TableHead>Employee ID</TableHead>
+                    <TableHead>DOJ</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Shift</TableHead>
                     <TableHead>Role</TableHead>
@@ -317,6 +320,18 @@ export default function Employees() {
                             />
                           ) : (
                             <span className="font-mono text-sm">{emp.biometric_id || "—"}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isEditing ? (
+                            <Input
+                              type="date"
+                              value={editForm.date_of_joining}
+                              onChange={(e) => setEditForm({ ...editForm, date_of_joining: e.target.value })}
+                              className="w-36 h-8 text-sm"
+                            />
+                          ) : (
+                            <span className="text-sm">{emp.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : "—"}</span>
                           )}
                         </TableCell>
                         <TableCell>

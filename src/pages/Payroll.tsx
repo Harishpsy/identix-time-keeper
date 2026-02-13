@@ -51,6 +51,8 @@ interface Employee {
   id: string;
   full_name: string;
   email: string;
+  biometric_id: string | null;
+  date_of_joining: string | null;
 }
 
 const defaultForm = {
@@ -92,7 +94,7 @@ export default function Payroll() {
     const monthDate = `${selectedMonth}-01`;
     const [{ data: payrollData }, { data: empData }] = await Promise.all([
       supabase.from("payroll").select("*").eq("month", monthDate).order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id, full_name, email").eq("is_active", true).order("full_name"),
+      supabase.from("profiles").select("id, full_name, email, biometric_id, date_of_joining").eq("is_active", true).order("full_name"),
     ]);
     setRecords((payrollData as unknown as PayrollRecord[]) || []);
     setEmployees(empData || []);
@@ -105,6 +107,14 @@ export default function Payroll() {
 
   const getEmployeeEmail = (userId: string) =>
     employees.find((e) => e.id === userId)?.email || "";
+
+  const getEmployeeId = (userId: string) =>
+    employees.find((e) => e.id === userId)?.biometric_id || "—";
+
+  const getEmployeeDOJ = (userId: string) => {
+    const doj = employees.find((e) => e.id === userId)?.date_of_joining;
+    return doj ? format(new Date(doj), "dd MMM yyyy") : "—";
+  };
 
   const downloadPayslip = (rec: PayrollRecord) => {
     const monthLabel = format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy");
@@ -571,9 +581,11 @@ export default function Payroll() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
+                    <TableHead>Emp ID</TableHead>
+                    <TableHead>DOJ</TableHead>
                     <TableHead className="text-right">Basic</TableHead>
                     <TableHead className="text-right">Gross</TableHead>
                     <TableHead className="text-right">Deductions</TableHead>
@@ -585,7 +597,7 @@ export default function Payroll() {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         No payroll records for {format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy")}
                       </TableCell>
                     </TableRow>
@@ -593,6 +605,8 @@ export default function Payroll() {
                     filtered.map((rec) => (
                       <TableRow key={rec.id}>
                         <TableCell className="font-medium">{getEmployeeName(rec.user_id)}</TableCell>
+                        <TableCell className="font-mono text-sm">{getEmployeeId(rec.user_id)}</TableCell>
+                        <TableCell className="text-sm">{getEmployeeDOJ(rec.user_id)}</TableCell>
                         <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>

@@ -266,6 +266,7 @@ export type Database = {
         Row: {
           biometric_id: string | null
           created_at: string
+          date_of_joining: string | null
           department_id: string | null
           email: string
           full_name: string
@@ -277,6 +278,7 @@ export type Database = {
         Insert: {
           biometric_id?: string | null
           created_at?: string
+          date_of_joining?: string | null
           department_id?: string | null
           email: string
           full_name: string
@@ -288,6 +290,7 @@ export type Database = {
         Update: {
           biometric_id?: string | null
           created_at?: string
+          date_of_joining?: string | null
           department_id?: string | null
           email?: string
           full_name?: string

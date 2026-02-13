@@ -2,3 +2,6 @@ project_id = "xtjgumosvekkrdtogfce"
 
 [functions.iclock-cdata]
 verify_jwt = false
+
+[functions.create-employee]
+verify_jwt = false

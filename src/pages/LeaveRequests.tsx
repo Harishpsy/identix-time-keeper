@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Check, X } from "lucide-react";
+import { Plus, Check, X, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -27,6 +27,7 @@ export default function LeaveRequests() {
   const { user, role } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
   const [approvers, setApprovers] = useState<any[]>([]);
+  const [leaveBalance, setLeaveBalance] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), type: "casual" as string, reason: "", submitted_to: "" });
 
@@ -64,7 +65,19 @@ export default function LeaveRequests() {
     setRequests(data || []);
   };
 
-  useEffect(() => { fetchRequests(); fetchApprovers(); }, [user, role]);
+  const fetchLeaveBalance = async () => {
+    if (!user) return;
+    const currentYear = new Date().getFullYear();
+    const { data } = await supabase
+      .from("leave_balances")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("year", currentYear)
+      .maybeSingle();
+    setLeaveBalance(data);
+  };
+
+  useEffect(() => { fetchRequests(); fetchApprovers(); fetchLeaveBalance(); }, [user, role]);
 
   const handleSubmit = async () => {
     if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
@@ -105,6 +118,40 @@ export default function LeaveRequests() {
             <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
           )}
         </div>
+
+        {role === "employee" && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { label: "Sick Leave", total: leaveBalance?.sick_total ?? 12, used: leaveBalance?.sick_used ?? 0, color: "text-destructive" },
+              { label: "Casual Leave", total: leaveBalance?.casual_total ?? 12, used: leaveBalance?.casual_used ?? 0, color: "text-warning" },
+              { label: "Annual Leave", total: leaveBalance?.annual_total ?? 15, used: leaveBalance?.annual_used ?? 0, color: "text-primary" },
+            ].map((item) => (
+              <Card key={item.label} className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg bg-muted ${item.color}`}>
+                      <CalendarDays className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">{item.label}</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-2xl font-bold text-foreground">{item.total - item.used}</span>
+                        <span className="text-xs text-muted-foreground">/ {item.total} remaining</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${item.used / item.total > 0.8 ? 'bg-destructive' : 'bg-primary'}`}
+                      style={{ width: `${Math.min((item.used / item.total) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{item.used} used</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <Card className="border-border/50">
           <CardContent className="p-0">

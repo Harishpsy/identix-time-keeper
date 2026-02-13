@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ALTER COLUMN biometric_id TYPE text USING biometric_id::text;

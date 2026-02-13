@@ -264,7 +264,7 @@ export type Database = {
       }
       profiles: {
         Row: {
-          biometric_id: number | null
+          biometric_id: string | null
           created_at: string
           department_id: string | null
           email: string
@@ -275,7 +275,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          biometric_id?: number | null
+          biometric_id?: string | null
           created_at?: string
           department_id?: string | null
           email: string
@@ -286,7 +286,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          biometric_id?: number | null
+          biometric_id?: string | null
           created_at?: string
           department_id?: string | null
           email?: string

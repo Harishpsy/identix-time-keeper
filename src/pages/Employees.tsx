@@ -84,9 +84,9 @@ export default function Employees() {
     setEditingId(null);
   };
 
-  const saveEdit = async (id: string) => {
+   const saveEdit = async (id: string) => {
     const updates: Record<string, any> = {
-      biometric_id: editForm.biometric_id ? parseInt(editForm.biometric_id, 10) : null,
+      biometric_id: editForm.biometric_id?.trim() || null,
       department_id: editForm.department_id || null,
       shift_id: editForm.shift_id || null,
     };
@@ -230,8 +230,8 @@ export default function Employees() {
                   <Input id="emp-password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="emp-bio">Biometric ID</Label>
-                  <Input id="emp-bio" type="number" value={form.biometric_id} onChange={(e) => setForm({ ...form, biometric_id: e.target.value })} placeholder="e.g. 1001" />
+                   <Label htmlFor="emp-bio">Employee ID</Label>
+                  <Input id="emp-bio" value={form.biometric_id} onChange={(e) => setForm({ ...form, biometric_id: e.target.value })} placeholder="e.g. CC01" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -292,7 +292,7 @@ export default function Employees() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Biometric ID</TableHead>
+                    <TableHead>Employee ID</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Shift</TableHead>
                     <TableHead>Role</TableHead>
@@ -309,8 +309,7 @@ export default function Employees() {
                         <TableCell className="text-muted-foreground">{emp.email}</TableCell>
                         <TableCell>
                           {isEditing ? (
-                            <Input
-                              type="number"
+                             <Input
                               value={editForm.biometric_id}
                               onChange={(e) => setEditForm({ ...editForm, biometric_id: e.target.value })}
                               className="w-24 h-8 font-mono text-sm"

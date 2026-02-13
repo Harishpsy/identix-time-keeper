@@ -1,0 +1,1 @@
+ALTER TABLE public.payroll ADD COLUMN released boolean NOT NULL DEFAULT false;

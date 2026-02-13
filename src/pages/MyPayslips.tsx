@@ -38,6 +38,7 @@ interface PayrollRecord {
   paid_days: number;
   lop_days: number;
   notes: string | null;
+  released: boolean;
 }
 
 export default function MyPayslips() {
@@ -188,7 +189,8 @@ export default function MyPayslips() {
                 <TableBody>
                   {(() => {
                     const now = new Date();
-                    const visibleRecords = records.filter((rec) => {
+                     const visibleRecords = records.filter((rec) => {
+                      if (rec.released) return true;
                       const payrollMonth = parse(rec.month, "yyyy-MM-dd", new Date());
                       const availableFrom = setDate(addMonths(payrollMonth, 1), 10);
                       return !isBefore(now, availableFrom);

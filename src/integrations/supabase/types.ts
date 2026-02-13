@@ -183,6 +183,7 @@ export type Database = {
           overtime: number
           paid_days: number
           professional_tax: number
+          released: boolean
           special_allowance: number
           tds: number
           total_deductions: number | null
@@ -213,6 +214,7 @@ export type Database = {
           overtime?: number
           paid_days?: number
           professional_tax?: number
+          released?: boolean
           special_allowance?: number
           tds?: number
           total_deductions?: number | null
@@ -243,6 +245,7 @@ export type Database = {
           overtime?: number
           paid_days?: number
           professional_tax?: number
+          released?: boolean
           special_allowance?: number
           tds?: number
           total_deductions?: number | null

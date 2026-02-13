@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Search, Plus, Pencil, Trash2, Loader2, Users, Download } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Loader2, Users, Download, Send } from "lucide-react";
 import { toast } from "sonner";
 import { format, parse } from "date-fns";
 import jsPDF from "jspdf";
@@ -44,6 +44,7 @@ interface PayrollRecord {
   lop_days: number;
   notes: string | null;
   created_at: string;
+  released: boolean;
 }
 
 interface Employee {
@@ -586,6 +587,20 @@ export default function Payroll() {
                         <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            <Button
+                              variant={rec.released ? "default" : "outline"}
+                              size="sm"
+                              onClick={async () => {
+                                const newVal = !rec.released;
+                                const { error } = await supabase.from("payroll").update({ released: newVal } as any).eq("id", rec.id);
+                                if (error) { toast.error("Failed to update release status"); return; }
+                                toast.success(newVal ? "Payslip released to employee" : "Payslip release revoked");
+                                fetchData();
+                              }}
+                              title={rec.released ? "Revoke early release" : "Release to employee now"}
+                            >
+                              <Send className="w-4 h-4" />
+                            </Button>
                             <Button variant="ghost" size="sm" onClick={() => downloadPayslip(rec)} title="Download Payslip">
                               <Download className="w-4 h-4" />
                             </Button>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, CalendarCheck, Clock, AlertTriangle, Download, FileText } from "lucide-react";
 import { format, endOfMonth } from "date-fns";
 import jsPDF from "jspdf";
@@ -15,7 +16,21 @@ import autoTable from "jspdf-autotable";
 export default function Reports() {
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [summaries, setSummaries] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [stats, setStats] = useState({ totalDays: 0, present: 0, late: 0, absent: 0 });
+
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("is_active", true)
+        .order("full_name");
+      setEmployees(data || []);
+    };
+    fetchEmployees();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -23,12 +38,18 @@ export default function Reports() {
       const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
 
-      const { data } = await supabase
+      let query = supabase
         .from("daily_summaries")
         .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
         .gte("date", start)
         .lte("date", end)
         .order("date", { ascending: false });
+
+      if (selectedEmployee !== "all") {
+        query = query.eq("user_id", selectedEmployee);
+      }
+
+      const { data } = await query;
 
       const all = data || [];
       setSummaries(all);
@@ -41,7 +62,7 @@ export default function Reports() {
     };
 
     fetchData();
-  }, [month]);
+  }, [month, selectedEmployee]);
 
   const downloadCSV = () => {
     const headers = ["Employee", "Date", "First In", "Last Out", "Status", "Late Mins"];
@@ -68,11 +89,14 @@ export default function Reports() {
     const doc = new jsPDF();
     const [year, mon] = month.split("-").map(Number);
     const monthName = format(new Date(year, mon - 1, 1), "MMMM yyyy");
+    const empName = selectedEmployee === "all"
+      ? "All Employees"
+      : employees.find((e) => e.id === selectedEmployee)?.full_name || "Employee";
 
     doc.setFontSize(18);
     doc.text("Attendance Report", 14, 20);
     doc.setFontSize(12);
-    doc.text(monthName, 14, 28);
+    doc.text(`${monthName} — ${empName}`, 14, 28);
     doc.setFontSize(10);
     doc.text(`Present: ${stats.present}  |  Late: ${stats.late}  |  Absent: ${stats.absent}  |  Total: ${stats.totalDays}`, 14, 35);
 
@@ -91,7 +115,10 @@ export default function Reports() {
       headStyles: { fillColor: [41, 128, 185] },
     });
 
-    doc.save(`attendance-report-${month}.pdf`);
+    const filename = selectedEmployee === "all"
+      ? `attendance-report-${month}.pdf`
+      : `attendance-report-${empName.replace(/\s+/g, "-").toLowerCase()}-${month}.pdf`;
+    doc.save(filename);
   };
 
   return (
@@ -102,7 +129,18 @@ export default function Reports() {
             <h1 className="text-2xl font-bold text-foreground">Reports</h1>
             <p className="text-muted-foreground mt-1">Monthly attendance reports</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap items-center">
+            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Employees" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Employees</SelectItem>
+                {employees.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-auto" />
             <Button variant="outline" onClick={downloadPDF}>
               <FileText className="w-4 h-4 mr-2" />PDF

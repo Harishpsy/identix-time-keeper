@@ -36,7 +36,7 @@ export default function LeaveRequests() {
   const [leaveSettings, setLeaveSettings] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "" });
+  const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "", permission_hours: "" });
 
   const fetchLeaveSettings = async () => {
     const { data } = await supabase.from("leave_settings").select("*").order("leave_type");
@@ -103,16 +103,18 @@ export default function LeaveRequests() {
   ];
 
   const handleSubmit = async () => {
-    if (!form.date || !form.to_date || !form.reason.trim()) { toast.error("Dates and reason are required"); return; }
-    if (form.to_date < form.date) { toast.error("To date must be on or after from date"); return; }
+    if (!form.date || !form.reason.trim()) { toast.error("Date and reason are required"); return; }
     if (!form.type) { toast.error("Please select a leave type"); return; }
+    if (form.type !== "permission" && form.to_date < form.date) { toast.error("To date must be on or after from date"); return; }
+    if (form.type === "permission" && (!form.permission_hours || parseFloat(form.permission_hours) <= 0)) { toast.error("Please enter permission duration in hours"); return; }
 
     if (editingId) {
       const { error } = await supabase.from("leave_requests").update({
         date: form.date,
-        to_date: form.to_date,
+        to_date: form.type === "permission" ? form.date : form.to_date,
         type: form.type as any,
         reason: form.reason,
+        permission_hours: form.type === "permission" ? parseFloat(form.permission_hours) : 0,
         ...(form.submitted_to ? { submitted_to: form.submitted_to } : { submitted_to: null }),
       }).eq("id", editingId).eq("user_id", user?.id).eq("status", "pending");
 
@@ -126,9 +128,10 @@ export default function LeaveRequests() {
       const { error } = await supabase.from("leave_requests").insert({
         user_id: user?.id,
         date: form.date,
-        to_date: form.to_date,
+        to_date: form.type === "permission" ? form.date : form.to_date,
         type: form.type as any,
         reason: form.reason,
+        permission_hours: form.type === "permission" ? parseFloat(form.permission_hours) : 0,
         ...(form.submitted_to ? { submitted_to: form.submitted_to } : {}),
       });
 
@@ -144,12 +147,12 @@ export default function LeaveRequests() {
   const closeDialog = () => {
     setDialogOpen(false);
     setEditingId(null);
-    setForm({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "" });
+    setForm({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "", reason: "", submitted_to: "", permission_hours: "" });
   };
 
   const openEditDialog = (r: any) => {
     setEditingId(r.id);
-    setForm({ date: r.date, to_date: r.to_date || r.date, type: r.type, reason: r.reason || "", submitted_to: r.submitted_to || "" });
+    setForm({ date: r.date, to_date: r.to_date || r.date, type: r.type, reason: r.reason || "", submitted_to: r.submitted_to || "", permission_hours: r.permission_hours?.toString() || "" });
     setDialogOpen(true);
   };
 
@@ -287,7 +290,7 @@ export default function LeaveRequests() {
                     <TableHead>From</TableHead>
                     <TableHead>To</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Reason</TableHead>
+                    <TableHead>Duration</TableHead>
                     <TableHead>Submitted To</TableHead>
                     <TableHead>Status</TableHead>
                     {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
@@ -307,7 +310,14 @@ export default function LeaveRequests() {
                       <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{r.to_date ? format(new Date(r.to_date), "dd MMM yyyy") : "—"}</TableCell>
                       <TableCell className="capitalize">{r.type}</TableCell>
-                      <TableCell className="max-w-48 truncate">{r.reason}</TableCell>
+                      <TableCell>
+                        {r.type === "permission" 
+                          ? `${r.permission_hours || 0} hrs` 
+                          : r.to_date && r.to_date !== r.date 
+                            ? `${Math.ceil((new Date(r.to_date).getTime() - new Date(r.date).getTime()) / (1000 * 60 * 60 * 24)) + 1} days`
+                            : "1 day"
+                        }
+                      </TableCell>
                       <TableCell>{r.approver?.full_name || "—"}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
@@ -375,16 +385,6 @@ export default function LeaveRequests() {
               <DialogTitle>{editingId ? "Edit Leave Request" : "Apply for Leave"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 pt-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>From Date</Label>
-                  <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>To Date</Label>
-                  <Input type="date" value={form.to_date} min={form.date} onChange={(e) => setForm({ ...form, to_date: e.target.value })} />
-                </div>
-              </div>
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
@@ -396,6 +396,29 @@ export default function LeaveRequests() {
                   </SelectContent>
                 </Select>
               </div>
+              {form.type === "permission" ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Hours</Label>
+                    <Input type="number" min="0.5" max="8" step="0.5" placeholder="e.g. 2" value={form.permission_hours} onChange={(e) => setForm({ ...form, permission_hours: e.target.value })} />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>From Date</Label>
+                    <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>To Date</Label>
+                    <Input type="date" value={form.to_date} min={form.date} onChange={(e) => setForm({ ...form, to_date: e.target.value })} />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Submit To</Label>
                 <Select value={form.submitted_to} onValueChange={(v) => setForm({ ...form, submitted_to: v })}>

@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Timer,
   DollarSign,
+  Receipt,
 } from "lucide-react";
 
 interface NavItem {
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
   { label: "Reports", href: "/reports", icon: <FileText className="w-5 h-5" />, roles: ["admin", "subadmin"] },
   { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin"] },
+  { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["employee", "subadmin"] },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

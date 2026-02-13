@@ -1,0 +1,123 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import StatCard from "@/components/dashboard/StatCard";
+import AttendanceStatusBadge from "@/components/dashboard/AttendanceStatusBadge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Users, CalendarCheck, Clock, AlertTriangle, Download } from "lucide-react";
+import { format, endOfMonth } from "date-fns";
+
+export default function Reports() {
+  const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [summaries, setSummaries] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalDays: 0, present: 0, late: 0, absent: 0 });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [year, mon] = month.split("-").map(Number);
+      const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
+      const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
+
+      const { data } = await supabase
+        .from("daily_summaries")
+        .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
+        .gte("date", start)
+        .lte("date", end)
+        .order("date", { ascending: false });
+
+      const all = data || [];
+      setSummaries(all);
+      setStats({
+        totalDays: all.length,
+        present: all.filter((s) => s.status === "present").length,
+        late: all.filter((s) => s.status === "late").length,
+        absent: all.filter((s) => s.status === "absent").length,
+      });
+    };
+
+    fetchData();
+  }, [month]);
+
+  const downloadCSV = () => {
+    const headers = ["Employee", "Date", "First In", "Last Out", "Status", "Late Mins"];
+    const rows = summaries.map((s) => [
+      s.profiles?.full_name || "",
+      s.date,
+      s.first_in ? format(new Date(s.first_in), "HH:mm") : "",
+      s.last_out ? format(new Date(s.last_out), "HH:mm") : "",
+      s.status,
+      s.late_minutes || 0,
+    ]);
+
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance-report-${month}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Reports</h1>
+            <p className="text-muted-foreground mt-1">Monthly attendance reports</p>
+          </div>
+          <div className="flex gap-3">
+            <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="w-auto" />
+            <Button variant="outline" onClick={downloadCSV}>
+              <Download className="w-4 h-4 mr-2" />CSV
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <StatCard title="Total Records" value={stats.totalDays} icon={<Users className="w-5 h-5" />} />
+          <StatCard title="Present" value={stats.present} icon={<CalendarCheck className="w-5 h-5" />} variant="success" />
+          <StatCard title="Late" value={stats.late} icon={<Clock className="w-5 h-5" />} variant="warning" />
+          <StatCard title="Absent" value={stats.absent} icon={<AlertTriangle className="w-5 h-5" />} variant="destructive" />
+        </div>
+
+        <Card className="border-border/50">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>First In</TableHead>
+                    <TableHead>Last Out</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Late (mins)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {summaries.length === 0 ? (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No data for this month</TableCell></TableRow>
+                  ) : summaries.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium">{s.profiles?.full_name || "—"}</TableCell>
+                      <TableCell>{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                      <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                      <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                      <TableCell>{s.late_minutes || 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}

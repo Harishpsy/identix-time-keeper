@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Check, X, CalendarDays, Settings } from "lucide-react";
+import { Plus, Check, X, CalendarDays, Settings, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -131,6 +131,18 @@ export default function LeaveRequests() {
     else { toast.success(`Request ${status}`); fetchRequests(); fetchLeaveBalance(); }
   };
 
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from("leave_requests")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user?.id)
+      .eq("status", "pending");
+
+    if (error) toast.error(error.message);
+    else { toast.success("Request deleted"); fetchRequests(); }
+  };
+
   const handleSettingUpdate = async (id: string, field: string, value: any) => {
     const { error } = await supabase
       .from("leave_settings")
@@ -246,12 +258,13 @@ export default function LeaveRequests() {
                     <TableHead>Submitted To</TableHead>
                     <TableHead>Status</TableHead>
                     {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
+                    {role === "employee" && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {requests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={role === "admin" ? 7 : role === "employee" ? 5 : 6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={role === "admin" ? 8 : role === "employee" ? 7 : 6} className="text-center text-muted-foreground py-8">
                         No leave requests
                       </TableCell>
                     </TableRow>
@@ -278,6 +291,15 @@ export default function LeaveRequests() {
                                 <X className="w-4 h-4 text-destructive" />
                               </Button>
                             </div>
+                          )}
+                        </TableCell>
+                      )}
+                      {role === "employee" && (
+                        <TableCell>
+                          {r.status === "pending" && (
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(r.id)}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
                           )}
                         </TableCell>
                       )}

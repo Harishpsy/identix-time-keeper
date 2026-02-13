@@ -103,6 +103,47 @@ export default function Payroll() {
 
   const openCreate = () => { resetForm(); setDialogOpen(true); };
 
+  // When employee is selected for a new entry, carry forward their latest payroll data
+  const handleEmployeeSelect = async (userId: string) => {
+    setForm((prev) => ({ ...prev, user_id: userId }));
+    if (editingId) return; // Don't carry forward when editing
+
+    const { data } = await supabase
+      .from("payroll")
+      .select("*")
+      .eq("user_id", userId)
+      .order("month", { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const prev = data[0] as unknown as PayrollRecord;
+      setForm({
+        user_id: userId,
+        basic_salary: prev.basic_salary.toString(),
+        hra: prev.hra.toString(),
+        dearness_allowance: prev.dearness_allowance.toString(),
+        conveyance_allowance: prev.conveyance_allowance.toString(),
+        medical_allowance: prev.medical_allowance.toString(),
+        special_allowance: prev.special_allowance.toString(),
+        overtime: "0",
+        bonus: "0",
+        other_earnings: "0",
+        epf_employee: prev.epf_employee.toString(),
+        esi_employee: prev.esi_employee.toString(),
+        professional_tax: prev.professional_tax.toString(),
+        tds: prev.tds.toString(),
+        loan_recovery: prev.loan_recovery.toString(),
+        other_deductions: prev.other_deductions.toString(),
+        epf_employer: prev.epf_employer.toString(),
+        esi_employer: prev.esi_employer.toString(),
+        paid_days: prev.paid_days.toString(),
+        lop_days: "0",
+        notes: "",
+      });
+      toast.info("Salary details carried forward from previous month. Adjust as needed.");
+    }
+  };
+
   const openEdit = (rec: PayrollRecord) => {
     setEditingId(rec.id);
     setForm({
@@ -237,7 +278,7 @@ export default function Payroll() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Employee *</Label>
-                    <Select value={form.user_id} onValueChange={(val) => setForm({ ...form, user_id: val })} disabled={!!editingId}>
+                    <Select value={form.user_id} onValueChange={handleEmployeeSelect} disabled={!!editingId}>
                       <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select employee" /></SelectTrigger>
                       <SelectContent>
                         {(editingId ? employees : availableEmployees).map((e) => (

@@ -8,6 +8,7 @@ import { Users, Clock, AlertTriangle, CalendarCheck, UserCheck } from "lucide-re
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import CheckInOut from "./CheckInOut";
 
 export default function AdminDashboard() {
   const { role } = useAuth();
@@ -46,6 +47,8 @@ export default function AdminDashboard() {
         </h1>
         <p className="text-muted-foreground mt-1">Overview of today's attendance</p>
       </div>
+
+      <CheckInOut />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Employees" value={stats.total} icon={<Users className="w-5 h-5" />} />

@@ -30,6 +30,7 @@ export default function Employees() {
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [confirmStep, setConfirmStep] = useState(false);
 
   // New employee form
   const [form, setForm] = useState({
@@ -460,41 +461,59 @@ export default function Employees() {
           </CardContent>
         </Card>
 
-        <Dialog open={resetPasswordOpen} onOpenChange={(open) => { setResetPasswordOpen(open); if (!open) { setNewPassword(""); setResetTarget(null); setShowNewPassword(false); } }}>
+        <Dialog open={resetPasswordOpen} onOpenChange={(open) => { setResetPasswordOpen(open); if (!open) { setNewPassword(""); setResetTarget(null); setShowNewPassword(false); setConfirmStep(false); } }}>
           <DialogContent className="sm:max-w-sm">
             <DialogHeader>
-              <DialogTitle>Reset Password</DialogTitle>
+              <DialogTitle>{confirmStep ? "Confirm Reset" : "Reset Password"}</DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              Set a new password for <span className="font-medium text-foreground">{resetTarget?.name}</span>
-            </p>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <div className="relative">
-                  <Input
-                    id="new-password"
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    minLength={6}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+            {confirmStep ? (
+              <div className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to reset the password for <span className="font-medium text-foreground">{resetTarget?.name}</span>? This action cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setConfirmStep(false)} disabled={resetting}>
+                    Back
+                  </Button>
+                  <Button variant="destructive" className="flex-1" onClick={handleResetPassword} disabled={resetting}>
+                    {resetting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Confirm Reset
+                  </Button>
                 </div>
               </div>
-              <Button className="w-full" onClick={handleResetPassword} disabled={resetting || newPassword.length < 6}>
-                {resetting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Reset Password
-              </Button>
-            </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Set a new password for <span className="font-medium text-foreground">{resetTarget?.name}</span>
+                </p>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="new-password"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Min 6 characters"
+                        minLength={6}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button className="w-full" onClick={() => setConfirmStep(true)} disabled={newPassword.length < 6}>
+                    Continue
+                  </Button>
+                </div>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </div>

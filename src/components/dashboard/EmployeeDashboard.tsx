@@ -6,6 +6,7 @@ import AttendanceStatusBadge from "./AttendanceStatusBadge";
 import { Clock, CalendarCheck, AlertTriangle, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import CheckInOut from "./CheckInOut";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 
 export default function EmployeeDashboard() {
@@ -57,6 +58,8 @@ export default function EmployeeDashboard() {
         <h1 className="text-2xl font-bold text-foreground">My Dashboard</h1>
         <p className="text-muted-foreground mt-1">Your attendance for {format(new Date(), "MMMM yyyy")}</p>
       </div>
+
+      <CheckInOut />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Days Present" value={stats.present} icon={<CalendarCheck className="w-5 h-5" />} variant="success" />

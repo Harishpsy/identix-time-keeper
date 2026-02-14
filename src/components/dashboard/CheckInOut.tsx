@@ -79,6 +79,32 @@ export default function CheckInOut() {
   const firstIn = todayPunches.find((p) => p.punch_type === "login");
   const lastPunch = todayPunches.length > 0 ? todayPunches[todayPunches.length - 1] : null;
 
+  // Calculate total break duration
+  const totalBreakMs = (() => {
+    const starts = todayPunches.filter((p) => p.punch_type === "break-start");
+    const ends = todayPunches.filter((p) => p.punch_type === "break-end");
+    let total = 0;
+    for (let i = 0; i < starts.length; i++) {
+      const endTime = ends[i]
+        ? new Date(ends[i].timestamp).getTime()
+        : isOnBreak && i === starts.length - 1
+        ? currentTime.getTime()
+        : new Date(starts[i].timestamp).getTime();
+      total += endTime - new Date(starts[i].timestamp).getTime();
+    }
+    return total;
+  })();
+
+  const formatDuration = (ms: number) => {
+    const totalSecs = Math.floor(ms / 1000);
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    if (hrs > 0) return `${hrs}h ${mins}m`;
+    if (mins > 0) return `${mins}m ${secs}s`;
+    return `${secs}s`;
+  };
+
   return (
     <Card className="border-border/50">
       <CardContent className="pt-6">
@@ -104,6 +130,12 @@ export default function CheckInOut() {
             {lastPunch && todayPunches.length > 1 && (
               <div className="text-sm text-muted-foreground">
                 Last: <span className="font-medium text-foreground">{format(new Date(lastPunch.timestamp), "hh:mm a")}</span>
+              </div>
+            )}
+            {totalBreakMs > 0 && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Coffee className="w-3.5 h-3.5" />
+                Break: <span className="font-medium text-foreground">{formatDuration(totalBreakMs)}</span>
               </div>
             )}
 

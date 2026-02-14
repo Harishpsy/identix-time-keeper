@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, UserCheck, UserX, Loader2, Pencil, Check, X, FileText } from "lucide-react";
+import { Search, Plus, UserCheck, UserX, Loader2, Pencil, Check, X, FileText, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import jsPDF from "jspdf";
@@ -25,6 +25,11 @@ export default function Employees() {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ biometric_id: "", department_id: "", shift_id: "", date_of_joining: "" });
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   // New employee form
   const [form, setForm] = useState({
@@ -144,6 +149,35 @@ export default function Employees() {
       toast.error(err.message || "Failed to create employee");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetTarget || !newPassword.trim()) return;
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setResetting(true);
+    try {
+      const res = await supabase.functions.invoke("reset-password", {
+        body: { user_id: resetTarget.id, new_password: newPassword },
+      });
+      if (res.error) {
+        toast.error(res.error.message || "Failed to reset password");
+      } else if (res.data?.error) {
+        toast.error(res.data.error);
+      } else {
+        toast.success(`Password reset for ${resetTarget.name}`);
+        setResetPasswordOpen(false);
+        setNewPassword("");
+        setResetTarget(null);
+        setShowNewPassword(false);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reset password");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -407,6 +441,9 @@ export default function Employees() {
                                 <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
                                   <FileText className="w-4 h-4" />
                                 </Button>
+                                <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
+                                  <KeyRound className="w-4 h-4" />
+                                </Button>
                                 <Button variant="ghost" size="sm" onClick={() => toggleActive(emp.id, emp.is_active)} title={emp.is_active ? "Deactivate" : "Activate"}>
                                   {emp.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                                 </Button>
@@ -422,6 +459,44 @@ export default function Employees() {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={resetPasswordOpen} onOpenChange={(open) => { setResetPasswordOpen(open); if (!open) { setNewPassword(""); setResetTarget(null); setShowNewPassword(false); } }}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Set a new password for <span className="font-medium text-foreground">{resetTarget?.name}</span>
+            </p>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Min 6 characters"
+                    minLength={6}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button className="w-full" onClick={handleResetPassword} disabled={resetting || newPassword.length < 6}>
+                {resetting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Reset Password
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

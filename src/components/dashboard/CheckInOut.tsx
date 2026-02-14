@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LogIn, LogOut, Clock } from "lucide-react";
+import { LogIn, LogOut, Clock, Coffee } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -36,14 +36,19 @@ export default function CheckInOut() {
     setTodayPunches(data || []);
   };
 
-  const isCheckedIn = todayPunches.length > 0 && todayPunches.length % 2 !== 0;
+  const hasLoggedIn = todayPunches.some((p) => p.punch_type === "login");
+  const hasLoggedOut = todayPunches.some((p) => p.punch_type === "logout");
+  const isOnBreak = (() => {
+    const breakStarts = todayPunches.filter((p) => p.punch_type === "break-start").length;
+    const breakEnds = todayPunches.filter((p) => p.punch_type === "break-end").length;
+    return breakStarts > breakEnds;
+  })();
 
-  const handlePunch = async () => {
+  const handlePunch = async (punchType: string, label: string) => {
     if (!user) return;
     setLoading(true);
     try {
       const now = new Date().toISOString();
-      const punchType = isCheckedIn ? "check-out" : "check-in";
 
       const { error } = await supabase.from("attendance_raw").insert({
         user_id: user.id,
@@ -55,8 +60,8 @@ export default function CheckInOut() {
       if (error) throw error;
 
       toast({
-        title: punchType === "check-in" ? "Checked In ✓" : "Checked Out ✓",
-        description: `${format(new Date(now), "hh:mm:ss a")}`,
+        title: `${label} ✓`,
+        description: format(new Date(now), "hh:mm:ss a"),
       });
 
       await fetchTodayPunches();
@@ -71,7 +76,7 @@ export default function CheckInOut() {
     }
   };
 
-  const firstIn = todayPunches.length > 0 ? todayPunches[0] : null;
+  const firstIn = todayPunches.find((p) => p.punch_type === "login");
   const lastPunch = todayPunches.length > 0 ? todayPunches[todayPunches.length - 1] : null;
 
   return (
@@ -93,7 +98,7 @@ export default function CheckInOut() {
           <div className="flex items-center gap-4">
             {firstIn && (
               <div className="text-sm text-muted-foreground">
-                First In: <span className="font-medium text-foreground">{format(new Date(firstIn.timestamp), "hh:mm a")}</span>
+                Login: <span className="font-medium text-foreground">{format(new Date(firstIn.timestamp), "hh:mm a")}</span>
               </div>
             )}
             {lastPunch && todayPunches.length > 1 && (
@@ -102,25 +107,55 @@ export default function CheckInOut() {
               </div>
             )}
 
-            <Button
-              onClick={handlePunch}
-              disabled={loading}
-              size="lg"
-              variant={isCheckedIn ? "destructive" : "default"}
-              className="min-w-[140px]"
-            >
-              {isCheckedIn ? (
-                <>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Check Out
-                </>
-              ) : (
-                <>
+            <div className="flex items-center gap-2">
+              {!hasLoggedIn && (
+                <Button
+                  onClick={() => handlePunch("login", "Login Time")}
+                  disabled={loading}
+                  size="lg"
+                  className="min-w-[140px]"
+                >
                   <LogIn className="w-4 h-4 mr-2" />
-                  Check In
+                  Login Time
+                </Button>
+              )}
+
+              {hasLoggedIn && !hasLoggedOut && (
+                <>
+                  <Button
+                    onClick={() =>
+                      isOnBreak
+                        ? handlePunch("break-end", "Break Ended")
+                        : handlePunch("break-start", "Break Started")
+                    }
+                    disabled={loading}
+                    size="lg"
+                    variant="outline"
+                    className="min-w-[140px]"
+                  >
+                    <Coffee className="w-4 h-4 mr-2" />
+                    {isOnBreak ? "End Break" : "Take a Break"}
+                  </Button>
+
+                  <Button
+                    onClick={() => handlePunch("logout", "Logout Time")}
+                    disabled={loading || isOnBreak}
+                    size="lg"
+                    variant="destructive"
+                    className="min-w-[140px]"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout Time
+                  </Button>
                 </>
               )}
-            </Button>
+
+              {hasLoggedOut && (
+                <div className="text-sm font-medium text-muted-foreground px-4 py-2 bg-muted rounded-md">
+                  Day completed ✓
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

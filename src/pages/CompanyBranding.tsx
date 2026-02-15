@@ -14,6 +14,7 @@ export default function CompanyBranding() {
   const [companyAddress, setCompanyAddress] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [brandColor, setBrandColor] = useState("#2980B9");
+  const [textColor, setTextColor] = useState("#FFFFFF");
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -34,6 +35,7 @@ export default function CompanyBranding() {
       setCompanyAddress(data.company_address || "");
       setLogoUrl(data.logo_url || "");
       setBrandColor(data.brand_color || "#2980B9");
+      setTextColor(data.text_color || "#FFFFFF");
     }
   };
 
@@ -88,6 +90,7 @@ export default function CompanyBranding() {
       company_address: companyAddress.trim(),
       logo_url: logoUrl,
       brand_color: brandColor,
+      text_color: textColor,
     };
 
     if (settingsId) {
@@ -228,6 +231,30 @@ export default function CompanyBranding() {
                   />
                 </div>
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1">
+                  <Palette className="w-3 h-3" /> Text Color
+                </Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                  />
+                  <Input
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    placeholder="#FFFFFF"
+                    className="w-32 font-mono text-sm"
+                    maxLength={7}
+                  />
+                  <div
+                    className="h-10 flex-1 rounded-md border"
+                    style={{ backgroundColor: textColor }}
+                  />
+                </div>
+              </div>
               <Button
                 onClick={handleSave}
                 disabled={saving || !companyName.trim()}
@@ -246,7 +273,7 @@ export default function CompanyBranding() {
             <CardTitle className="text-base">Payslip Header Preview</CardTitle>
           </CardHeader>
           <CardContent>
-            <div style={{ backgroundColor: brandColor }} className="text-white rounded-lg p-6 flex items-center gap-4">
+            <div style={{ backgroundColor: brandColor, color: textColor }} className="rounded-lg p-6 flex items-center gap-4">
               {logoUrl && (
                 <img
                   src={logoUrl}

@@ -125,7 +125,7 @@ export default function CheckInOut() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="w-5 h-5" />
-              <span className="text-2xl font-mono font-semibold text-foreground whitespace-nowrap">
+              <span className="text-2xl font-mono font-semibold text-foreground whitespace-nowrap tabular-nums">
                 {format(currentTime, "hh:mm:ss a")}
               </span>
             </div>
@@ -148,12 +148,12 @@ export default function CheckInOut() {
               )}
               <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                 <Coffee className="w-3.5 h-3.5" />
-                Break: <span className="font-medium text-foreground">{totalBreakMs > 0 ? formatDuration(totalBreakMs) : "0s"}</span>
+                Break: <span className="font-medium text-foreground tabular-nums">{totalBreakMs > 0 ? formatDuration(totalBreakMs) : "0s"}</span>
               </div>
               {firstIn && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                   <Clock className="w-3.5 h-3.5" />
-                  Working: <span className="font-medium text-foreground">
+                  Working: <span className="font-medium text-foreground tabular-nums">
                     {formatDuration(
                       (hasLoggedOut && lastPunch
                         ? new Date(lastPunch.timestamp).getTime()

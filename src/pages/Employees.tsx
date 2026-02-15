@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, UserCheck, UserX, Loader2, Pencil, Check, X, FileText, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Search, Plus, Loader2, Pencil, Check, X, FileText, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import jsPDF from "jspdf";
@@ -419,9 +420,15 @@ export default function Employees() {
                           </Select>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={emp.is_active ? "default" : "secondary"} className="text-xs">
-                            {emp.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={emp.is_active}
+                              onCheckedChange={() => toggleActive(emp.id, emp.is_active)}
+                            />
+                            <span className={`text-xs font-medium ${emp.is_active ? "text-green-600" : "text-muted-foreground"}`}>
+                              {emp.is_active ? "Active" : "Inactive"}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
@@ -444,9 +451,6 @@ export default function Employees() {
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
                                   <KeyRound className="w-4 h-4" />
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={() => toggleActive(emp.id, emp.is_active)} title={emp.is_active ? "Deactivate" : "Activate"}>
-                                  {emp.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                                 </Button>
                               </>
                             )}

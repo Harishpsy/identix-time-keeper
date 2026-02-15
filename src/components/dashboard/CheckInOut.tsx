@@ -3,15 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LogIn, LogOut, Clock, Coffee } from "lucide-react";
+import { LogIn, LogOut, Clock, Coffee, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 export default function CheckInOut() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [todayPunches, setTodayPunches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [shiftConfig, setShiftConfig] = useState<{ total_working_hours: number; max_break_minutes: number } | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 50);
@@ -34,6 +35,19 @@ export default function CheckInOut() {
     if (!user) return;
     fetchTodayPunches();
   }, [user]);
+
+  // Fetch shift config for the user
+  useEffect(() => {
+    if (!profile?.shift_id) return;
+    supabase
+      .from("shifts")
+      .select("total_working_hours, max_break_minutes")
+      .eq("id", profile.shift_id)
+      .single()
+      .then(({ data }) => {
+        if (data) setShiftConfig({ total_working_hours: data.total_working_hours as number ?? 9, max_break_minutes: data.max_break_minutes ?? 60 });
+      });
+  }, [profile?.shift_id]);
 
   const fetchTodayPunches = async () => {
     if (!user) return;
@@ -107,6 +121,10 @@ export default function CheckInOut() {
     return total;
   })();
 
+  const maxBreakMs = (shiftConfig?.max_break_minutes ?? 60) * 60 * 1000;
+  const breakExceeded = totalBreakMs > maxBreakMs;
+  const excessBreakMs = breakExceeded ? totalBreakMs - maxBreakMs : 0;
+
   const formatDuration = (ms: number) => {
     const totalSecs = Math.floor(ms / 1000);
     const hrs = Math.floor(totalSecs / 3600);
@@ -166,6 +184,17 @@ export default function CheckInOut() {
             </div>
           )}
         </div>
+
+        {/* Break exceeded warning */}
+        {breakExceeded && hasLoggedIn && !hasLoggedOut && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-destructive/10 border border-destructive/30 text-destructive text-sm font-medium">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span>
+              Break time exceeded by <span className="font-bold tabular-nums">{formatDuration(excessBreakMs)}</span>
+              {isOnBreak && " — Please end your break now!"}
+            </span>
+          </div>
+        )}
 
         {/* Row 2: Action Buttons */}
         <div className="flex items-center justify-end gap-2">

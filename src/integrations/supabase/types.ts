@@ -412,24 +412,30 @@ export type Database = {
           end_time: string
           grace_period_mins: number
           id: string
+          max_break_minutes: number
           name: string
           start_time: string
+          total_working_hours: number
         }
         Insert: {
           created_at?: string
           end_time: string
           grace_period_mins?: number
           id?: string
+          max_break_minutes?: number
           name: string
           start_time: string
+          total_working_hours?: number
         }
         Update: {
           created_at?: string
           end_time?: string
           grace_period_mins?: number
           id?: string
+          max_break_minutes?: number
           name?: string
           start_time?: string
+          total_working_hours?: number
         }
         Relationships: []
       }

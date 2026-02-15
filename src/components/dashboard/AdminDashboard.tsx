@@ -243,7 +243,7 @@ export default function AdminDashboard() {
         <StatCard title="Total Employees" value={stats.total} icon={<Users className="w-5 h-5" />} />
         <StatCard title="Present Today" value={stats.present} icon={<UserCheck className="w-5 h-5" />} variant="success" />
         <StatCard title="Late Today" value={stats.late} icon={<Clock className="w-5 h-5" />} variant="warning" />
-        <StatCard title="Absent Today" value={stats.absent} icon={<AlertTriangle className="w-5 h-5" />} variant="destructive" />
+        <StatCard title="Leave Today" value={stats.absent} icon={<AlertTriangle className="w-5 h-5" />} variant="destructive" />
       </div>
 
       <Card className="border-border/50">

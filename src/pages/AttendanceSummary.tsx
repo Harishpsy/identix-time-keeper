@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { Search, Download, FileText } from "lucide-react";
+import { Search, Download, FileText, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import EmployeeDailyDetails from "@/components/attendance/EmployeeDailyDetails";
@@ -214,7 +214,7 @@ export default function AttendanceSummary() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                      <TableCell colSpan={8} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell>
                     </TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow>

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { RotateCcw, Search, ShieldAlert } from "lucide-react";
+import { RotateCcw, Search, ShieldAlert, Loader2 } from "lucide-react";
 
 interface EmployeePunchData {
   userId: string;
@@ -173,7 +173,7 @@ export default function AttendanceReset() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
+              <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
             ) : loggedOutEmployees.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">No logged-out employees to reset</p>
             ) : (

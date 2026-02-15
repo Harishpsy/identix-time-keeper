@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
   { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["admin"] },
   { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin"] },
   { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
-  { label: "Reports", href: "/reports", icon: <FileText className="w-5 h-5" />, roles: ["admin", "subadmin"] },
+  
   { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin"] },
   { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["employee", "subadmin"] },
   { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin"] },

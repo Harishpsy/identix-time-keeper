@@ -138,6 +138,19 @@ export default function CheckInOut() {
                 Break: <span className="font-medium text-foreground">{formatDuration(totalBreakMs)}</span>
               </div>
             )}
+            {hasLoggedIn && firstIn && (
+              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                <Clock className="w-3.5 h-3.5" />
+                Working: <span className="font-medium text-foreground">
+                  {formatDuration(
+                    (hasLoggedOut && lastPunch
+                      ? new Date(lastPunch.timestamp).getTime()
+                      : currentTime.getTime()
+                    ) - new Date(firstIn.timestamp).getTime() - totalBreakMs
+                  )}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-center gap-2">
               {!hasLoggedIn && (

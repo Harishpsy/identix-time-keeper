@@ -111,31 +111,33 @@ export default function MyPayslips() {
     for (let i = 0; i < maxRows; i++) {
       tableBody.push([
         (earnings[i]?.[0] as string) || "",
-        earnings[i] ? `₹${Number(earnings[i][1]).toFixed(2)}` : "",
+        earnings[i] ? `Rs.${Number(earnings[i][1]).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "",
         (deductions[i]?.[0] as string) || "",
-        deductions[i] ? `₹${Number(deductions[i][1]).toFixed(2)}` : "",
+        deductions[i] ? `Rs.${Number(deductions[i][1]).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "",
       ]);
     }
-    // Totals row
     tableBody.push([
       "Gross Earnings",
-      `₹${Number(rec.gross_earnings).toFixed(2)}`,
+      `Rs.${Number(rec.gross_earnings).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
       "Total Deductions",
-      `₹${Number(rec.total_deductions).toFixed(2)}`,
+      `Rs.${Number(rec.total_deductions).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
     ]);
 
     autoTable(doc, {
       startY: 60,
-      head: [["Earnings", "Amount (₹)", "Deductions", "Amount (₹)"]],
+      head: [["Earnings", "Amount (Rs.)", "Deductions", "Amount (Rs.)"]],
       body: tableBody,
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [41, 128, 185], fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 4, font: "helvetica" },
+      headStyles: { fillColor: [41, 128, 185], fontStyle: "bold", halign: "left" },
       columnStyles: {
-        1: { halign: "right" },
-        3: { halign: "right" },
+        0: { cellWidth: 55 },
+        1: { cellWidth: 35, halign: "right" },
+        2: { cellWidth: 55 },
+        3: { cellWidth: 35, halign: "right" },
       },
+      tableWidth: pw - 28,
+      margin: { left: 14, right: 14 },
       didParseCell: (data) => {
-        // Bold the totals row
         if (data.row.index === tableBody.length - 1) {
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.fillColor = [235, 245, 255];
@@ -152,7 +154,7 @@ export default function MyPayslips() {
     doc.setFontSize(12);
     doc.text("Net Salary (Take Home)", 20, finalY + 20);
     doc.setFontSize(16);
-    doc.text(`₹${Number(rec.net_salary).toFixed(2)}`, pw - 20, finalY + 21, { align: "right" });
+    doc.text(`Rs.${Number(rec.net_salary).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, pw - 20, finalY + 21, { align: "right" });
 
     // Footer
     doc.setTextColor(150, 150, 150);

@@ -119,10 +119,10 @@ export default function CheckInOut() {
 
   return (
     <Card className="border-border/50">
-      <CardContent className="pt-6">
-        <div className="flex flex-col lg:flex-row items-center gap-4">
-          {/* Clock & Date */}
-          <div className="flex items-center gap-4 shrink-0">
+      <CardContent className="pt-6 space-y-4">
+        {/* Row 1: Clock, Date, Stats */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="w-5 h-5" />
               <span className="text-2xl font-mono font-semibold text-foreground whitespace-nowrap">
@@ -134,9 +134,8 @@ export default function CheckInOut() {
             </div>
           </div>
 
-          {/* Stats */}
           {hasLoggedIn && (
-            <div className="flex items-center gap-4 flex-wrap justify-center lg:justify-start">
+            <div className="flex items-center gap-4 flex-wrap">
               {firstIn && (
                 <div className="text-sm text-muted-foreground whitespace-nowrap">
                   Login: <span className="font-medium text-foreground">{format(new Date(firstIn.timestamp), "hh:mm a")}</span>
@@ -166,57 +165,57 @@ export default function CheckInOut() {
               )}
             </div>
           )}
+        </div>
 
-          {/* Actions — pushed to right */}
-          <div className="flex items-center gap-2 shrink-0 lg:ml-auto">
-            {!hasLoggedIn && (
+        {/* Row 2: Action Buttons */}
+        <div className="flex items-center justify-end gap-2">
+          {!hasLoggedIn && (
+            <Button
+              onClick={() => handlePunch("login", "Login Time")}
+              disabled={loading}
+              size="lg"
+              className="min-w-[140px]"
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Login Time
+            </Button>
+          )}
+
+          {hasLoggedIn && !hasLoggedOut && (
+            <>
               <Button
-                onClick={() => handlePunch("login", "Login Time")}
+                onClick={() =>
+                  isOnBreak
+                    ? handlePunch("break-end", "Break Ended")
+                    : handlePunch("break-start", "Break Started")
+                }
                 disabled={loading}
                 size="lg"
+                variant="outline"
                 className="min-w-[140px]"
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                Login Time
+                <Coffee className="w-4 h-4 mr-2" />
+                {isOnBreak ? "End Break" : "Take a Break"}
               </Button>
-            )}
 
-            {hasLoggedIn && !hasLoggedOut && (
-              <>
-                <Button
-                  onClick={() =>
-                    isOnBreak
-                      ? handlePunch("break-end", "Break Ended")
-                      : handlePunch("break-start", "Break Started")
-                  }
-                  disabled={loading}
-                  size="lg"
-                  variant="outline"
-                  className="min-w-[140px]"
-                >
-                  <Coffee className="w-4 h-4 mr-2" />
-                  {isOnBreak ? "End Break" : "Take a Break"}
-                </Button>
+              <Button
+                onClick={() => handlePunch("logout", "Logout Time")}
+                disabled={loading || isOnBreak}
+                size="lg"
+                variant="destructive"
+                className="min-w-[140px]"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout Time
+              </Button>
+            </>
+          )}
 
-                <Button
-                  onClick={() => handlePunch("logout", "Logout Time")}
-                  disabled={loading || isOnBreak}
-                  size="lg"
-                  variant="destructive"
-                  className="min-w-[140px]"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout Time
-                </Button>
-              </>
-            )}
-
-            {hasLoggedOut && (
-              <div className="text-sm font-medium text-muted-foreground px-4 py-2 bg-muted rounded-md">
-                Day completed ✓
-              </div>
-            )}
-          </div>
+          {hasLoggedOut && (
+            <div className="text-sm font-medium text-muted-foreground px-4 py-2 bg-muted rounded-md">
+              Day completed ✓
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

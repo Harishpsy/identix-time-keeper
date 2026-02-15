@@ -126,7 +126,39 @@ export default function AdminDashboard() {
 
     setStats({ total: totalUsers || 0, present, late, absent });
     setTodayRecords(records);
-    setMySummaries(myResult.data || []);
+
+    // Build mySummaries: if today has no daily_summary but user has raw punches, add a virtual entry
+    let finalSummaries = myResult.data || [];
+    const hasTodaySummary = finalSummaries.some((s: any) => s.date === today);
+    if (!hasTodaySummary && user && rawPunches) {
+      const myPunches = rawPunches.filter((p: any) => p.user_id === user.id);
+      const myLogins = myPunches.filter((p: any) => p.punch_type === "login");
+      const myLogouts = myPunches.filter((p: any) => p.punch_type === "logout");
+      if (myLogins.length > 0) {
+        const firstIn = myLogins[0].timestamp;
+        const lastOut = myLogouts.length > 0 ? myLogouts[myLogouts.length - 1].timestamp : null;
+        let duration = "—";
+        if (lastOut) {
+          const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+          const h = Math.floor(ms / 3600000);
+          const m = Math.floor((ms % 3600000) / 60000);
+          duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+        }
+        finalSummaries = [
+          {
+            id: "today-virtual",
+            date: today,
+            first_in: firstIn,
+            last_out: lastOut,
+            total_duration: duration,
+            status: "present",
+            late_minutes: 0,
+          },
+          ...finalSummaries,
+        ];
+      }
+    }
+    setMySummaries(finalSummaries);
   }, [user]);
 
   useEffect(() => {

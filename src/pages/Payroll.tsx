@@ -131,6 +131,12 @@ export default function Payroll() {
     const companyName = brandingData?.company_name || "PAYSLIP";
     const companyAddress = brandingData?.company_address || "";
     const logoUrl = brandingData?.logo_url || "";
+    const brandHex = brandingData?.brand_color || "#2980B9";
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const h = hex.replace("#", "");
+      return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+    };
+    const brandRgb = hexToRgb(brandHex);
 
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
@@ -158,7 +164,7 @@ export default function Payroll() {
 
     // Header
     const headerHeight = companyAddress ? 42 : 35;
-    doc.setFillColor(41, 128, 185);
+    doc.setFillColor(...brandRgb);
     doc.rect(0, 0, pw, headerHeight, "F");
 
     if (logoDataUrl) {
@@ -228,7 +234,7 @@ export default function Payroll() {
       head: [["Earnings", "Amount (Rs.)", "Deductions", "Amount (Rs.)"]],
       body: tableBody,
       styles: { fontSize: 9, cellPadding: 4, font: "helvetica" },
-      headStyles: { fillColor: [41, 128, 185], fontStyle: "bold", halign: "left" },
+      headStyles: { fillColor: brandRgb, fontStyle: "bold", halign: "left" },
       columnStyles: {
         0: { cellWidth: 55 },
         1: { cellWidth: 35, halign: "right" },
@@ -247,7 +253,7 @@ export default function Payroll() {
 
     const finalY = (doc as any).lastAutoTable?.finalY || 160;
 
-    doc.setFillColor(41, 128, 185);
+    doc.setFillColor(...brandRgb);
     doc.roundedRect(14, finalY + 8, pw - 28, 20, 3, 3, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(12);

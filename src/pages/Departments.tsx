@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -19,8 +19,10 @@ export default function Departments() {
   const [editing, setEditing] = useState<any>(null);
   const [name, setName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchDepartments = async () => {
+    setLoading(true);
     const [{ data: deps }, { data: profiles }] = await Promise.all([
       supabase.from("departments").select("*").order("name"),
       supabase.from("profiles").select("department_id").not("department_id", "is", null),
@@ -29,6 +31,7 @@ export default function Departments() {
     const counts: Record<string, number> = {};
     profiles?.forEach((p: any) => { counts[p.department_id] = (counts[p.department_id] || 0) + 1; });
     setEmpCounts(counts);
+    setLoading(false);
   };
 
   useEffect(() => { fetchDepartments(); }, []);
@@ -89,7 +92,9 @@ export default function Departments() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {departments.length === 0 ? (
+                {loading ? (
+                  <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                ) : departments.length === 0 ? (
                   <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No departments configured</TableCell></TableRow>
                 ) : departments.map((d) => (
                   <TableRow key={d.id}>

@@ -91,8 +91,10 @@ export default function Payroll() {
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [form, setForm] = useState({ ...defaultForm });
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
+    setLoading(true);
     const monthDate = `${selectedMonth}-01`;
     const [{ data: payrollData }, { data: empData }] = await Promise.all([
       supabase.from("payroll").select("*").eq("month", monthDate).order("created_at", { ascending: false }),
@@ -100,6 +102,7 @@ export default function Payroll() {
     ]);
     setRecords((payrollData as unknown as PayrollRecord[]) || []);
     setEmployees(empData || []);
+    setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [selectedMonth]);
@@ -597,7 +600,9 @@ export default function Payroll() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.length === 0 ? (
+                  {loading ? (
+                    <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                  ) : filtered.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         No payroll records for {format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy")}

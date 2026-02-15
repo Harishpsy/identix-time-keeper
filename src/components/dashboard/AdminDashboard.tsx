@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { getLocalDayBoundsUTC, formatLocalDate, parseLocalDate } from "@/lib/timezone";
 import CheckInOut from "./CheckInOut";
 
 interface TodayRecord {
@@ -52,10 +53,11 @@ export default function AdminDashboard() {
 
   const fetchData = useCallback(async () => {
 // ... keep existing code (fetchData body)
-    const today = format(new Date(), "yyyy-MM-dd");
     const now = new Date();
-    const start = format(startOfMonth(now), "yyyy-MM-dd");
-    const end = format(endOfMonth(now), "yyyy-MM-dd");
+    const today = formatLocalDate(now);
+    const start = formatLocalDate(startOfMonth(now));
+    const end = formatLocalDate(endOfMonth(now));
+    const { start: dayStart, end: dayEnd } = getLocalDayBoundsUTC(now);
 
     const [{ count: totalUsers }, { data: activeProfiles }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
@@ -68,8 +70,8 @@ export default function AdminDashboard() {
       supabase
         .from("attendance_raw")
         .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-        .gte("timestamp", `${today}T00:00:00`)
-        .lte("timestamp", `${today}T23:59:59`)
+        .gte("timestamp", dayStart)
+        .lte("timestamp", dayEnd)
         .order("timestamp", { ascending: true }),
       user
         ? supabase
@@ -285,7 +287,7 @@ export default function AdminDashboard() {
                   <TableBody>
                     {paginatedHistory.map((s) => (
                       <TableRow key={s.id}>
-                        <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell className="font-medium">{format(parseLocalDate(s.date), "dd MMM yyyy")}</TableCell>
                         <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                         <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
                         <TableCell>{s.total_duration || "—"}</TableCell>

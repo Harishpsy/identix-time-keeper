@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getLocalDayBoundsUTC, formatLocalDate } from "@/lib/timezone";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import AttendanceStatusBadge from "@/components/dashboard/AttendanceStatusBadge";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, CalendarCheck, Clock, AlertTriangle, Download, FileText, Loader2 } from "lucide-react";
-import { format, endOfMonth } from "date-fns";
+import { format, endOfMonth, isToday, parseISO, startOfDay } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -39,6 +40,7 @@ export default function Reports() {
       const [year, mon] = month.split("-").map(Number);
       const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
+      const todayStr = formatLocalDate(new Date());
 
       let query = supabase
         .from("daily_summaries")
@@ -51,9 +53,69 @@ export default function Reports() {
         query = query.eq("user_id", selectedEmployee);
       }
 
-      const { data } = await query;
+      const { data: summaryData } = await query;
+      let all = summaryData || [];
 
-      const all = data || [];
+      // If today falls within the selected month, synthesize records from attendance_raw
+      // for users who have punched in today but don't have a daily_summary yet
+      if (todayStr >= start && todayStr <= end) {
+        const { start: dayStart, end: dayEnd } = getLocalDayBoundsUTC(new Date());
+        
+        let rawQuery = supabase
+          .from("attendance_raw")
+          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+          .gte("timestamp", dayStart)
+          .lte("timestamp", dayEnd)
+          .order("timestamp", { ascending: true });
+
+        if (selectedEmployee !== "all") {
+          rawQuery = rawQuery.eq("user_id", selectedEmployee);
+        }
+
+        const { data: rawData } = await rawQuery;
+
+        if (rawData && rawData.length > 0) {
+          // Group raw punches by user_id
+          const userPunches: Record<string, any[]> = {};
+          for (const punch of rawData) {
+            if (!userPunches[punch.user_id]) {
+              userPunches[punch.user_id] = [];
+            }
+            userPunches[punch.user_id].push(punch);
+          }
+
+          // Users who already have a daily_summary for today
+          const existingTodayUsers = new Set(
+            all.filter((s) => s.date === todayStr).map((s) => s.user_id)
+          );
+
+          // Create virtual summaries for users with raw punches but no daily_summary
+          for (const [userId, punches] of Object.entries(userPunches)) {
+            if (existingTodayUsers.has(userId)) continue;
+
+            const loginPunch = punches.find((p) => p.punch_type === "login");
+            const logoutPunch = [...punches].reverse().find((p) => p.punch_type === "logout");
+
+            if (loginPunch) {
+              const virtualSummary = {
+                id: `virtual-${userId}-${todayStr}`,
+                user_id: userId,
+                date: todayStr,
+                first_in: loginPunch.timestamp,
+                last_out: logoutPunch?.timestamp || null,
+                total_duration: null,
+                late_minutes: 0,
+                status: "present" as const,
+                is_manual_override: false,
+                created_at: new Date().toISOString(),
+                profiles: loginPunch.profiles,
+              };
+              all = [virtualSummary, ...all];
+            }
+          }
+        }
+      }
+
       setSummaries(all);
       setStats({
         totalDays: all.length,

@@ -177,6 +177,45 @@ export default function AdminDashboard() {
 
       <CheckInOut />
 
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">My Attendance History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {mySummaries.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No attendance records this month</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>First In</TableHead>
+                      <TableHead>Last Out</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedHistory.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{s.total_duration || "—"}</TableCell>
+                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls page={historyPage} totalPages={historyTotalPages} onPageChange={setHistoryPage} />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Employees" value={stats.total} icon={<Users className="w-5 h-5" />} />
         <StatCard title="Present Today" value={stats.present} icon={<UserCheck className="w-5 h-5" />} variant="success" />
@@ -222,45 +261,6 @@ export default function AdminDashboard() {
       </Card>
 
       <LiveAttendanceFeed />
-
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">My Attendance History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {mySummaries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No attendance records this month</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>First In</TableHead>
-                      <TableHead>Last Out</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedHistory.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
-                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.total_duration || "—"}</TableCell>
-                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <PaginationControls page={historyPage} totalPages={historyTotalPages} onPageChange={setHistoryPage} />
-            </>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

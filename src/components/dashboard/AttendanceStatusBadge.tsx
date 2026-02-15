@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 const statusConfig: Record<string, { label: string; className: string }> = {
   present: { label: "Present", className: "status-present" },
   late: { label: "Late", className: "status-late" },
-  absent: { label: "Absent", className: "status-absent" },
+  absent: { label: "Leave", className: "status-on-leave" },
   half_day: { label: "Half Day", className: "status-late" },
   on_leave: { label: "On Leave", className: "status-on-leave" },
 };

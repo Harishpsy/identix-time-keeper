@@ -408,7 +408,7 @@ export default function Payroll() {
           special_allowance: prev.special_allowance,
           overtime: 0,
           bonus: 0,
-          other_earnings: 0,
+          other_earnings: prev.other_earnings,
           epf_employee: prev.epf_employee,
           esi_employee: prev.esi_employee,
           professional_tax: prev.professional_tax,

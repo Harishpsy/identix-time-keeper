@@ -57,8 +57,9 @@ export default function AdminDashboard() {
     const start = format(startOfMonth(now), "yyyy-MM-dd");
     const end = format(endOfMonth(now), "yyyy-MM-dd");
 
-    const [{ count: totalUsers }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
+    const [{ count: totalUsers }, { data: activeProfiles }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("profiles").select("id").eq("is_active", true),
       supabase
         .from("daily_summaries")
         .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
@@ -81,6 +82,7 @@ export default function AdminDashboard() {
         : Promise.resolve({ data: [] as any[] }),
     ]);
 
+    const activeUserIds = new Set((activeProfiles || []).map((p: any) => p.id));
     let records: TodayRecord[] = [];
 
     if (summaries && summaries.length > 0) {
@@ -102,7 +104,9 @@ export default function AdminDashboard() {
         byUser.get(p.user_id)!.punches.push(p);
       }
 
-      records = Array.from(byUser.entries()).map(([userId, { punches, profile }]) => {
+      records = Array.from(byUser.entries())
+        .filter(([_, { profile }]) => profile) // only users with profiles
+        .map(([userId, { punches, profile }]) => {
         const logins = punches.filter((p: any) => p.punch_type === "login");
         const logouts = punches.filter((p: any) => p.punch_type === "logout");
         const firstIn = logins.length > 0 ? logins[0].timestamp : null;
@@ -120,9 +124,12 @@ export default function AdminDashboard() {
       });
     }
 
+    // Filter to only active users
+    records = records.filter((r) => activeUserIds.has(r.userId));
+
     const present = records.filter((r) => r.status === "present" || r.status === "late").length;
     const late = records.filter((r) => r.status === "late").length;
-    const absent = (totalUsers || 0) - present;
+    const absent = Math.max(0, (totalUsers || 0) - present);
 
     setStats({ total: totalUsers || 0, present, late, absent });
     setTodayRecords(records);

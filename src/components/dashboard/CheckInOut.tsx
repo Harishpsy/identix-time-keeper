@@ -120,99 +120,102 @@ export default function CheckInOut() {
   return (
     <Card className="border-border/50">
       <CardContent className="pt-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col lg:flex-row items-center gap-4">
+          {/* Clock & Date */}
+          <div className="flex items-center gap-4 shrink-0">
             <div className="flex items-center gap-2 text-muted-foreground">
               <Clock className="w-5 h-5" />
-              <span className="text-2xl font-mono font-semibold text-foreground">
+              <span className="text-2xl font-mono font-semibold text-foreground whitespace-nowrap">
                 {format(currentTime, "hh:mm:ss a")}
               </span>
             </div>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground whitespace-nowrap">
               {format(currentTime, "EEEE, dd MMM yyyy")}
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {firstIn && (
-              <div className="text-sm text-muted-foreground">
-                Login: <span className="font-medium text-foreground">{format(new Date(firstIn.timestamp), "hh:mm a")}</span>
-              </div>
-            )}
-            {lastPunch && todayPunches.length > 1 && (
-              <div className="text-sm text-muted-foreground">
-                Last: <span className="font-medium text-foreground">{format(new Date(lastPunch.timestamp), "hh:mm a")}</span>
-              </div>
-            )}
-            {hasLoggedIn && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          {/* Stats */}
+          {hasLoggedIn && (
+            <div className="flex items-center gap-4 flex-wrap justify-center lg:justify-start">
+              {firstIn && (
+                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                  Login: <span className="font-medium text-foreground">{format(new Date(firstIn.timestamp), "hh:mm a")}</span>
+                </div>
+              )}
+              {lastPunch && todayPunches.length > 1 && (
+                <div className="text-sm text-muted-foreground whitespace-nowrap">
+                  Last: <span className="font-medium text-foreground">{format(new Date(lastPunch.timestamp), "hh:mm a")}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
                 <Coffee className="w-3.5 h-3.5" />
                 Break: <span className="font-medium text-foreground">{totalBreakMs > 0 ? formatDuration(totalBreakMs) : "0s"}</span>
               </div>
-            )}
-            {hasLoggedIn && firstIn && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Clock className="w-3.5 h-3.5" />
-                Working: <span className="font-medium text-foreground">
-                  {formatDuration(
-                    (hasLoggedOut && lastPunch
-                      ? new Date(lastPunch.timestamp).getTime()
-                      : currentTime.getTime()
-                    ) - new Date(firstIn.timestamp).getTime() - totalBreakMs
-                  )}
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              {!hasLoggedIn && (
-                <Button
-                  onClick={() => handlePunch("login", "Login Time")}
-                  disabled={loading}
-                  size="lg"
-                  className="min-w-[140px]"
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Login Time
-                </Button>
-              )}
-
-              {hasLoggedIn && !hasLoggedOut && (
-                <>
-                  <Button
-                    onClick={() =>
-                      isOnBreak
-                        ? handlePunch("break-end", "Break Ended")
-                        : handlePunch("break-start", "Break Started")
-                    }
-                    disabled={loading}
-                    size="lg"
-                    variant="outline"
-                    className="min-w-[140px]"
-                  >
-                    <Coffee className="w-4 h-4 mr-2" />
-                    {isOnBreak ? "End Break" : "Take a Break"}
-                  </Button>
-
-                  <Button
-                    onClick={() => handlePunch("logout", "Logout Time")}
-                    disabled={loading || isOnBreak}
-                    size="lg"
-                    variant="destructive"
-                    className="min-w-[140px]"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout Time
-                  </Button>
-                </>
-              )}
-
-              {hasLoggedOut && (
-                <div className="text-sm font-medium text-muted-foreground px-4 py-2 bg-muted rounded-md">
-                  Day completed ✓
+              {firstIn && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
+                  <Clock className="w-3.5 h-3.5" />
+                  Working: <span className="font-medium text-foreground">
+                    {formatDuration(
+                      (hasLoggedOut && lastPunch
+                        ? new Date(lastPunch.timestamp).getTime()
+                        : currentTime.getTime()
+                      ) - new Date(firstIn.timestamp).getTime() - totalBreakMs
+                    )}
+                  </span>
                 </div>
               )}
             </div>
+          )}
+
+          {/* Actions — pushed to right */}
+          <div className="flex items-center gap-2 shrink-0 lg:ml-auto">
+            {!hasLoggedIn && (
+              <Button
+                onClick={() => handlePunch("login", "Login Time")}
+                disabled={loading}
+                size="lg"
+                className="min-w-[140px]"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Login Time
+              </Button>
+            )}
+
+            {hasLoggedIn && !hasLoggedOut && (
+              <>
+                <Button
+                  onClick={() =>
+                    isOnBreak
+                      ? handlePunch("break-end", "Break Ended")
+                      : handlePunch("break-start", "Break Started")
+                  }
+                  disabled={loading}
+                  size="lg"
+                  variant="outline"
+                  className="min-w-[140px]"
+                >
+                  <Coffee className="w-4 h-4 mr-2" />
+                  {isOnBreak ? "End Break" : "Take a Break"}
+                </Button>
+
+                <Button
+                  onClick={() => handlePunch("logout", "Logout Time")}
+                  disabled={loading || isOnBreak}
+                  size="lg"
+                  variant="destructive"
+                  className="min-w-[140px]"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout Time
+                </Button>
+              </>
+            )}
+
+            {hasLoggedOut && (
+              <div className="text-sm font-medium text-muted-foreground px-4 py-2 bg-muted rounded-md">
+                Day completed ✓
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

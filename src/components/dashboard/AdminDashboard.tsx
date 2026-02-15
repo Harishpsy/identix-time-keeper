@@ -1,12 +1,13 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import StatCard from "./StatCard";
 import LiveAttendanceFeed from "./LiveAttendanceFeed";
 import AttendanceStatusBadge from "./AttendanceStatusBadge";
-import { Users, Clock, AlertTriangle, UserCheck } from "lucide-react";
+import { Users, Clock, AlertTriangle, UserCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import CheckInOut from "./CheckInOut";
 
@@ -20,13 +21,37 @@ interface TodayRecord {
   lateMinutes: number;
 }
 
+const PAGE_SIZE = 10;
+
+function PaginationControls({ page, totalPages, onPageChange }: { page: number; totalPages: number; onPageChange: (p: number) => void }) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between pt-4">
+      <p className="text-sm text-muted-foreground">
+        Page {page} of {totalPages}
+      </p>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+        </Button>
+        <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}>
+          Next <ChevronRight className="w-4 h-4 ml-1" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, role } = useAuth();
   const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [mySummaries, setMySummaries] = useState<any[]>([]);
+  const [todayPage, setTodayPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const fetchData = useCallback(async () => {
+// ... keep existing code (fetchData body)
     const today = format(new Date(), "yyyy-MM-dd");
     const now = new Date();
     const start = format(startOfMonth(now), "yyyy-MM-dd");
@@ -108,7 +133,6 @@ export default function AdminDashboard() {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh via Realtime subscription on attendance_raw
   useEffect(() => {
     const channel = supabase
       .channel("admin-dashboard-attendance")
@@ -125,6 +149,22 @@ export default function AdminDashboard() {
       supabase.removeChannel(channel);
     };
   }, [fetchData]);
+
+  const todayTotalPages = Math.max(1, Math.ceil(todayRecords.length / PAGE_SIZE));
+  const paginatedToday = useMemo(
+    () => todayRecords.slice((todayPage - 1) * PAGE_SIZE, todayPage * PAGE_SIZE),
+    [todayRecords, todayPage]
+  );
+
+  const historyTotalPages = Math.max(1, Math.ceil(mySummaries.length / PAGE_SIZE));
+  const paginatedHistory = useMemo(
+    () => mySummaries.slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE),
+    [mySummaries, historyPage]
+  );
+
+  // Reset pages when data changes
+  useEffect(() => { setTodayPage(1); }, [todayRecords]);
+  useEffect(() => { setHistoryPage(1); }, [mySummaries]);
 
   return (
     <div className="space-y-6">
@@ -154,28 +194,31 @@ export default function AdminDashboard() {
               {todayRecords.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No attendance records for today</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Employee</TableHead>
-                        <TableHead>First In</TableHead>
-                        <TableHead>Last Out</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {todayRecords.map((r) => (
-                        <TableRow key={r.userId}>
-                          <TableCell className="font-medium">{r.fullName}</TableCell>
-                          <TableCell>{r.firstIn ? format(new Date(r.firstIn), "hh:mm a") : "—"}</TableCell>
-                          <TableCell>{r.lastOut ? format(new Date(r.lastOut), "hh:mm a") : "—"}</TableCell>
-                          <TableCell><AttendanceStatusBadge status={r.status} /></TableCell>
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Employee</TableHead>
+                          <TableHead>First In</TableHead>
+                          <TableHead>Last Out</TableHead>
+                          <TableHead>Status</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedToday.map((r) => (
+                          <TableRow key={r.userId}>
+                            <TableCell className="font-medium">{r.fullName}</TableCell>
+                            <TableCell>{r.firstIn ? format(new Date(r.firstIn), "hh:mm a") : "—"}</TableCell>
+                            <TableCell>{r.lastOut ? format(new Date(r.lastOut), "hh:mm a") : "—"}</TableCell>
+                            <TableCell><AttendanceStatusBadge status={r.status} /></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <PaginationControls page={todayPage} totalPages={todayTotalPages} onPageChange={setTodayPage} />
+                </>
               )}
             </CardContent>
           </Card>
@@ -192,30 +235,33 @@ export default function AdminDashboard() {
           {mySummaries.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No attendance records this month</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>First In</TableHead>
-                    <TableHead>Last Out</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mySummaries.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
-                      <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                      <TableCell>{s.total_duration || "—"}</TableCell>
-                      <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>First In</TableHead>
+                      <TableHead>Last Out</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedHistory.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{s.total_duration || "—"}</TableCell>
+                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls page={historyPage} totalPages={historyTotalPages} onPageChange={setHistoryPage} />
+            </>
           )}
         </CardContent>
       </Card>

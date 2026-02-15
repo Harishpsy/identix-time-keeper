@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import CheckInOut from "./CheckInOut";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { formatLocalDate, parseLocalDate } from "@/lib/timezone";
 
 export default function EmployeeDashboard() {
   const { user } = useAuth();
@@ -19,8 +20,8 @@ export default function EmployeeDashboard() {
 
     const fetchData = async () => {
       const now = new Date();
-      const start = format(startOfMonth(now), "yyyy-MM-dd");
-      const end = format(endOfMonth(now), "yyyy-MM-dd");
+      const start = formatLocalDate(startOfMonth(now));
+      const end = formatLocalDate(endOfMonth(now));
 
       const [{ data: sums }, { count: leaveCount }] = await Promise.all([
         supabase
@@ -90,7 +91,7 @@ export default function EmployeeDashboard() {
                 <TableBody>
                   {summaries.map((s) => (
                     <TableRow key={s.id}>
-                      <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="font-medium">{format(parseLocalDate(s.date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{s.total_duration || "—"}</TableCell>

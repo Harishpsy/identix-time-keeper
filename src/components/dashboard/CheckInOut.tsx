@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LogIn, LogOut, Clock, Coffee, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { getLocalDayBoundsUTC } from "@/lib/timezone";
 
 export default function CheckInOut() {
   const { user, profile } = useAuth();
@@ -51,13 +52,13 @@ export default function CheckInOut() {
 
   const fetchTodayPunches = async () => {
     if (!user) return;
-    const today = format(new Date(), "yyyy-MM-dd");
+    const { start, end } = getLocalDayBoundsUTC(new Date());
     const { data } = await supabase
       .from("attendance_raw")
       .select("*")
       .eq("user_id", user.id)
-      .gte("timestamp", `${today}T00:00:00`)
-      .lte("timestamp", `${today}T23:59:59`)
+      .gte("timestamp", start)
+      .lte("timestamp", end)
       .order("timestamp", { ascending: true });
     setTodayPunches(data || []);
   };

@@ -36,10 +36,16 @@ export default function AttendanceSummary() {
     const start = format(startOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
     const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
 
-    const [{ data: dailyData }, { data: profiles }, { data: departments }] = await Promise.all([
+    const today = format(new Date(), "yyyy-MM-dd");
+    const isCurrentMonth = today >= start && today <= end;
+
+    const [{ data: dailyData }, { data: profiles }, { data: departments }, { data: todayRawPunches }] = await Promise.all([
       supabase.from("daily_summaries").select("user_id, status").gte("date", start).lte("date", end),
       supabase.from("profiles").select("id, full_name, email, department_id").eq("is_active", true).order("full_name"),
       supabase.from("departments").select("id, name"),
+      isCurrentMonth
+        ? supabase.from("attendance_raw").select("user_id").gte("timestamp", `${today}T00:00:00`).lte("timestamp", `${today}T23:59:59`)
+        : Promise.resolve({ data: [] }),
     ]);
 
     const deptMap: Record<string, string> = {};
@@ -55,6 +61,33 @@ export default function AttendanceSummary() {
       else if (r.status === "half_day") counts[r.user_id].halfDay++;
       else if (r.status === "on_leave") counts[r.user_id].onLeave++;
     });
+
+    // For today: if a user has raw punches but no daily_summary yet, count them as present
+    if (isCurrentMonth && todayRawPunches && todayRawPunches.length > 0) {
+      const todaySummaryUsers = new Set(
+        (dailyData || []).filter((r: any) => {
+          // Check if this user already has a summary for today
+          return true; // We need date info - let's re-query
+        }).map((r: any) => r.user_id)
+      );
+
+      // Get today's daily_summaries to know who already has one
+      const { data: todaySummaries } = await supabase
+        .from("daily_summaries")
+        .select("user_id")
+        .eq("date", today);
+
+      const usersWithSummaryToday = new Set((todaySummaries || []).map((s: any) => s.user_id));
+      const usersWithPunchToday = new Set((todayRawPunches || []).map((p: any) => p.user_id));
+
+      for (const userId of usersWithPunchToday) {
+        if (!usersWithSummaryToday.has(userId)) {
+          if (!counts[userId]) counts[userId] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
+          counts[userId].present++;
+          counts[userId].total++;
+        }
+      }
+    }
 
     const result: EmployeeSummary[] = (profiles || []).map((p) => ({
       userId: p.id,

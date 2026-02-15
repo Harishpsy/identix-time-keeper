@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { getLocalDayBoundsUTC, formatLocalDate, parseLocalDate } from "@/lib/timezone";
 import CheckInOut from "./CheckInOut";
+import UpcomingAnniversaries from "./UpcomingAnniversaries";
 
 interface TodayRecord {
   userId: string;
@@ -283,7 +284,10 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      <LiveAttendanceFeed />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <LiveAttendanceFeed />
+        <UpcomingAnniversaries />
+      </div>
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">

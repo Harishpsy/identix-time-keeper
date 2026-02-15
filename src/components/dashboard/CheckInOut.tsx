@@ -14,7 +14,7 @@ export default function CheckInOut() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 50);
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
@@ -112,8 +112,9 @@ export default function CheckInOut() {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
+    const msec = Math.floor((ms % 1000) / 10);
     const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${hrs}:${pad(mins)}:${pad(secs)}`;
+    return `${hrs}:${pad(mins)}:${pad(secs)}:${pad(msec)}`;
   };
 
   return (

@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Upload, Loader2, Trash2 } from "lucide-react";
+import { Building2, Upload, Loader2, Trash2, Palette } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CompanyBranding() {
   const [companyName, setCompanyName] = useState("");
   const [companyAddress, setCompanyAddress] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [brandColor, setBrandColor] = useState("#2980B9");
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -32,6 +33,7 @@ export default function CompanyBranding() {
       setCompanyName(data.company_name || "");
       setCompanyAddress(data.company_address || "");
       setLogoUrl(data.logo_url || "");
+      setBrandColor(data.brand_color || "#2980B9");
     }
   };
 
@@ -85,6 +87,7 @@ export default function CompanyBranding() {
       company_name: companyName.trim(),
       company_address: companyAddress.trim(),
       logo_url: logoUrl,
+      brand_color: brandColor,
     };
 
     if (settingsId) {
@@ -198,8 +201,32 @@ export default function CompanyBranding() {
                   value={companyAddress}
                   onChange={(e) => setCompanyAddress(e.target.value)}
                   placeholder="Enter company address"
-                  rows={4}
+                  rows={3}
                 />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1">
+                  <Palette className="w-3 h-3" /> Brand Color
+                </Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    className="w-10 h-10 rounded cursor-pointer border-0 p-0"
+                  />
+                  <Input
+                    value={brandColor}
+                    onChange={(e) => setBrandColor(e.target.value)}
+                    placeholder="#2980B9"
+                    className="w-32 font-mono text-sm"
+                    maxLength={7}
+                  />
+                  <div
+                    className="h-10 flex-1 rounded-md border"
+                    style={{ backgroundColor: brandColor }}
+                  />
+                </div>
               </div>
               <Button
                 onClick={handleSave}
@@ -219,7 +246,7 @@ export default function CompanyBranding() {
             <CardTitle className="text-base">Payslip Header Preview</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-[#2980B9] text-white rounded-lg p-6 flex items-center gap-4">
+            <div style={{ backgroundColor: brandColor }} className="text-white rounded-lg p-6 flex items-center gap-4">
               {logoUrl && (
                 <img
                   src={logoUrl}

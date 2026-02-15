@@ -51,6 +51,7 @@ export type Database = {
       }
       company_settings: {
         Row: {
+          brand_color: string
           company_address: string | null
           company_name: string
           created_at: string
@@ -59,6 +60,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand_color?: string
           company_address?: string | null
           company_name?: string
           created_at?: string
@@ -67,6 +69,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand_color?: string
           company_address?: string | null
           company_name?: string
           created_at?: string

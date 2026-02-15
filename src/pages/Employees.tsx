@@ -34,6 +34,7 @@ export default function Employees() {
   const [resetting, setResetting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // New employee form
   const [form, setForm] = useState({
@@ -48,6 +49,7 @@ export default function Employees() {
   });
 
   const fetchEmployees = async () => {
+    setLoading(true);
     const [{ data: profs }, { data: userRoles }, { data: deps }, { data: sh }] = await Promise.all([
       supabase.from("profiles").select("*").order("full_name"),
       supabase.from("user_roles").select("user_id, role"),
@@ -62,6 +64,7 @@ export default function Employees() {
     const roleMap: Record<string, string> = {};
     userRoles?.forEach((r: any) => { roleMap[r.user_id] = r.role; });
     setRoles(roleMap);
+    setLoading(false);
   };
 
   useEffect(() => { fetchEmployees(); }, []);
@@ -348,7 +351,9 @@ export default function Employees() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((emp) => {
+                  {loading ? (
+                    <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                  ) : filtered.map((emp) => {
                     const isEditing = editingId === emp.id;
                     return (
                       <TableRow key={emp.id}>

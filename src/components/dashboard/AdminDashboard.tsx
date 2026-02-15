@@ -184,48 +184,44 @@ export default function AdminDashboard() {
         <StatCard title="Absent Today" value={stats.absent} icon={<AlertTriangle className="w-5 h-5" />} variant="destructive" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Today's Attendance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {todayRecords.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">No attendance records for today</p>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Employee</TableHead>
-                          <TableHead>First In</TableHead>
-                          <TableHead>Last Out</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedToday.map((r) => (
-                          <TableRow key={r.userId}>
-                            <TableCell className="font-medium">{r.fullName}</TableCell>
-                            <TableCell>{r.firstIn ? format(new Date(r.firstIn), "hh:mm a") : "—"}</TableCell>
-                            <TableCell>{r.lastOut ? format(new Date(r.lastOut), "hh:mm a") : "—"}</TableCell>
-                            <TableCell><AttendanceStatusBadge status={r.status} /></TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <PaginationControls page={todayPage} totalPages={todayTotalPages} onPageChange={setTodayPage} />
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">Today's Attendance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {todayRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No attendance records for today</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>First In</TableHead>
+                      <TableHead>Last Out</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedToday.map((r) => (
+                      <TableRow key={r.userId}>
+                        <TableCell className="font-medium">{r.fullName}</TableCell>
+                        <TableCell>{r.firstIn ? format(new Date(r.firstIn), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{r.lastOut ? format(new Date(r.lastOut), "hh:mm a") : "—"}</TableCell>
+                        <TableCell><AttendanceStatusBadge status={r.status} /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <PaginationControls page={todayPage} totalPages={todayTotalPages} onPageChange={setTodayPage} />
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-        <LiveAttendanceFeed />
-      </div>
+      <LiveAttendanceFeed />
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">

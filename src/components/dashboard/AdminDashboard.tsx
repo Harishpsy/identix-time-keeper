@@ -61,7 +61,7 @@ export default function AdminDashboard() {
 
     const [{ count: totalUsers }, { data: activeProfiles }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
-      supabase.from("profiles").select("id").eq("is_active", true),
+      supabase.from("profiles").select("id, full_name, email").eq("is_active", true),
       supabase
         .from("daily_summaries")
         .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
@@ -85,18 +85,23 @@ export default function AdminDashboard() {
     ]);
 
     const activeUserIds = new Set((activeProfiles || []).map((p: any) => p.id));
+    const activeUserMap = new Map((activeProfiles || []).map((p: any) => [p.id, p]));
     let records: TodayRecord[] = [];
+    const usersWithRecords = new Set<string>();
 
     if (summaries && summaries.length > 0) {
-      records = summaries.map((s: any) => ({
-        userId: s.user_id,
-        fullName: s.profiles?.full_name || "—",
-        email: s.profiles?.email || "",
-        firstIn: s.first_in,
-        lastOut: s.last_out,
-        status: s.status,
-        lateMinutes: s.late_minutes || 0,
-      }));
+      records = summaries.map((s: any) => {
+        usersWithRecords.add(s.user_id);
+        return {
+          userId: s.user_id,
+          fullName: s.profiles?.full_name || "—",
+          email: s.profiles?.email || "",
+          firstIn: s.first_in,
+          lastOut: s.last_out,
+          status: s.status,
+          lateMinutes: s.late_minutes || 0,
+        };
+      });
     } else if (rawPunches && rawPunches.length > 0) {
       const byUser = new Map<string, { punches: any[]; profile: any }>();
       for (const p of rawPunches) {
@@ -107,8 +112,9 @@ export default function AdminDashboard() {
       }
 
       records = Array.from(byUser.entries())
-        .filter(([_, { profile }]) => profile) // only users with profiles
+        .filter(([_, { profile }]) => profile)
         .map(([userId, { punches, profile }]) => {
+        usersWithRecords.add(userId);
         const logins = punches.filter((p: any) => p.punch_type === "login");
         const logouts = punches.filter((p: any) => p.punch_type === "logout");
         const firstIn = logins.length > 0 ? logins[0].timestamp : null;
@@ -128,6 +134,21 @@ export default function AdminDashboard() {
 
     // Filter to only active users
     records = records.filter((r) => activeUserIds.has(r.userId));
+
+    // Add absent entries for active users who have no records today
+    for (const [userId, profile] of activeUserMap) {
+      if (!usersWithRecords.has(userId)) {
+        records.push({
+          userId,
+          fullName: profile.full_name || "—",
+          email: profile.email || "",
+          firstIn: null,
+          lastOut: null,
+          status: "absent",
+          lateMinutes: 0,
+        });
+      }
+    }
 
     const present = records.filter((r) => r.status === "present" || r.status === "late").length;
     const late = records.filter((r) => r.status === "late").length;

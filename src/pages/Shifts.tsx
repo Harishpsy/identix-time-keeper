@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Shifts() {
@@ -17,10 +17,13 @@ export default function Shifts() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", start_time: "09:00", end_time: "18:00", grace_period_mins: 15, total_working_hours: 9, max_break_minutes: 60 });
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const fetchShifts = async () => {
+    setLoading(true);
     const { data } = await supabase.from("shifts").select("*").order("name");
     setShifts(data || []);
+    setLoading(false);
   };
 
   useEffect(() => { fetchShifts(); }, []);
@@ -85,7 +88,9 @@ export default function Shifts() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shifts.length === 0 ? (
+                {loading ? (
+                  <TableRow><TableCell colSpan={7} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                ) : shifts.length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No shifts configured</TableCell></TableRow>
                 ) : shifts.map((s) => (
                   <TableRow key={s.id}>

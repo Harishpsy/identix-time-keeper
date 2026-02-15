@@ -67,25 +67,56 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
       const [y, m] = month.split("-").map(Number);
       const start = format(startOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
+      const today = format(new Date(), "yyyy-MM-dd");
+      const isCurrentMonth = today >= start && today <= end;
 
-      const { data } = await supabase
-        .from("daily_summaries")
-        .select("date, status, first_in, last_out, total_duration, late_minutes")
-        .eq("user_id", userId)
-        .gte("date", start)
-        .lte("date", end)
-        .order("date", { ascending: true });
+      const [{ data }, rawResult] = await Promise.all([
+        supabase
+          .from("daily_summaries")
+          .select("date, status, first_in, last_out, total_duration, late_minutes")
+          .eq("user_id", userId)
+          .gte("date", start)
+          .lte("date", end)
+          .order("date", { ascending: true }),
+        isCurrentMonth
+          ? supabase
+              .from("attendance_raw")
+              .select("timestamp, punch_type")
+              .eq("user_id", userId)
+              .gte("timestamp", `${today}T00:00:00`)
+              .lte("timestamp", `${today}T23:59:59`)
+              .order("timestamp", { ascending: true })
+          : Promise.resolve({ data: [] }),
+      ]);
 
-      setRecords(
-        (data || []).map((d: any) => ({
-          date: d.date,
-          status: d.status,
-          first_in: d.first_in,
-          last_out: d.last_out,
-          total_duration: d.total_duration,
-          late_minutes: d.late_minutes,
-        }))
-      );
+      const records: DailyRecord[] = (data || []).map((d: any) => ({
+        date: d.date,
+        status: d.status,
+        first_in: d.first_in,
+        last_out: d.last_out,
+        total_duration: d.total_duration,
+        late_minutes: d.late_minutes,
+      }));
+
+      // Add today's live record from raw punches if no daily_summary exists yet
+      if (isCurrentMonth && rawResult.data && rawResult.data.length > 0) {
+        const hasTodaySummary = records.some((r) => r.date === today);
+        if (!hasTodaySummary) {
+          const punches = rawResult.data;
+          const firstIn = punches[0]?.timestamp || null;
+          const lastOut = punches.length > 1 ? punches[punches.length - 1]?.timestamp : null;
+          records.push({
+            date: today,
+            status: "present",
+            first_in: firstIn,
+            last_out: lastOut,
+            total_duration: null,
+            late_minutes: 0,
+          });
+        }
+      }
+
+      setRecords(records);
       setLoading(false);
     };
 

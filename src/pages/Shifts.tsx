@@ -15,7 +15,7 @@ export default function Shifts() {
   const [shifts, setShifts] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", start_time: "09:00", end_time: "18:00", grace_period_mins: 15 });
+  const [form, setForm] = useState({ name: "", start_time: "09:00", end_time: "18:00", grace_period_mins: 15, total_working_hours: 9, max_break_minutes: 60 });
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const fetchShifts = async () => {
@@ -49,13 +49,13 @@ export default function Shifts() {
 
   const openEdit = (shift: any) => {
     setEditing(shift);
-    setForm({ name: shift.name, start_time: shift.start_time, end_time: shift.end_time, grace_period_mins: shift.grace_period_mins });
+    setForm({ name: shift.name, start_time: shift.start_time, end_time: shift.end_time, grace_period_mins: shift.grace_period_mins, total_working_hours: shift.total_working_hours ?? 9, max_break_minutes: shift.max_break_minutes ?? 60 });
     setDialogOpen(true);
   };
 
   const openNew = () => {
     setEditing(null);
-    setForm({ name: "", start_time: "09:00", end_time: "18:00", grace_period_mins: 15 });
+    setForm({ name: "", start_time: "09:00", end_time: "18:00", grace_period_mins: 15, total_working_hours: 9, max_break_minutes: 60 });
     setDialogOpen(true);
   };
 
@@ -79,18 +79,22 @@ export default function Shifts() {
                   <TableHead>Start Time</TableHead>
                   <TableHead>End Time</TableHead>
                   <TableHead>Grace Period</TableHead>
+                  <TableHead>Working Hours</TableHead>
+                  <TableHead>Max Break</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {shifts.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No shifts configured</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No shifts configured</TableCell></TableRow>
                 ) : shifts.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell>{s.start_time}</TableCell>
                     <TableCell>{s.end_time}</TableCell>
                     <TableCell>{s.grace_period_mins} mins</TableCell>
+                    <TableCell>{s.total_working_hours ?? 9} hrs</TableCell>
+                    <TableCell>{s.max_break_minutes ?? 60} mins</TableCell>
                     <TableCell className="flex gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(s)}><Pencil className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(s)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
@@ -125,6 +129,16 @@ export default function Shifts() {
               <div className="space-y-2">
                 <Label>Grace Period (minutes)</Label>
                 <Input type="number" value={form.grace_period_mins} onChange={(e) => setForm({ ...form, grace_period_mins: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Total Working Hours</Label>
+                  <Input type="number" step="0.5" value={form.total_working_hours} onChange={(e) => setForm({ ...form, total_working_hours: parseFloat(e.target.value) || 9 })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Break (minutes)</Label>
+                  <Input type="number" value={form.max_break_minutes} onChange={(e) => setForm({ ...form, max_break_minutes: parseInt(e.target.value) || 60 })} />
+                </div>
               </div>
               <Button className="w-full" onClick={handleSave}>{editing ? "Update" : "Create"} Shift</Button>
             </div>

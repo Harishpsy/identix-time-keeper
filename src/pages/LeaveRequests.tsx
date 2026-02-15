@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -27,6 +27,26 @@ const leaveColorMap: Record<string, string> = {
   casual: "text-warning",
   annual: "text-primary",
 };
+
+function DebouncedNumberInput({ value, onSave }: { value: number; onSave: (val: number) => void }) {
+  const [local, setLocal] = useState(value);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setLocal(value); }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value) || 0;
+    setLocal(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onSave(val), 800);
+  };
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  return (
+    <Input type="number" min={0} className="w-20 h-8 text-sm" value={local} onChange={handleChange} />
+  );
+}
 
 export default function LeaveRequests() {
   const { user, role } = useAuth();
@@ -222,12 +242,9 @@ export default function LeaveRequests() {
                       <p className="font-medium capitalize text-foreground">{s.leave_type} Leave</p>
                       <div className="flex items-center gap-2">
                         <Label className="text-xs text-muted-foreground">Days:</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          className="w-20 h-8 text-sm"
+                        <DebouncedNumberInput
                           value={s.total_days}
-                          onChange={(e) => handleSettingUpdate(s.id, "total_days", parseInt(e.target.value) || 0)}
+                          onSave={(val) => handleSettingUpdate(s.id, "total_days", val)}
                         />
                       </div>
                     </div>

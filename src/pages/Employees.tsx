@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus, Loader2, Pencil, Check, X, FileText, KeyRound, Eye, EyeOff } from "lucide-react";
@@ -32,6 +33,7 @@ export default function Employees() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
+  const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
 
   // New employee form
   const [form, setForm] = useState({
@@ -423,7 +425,13 @@ export default function Employees() {
                           <div className="flex items-center gap-2">
                             <Switch
                               checked={emp.is_active}
-                              onCheckedChange={() => toggleActive(emp.id, emp.is_active)}
+                              onCheckedChange={() => {
+                                if (emp.is_active) {
+                                  setDeactivateTarget({ id: emp.id, name: emp.full_name });
+                                } else {
+                                  toggleActive(emp.id, emp.is_active);
+                                }
+                              }}
                             />
                             <span className={`text-xs font-medium ${emp.is_active ? "text-green-600" : "text-muted-foreground"}`}>
                               {emp.is_active ? "Active" : "Inactive"}
@@ -520,6 +528,31 @@ export default function Employees() {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => { if (!open) setDeactivateTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deactivate Employee</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to deactivate <span className="font-medium text-foreground">{deactivateTarget?.name}</span>? They will no longer appear in active employee lists and attendance tracking.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deactivateTarget) {
+                    toggleActive(deactivateTarget.id, true);
+                    setDeactivateTarget(null);
+                  }
+                }}
+              >
+                Deactivate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

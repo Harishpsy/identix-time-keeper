@@ -7,37 +7,51 @@ import AttendanceStatusBadge from "./AttendanceStatusBadge";
 import { Users, Clock, AlertTriangle, CalendarCheck, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import CheckInOut from "./CheckInOut";
 
 export default function AdminDashboard() {
-  const { role } = useAuth();
+  const { user, role } = useAuth();
   const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
   const [todaySummaries, setTodaySummaries] = useState<any[]>([]);
+  const [mySummaries, setMySummaries] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       const today = format(new Date(), "yyyy-MM-dd");
+      const now = new Date();
+      const start = format(startOfMonth(now), "yyyy-MM-dd");
+      const end = format(endOfMonth(now), "yyyy-MM-dd");
 
-      const [{ count: totalUsers }, { data: summaries }] = await Promise.all([
+      const [{ count: totalUsers }, { data: summaries }, myResult] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
         supabase
           .from("daily_summaries")
           .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
           .eq("date", today)
           .order("first_in", { ascending: true }),
+        user
+          ? supabase
+              .from("daily_summaries")
+              .select("*")
+              .eq("user_id", user.id)
+              .gte("date", start)
+              .lte("date", end)
+              .order("date", { ascending: false })
+          : Promise.resolve({ data: [] as any[] }),
       ]);
 
-      const present = summaries?.filter((s) => s.status === "present").length || 0;
-      const late = summaries?.filter((s) => s.status === "late").length || 0;
-      const absent = summaries?.filter((s) => s.status === "absent").length || 0;
+      const present = summaries?.filter((s: any) => s.status === "present").length || 0;
+      const late = summaries?.filter((s: any) => s.status === "late").length || 0;
+      const absent = summaries?.filter((s: any) => s.status === "absent").length || 0;
 
       setStats({ total: totalUsers || 0, present, late, absent });
       setTodaySummaries(summaries || []);
+      setMySummaries(myResult.data || []);
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   return (
     <div className="space-y-6">
@@ -98,6 +112,42 @@ export default function AdminDashboard() {
 
         <LiveAttendanceFeed />
       </div>
+
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">My Attendance History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {mySummaries.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No attendance records this month</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>First In</TableHead>
+                    <TableHead>Last Out</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mySummaries.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                      <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                      <TableCell>{s.total_duration || "—"}</TableCell>
+                      <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

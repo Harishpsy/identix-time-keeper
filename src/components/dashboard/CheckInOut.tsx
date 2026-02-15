@@ -144,10 +144,10 @@ export default function CheckInOut() {
                 Last: <span className="font-medium text-foreground">{format(new Date(lastPunch.timestamp), "hh:mm a")}</span>
               </div>
             )}
-            {totalBreakMs > 0 && (
+            {hasLoggedIn && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Coffee className="w-3.5 h-3.5" />
-                Break: <span className="font-medium text-foreground">{formatDuration(totalBreakMs)}</span>
+                Break: <span className="font-medium text-foreground">{totalBreakMs > 0 ? formatDuration(totalBreakMs) : "0s"}</span>
               </div>
             )}
             {hasLoggedIn && firstIn && (

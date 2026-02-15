@@ -121,29 +121,66 @@ export default function Payroll() {
     return doj ? format(new Date(doj), "dd MMM yyyy") : "—";
   };
 
-  const downloadPayslip = (rec: PayrollRecord) => {
+  const downloadPayslip = async (rec: PayrollRecord) => {
     const monthLabel = format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy");
     const empName = getEmployeeName(rec.user_id);
     const empEmail = getEmployeeEmail(rec.user_id);
 
+    // Fetch company branding
+    const { data: brandingData } = await supabase.from("company_settings").select("*").limit(1).single();
+    const companyName = brandingData?.company_name || "PAYSLIP";
+    const companyAddress = brandingData?.company_address || "";
+    const logoUrl = brandingData?.logo_url || "";
+
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
 
-    doc.setFillColor(41, 128, 185);
-    doc.rect(0, 0, pw, 35, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.text("PAYSLIP", pw / 2, 16, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(monthLabel, pw / 2, 24, { align: "center" });
-    doc.text("Confidential", pw / 2, 30, { align: "center" });
+    // Load logo if available
+    let logoImg: HTMLImageElement | null = null;
+    if (logoUrl) {
+      try {
+        logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = logoUrl;
+        });
+      } catch {
+        logoImg = null;
+      }
+    }
 
+    // Header
+    const headerHeight = companyAddress ? 42 : 35;
+    doc.setFillColor(41, 128, 185);
+    doc.rect(0, 0, pw, headerHeight, "F");
+
+    if (logoImg) {
+      doc.addImage(logoImg, "PNG", 10, 4, 18, 18);
+    }
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.text(companyName, pw / 2, 14, { align: "center" });
+    doc.setFontSize(9);
+    if (companyAddress) {
+      doc.text(companyAddress, pw / 2, 21, { align: "center" });
+      doc.setFontSize(10);
+      doc.text(`Payslip - ${monthLabel}`, pw / 2, 29, { align: "center" });
+      doc.text("Confidential", pw / 2, 35, { align: "center" });
+    } else {
+      doc.text(monthLabel, pw / 2, 22, { align: "center" });
+      doc.text("Confidential", pw / 2, 28, { align: "center" });
+    }
+
+    const infoY = headerHeight + 10;
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
-    doc.text(`Employee Name: ${empName}`, 14, 45);
-    doc.text(`Email: ${empEmail}`, 14, 52);
-    doc.text(`Paid Days: ${rec.paid_days - rec.lop_days} / ${rec.paid_days}`, pw - 14, 45, { align: "right" });
-    doc.text(`LOP Days: ${rec.lop_days}`, pw - 14, 52, { align: "right" });
+    doc.text(`Employee Name: ${empName}`, 14, infoY);
+    doc.text(`Email: ${empEmail}`, 14, infoY + 7);
+    doc.text(`Paid Days: ${rec.paid_days - rec.lop_days} / ${rec.paid_days}`, pw - 14, infoY, { align: "right" });
+    doc.text(`LOP Days: ${rec.lop_days}`, pw - 14, infoY + 7, { align: "right" });
 
     const earnings = [
       ["Basic Salary", rec.basic_salary],
@@ -182,7 +219,7 @@ export default function Payroll() {
     ]);
 
     autoTable(doc, {
-      startY: 60,
+      startY: infoY + 15,
       head: [["Earnings", "Amount (Rs.)", "Deductions", "Amount (Rs.)"]],
       body: tableBody,
       styles: { fontSize: 9, cellPadding: 4, font: "helvetica" },

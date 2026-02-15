@@ -442,7 +442,7 @@ export default function Payroll() {
   const renderNumField = (label: string, field: keyof typeof form) => (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input type="number" min="0" step="0.01" value={form[field]} onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))} onFocus={(e) => e.target.select()} className="h-8 text-sm" />
+      <Input type="number" min="0" step="0.01" value={form[field]} onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))} onClick={(e) => e.stopPropagation()} onFocus={(e) => e.target.select()} className="h-8 text-sm" />
     </div>
   );
 

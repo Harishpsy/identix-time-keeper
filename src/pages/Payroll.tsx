@@ -294,8 +294,13 @@ export default function Payroll() {
   const netPreview = grossPreview - deductionsPreview;
 
   const handleSave = async () => {
-    if (!form.user_id || !form.basic_salary) {
+    if (!form.user_id && n(form.basic_salary) <= 0) {
       toast.error("Employee and basic salary are required");
+    } else if (!form.user_id) {
+      toast.error("Please select an employee");
+      return;
+    } else if (n(form.basic_salary) <= 0) {
+      toast.error("Basic salary is required");
       return;
     }
     if (n(form.basic_salary) < 0) {

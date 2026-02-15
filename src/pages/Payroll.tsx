@@ -136,18 +136,23 @@ export default function Payroll() {
     const pw = doc.internal.pageSize.getWidth();
 
     // Load logo if available
-    let logoImg: HTMLImageElement | null = null;
+    let logoDataUrl: string | null = null;
     if (logoUrl) {
       try {
-        logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = () => resolve(img);
-          img.onerror = reject;
-          img.src = logoUrl;
+        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const i = new Image();
+          i.crossOrigin = "anonymous";
+          i.onload = () => resolve(i);
+          i.onerror = reject;
+          i.src = logoUrl;
         });
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d")!.drawImage(img, 0, 0);
+        logoDataUrl = canvas.toDataURL("image/png");
       } catch {
-        logoImg = null;
+        logoDataUrl = null;
       }
     }
 
@@ -156,8 +161,8 @@ export default function Payroll() {
     doc.setFillColor(41, 128, 185);
     doc.rect(0, 0, pw, headerHeight, "F");
 
-    if (logoImg) {
-      doc.addImage(logoImg, "PNG", 10, 4, 18, 18);
+    if (logoDataUrl) {
+      doc.addImage(logoDataUrl, "PNG", 10, 4, 18, 18);
     }
 
     doc.setTextColor(255, 255, 255);

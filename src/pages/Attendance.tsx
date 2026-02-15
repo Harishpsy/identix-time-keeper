@@ -8,7 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Download, FileText } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const PAGE_SIZE = 10;
 
@@ -114,6 +116,73 @@ export default function Attendance() {
   // Reset page when filters change
   useEffect(() => { setPage(1); }, [search, month]);
 
+  const [year, mon] = month.split("-").map(Number);
+  const monthLabel = format(new Date(year, mon - 1, 1), "MMMM yyyy");
+
+  const downloadCSV = () => {
+    const isEmp = role === "employee";
+    const headers = isEmp
+      ? ["Date", "First In", "Last Out", "Duration", "Status", "Late Mins"]
+      : ["Employee", "Date", "First In", "Last Out", "Duration", "Status", "Late Mins"];
+    const rows = filtered.map((s) => {
+      const row = [
+        s.date,
+        s.first_in ? format(new Date(s.first_in), "HH:mm") : "",
+        s.last_out ? format(new Date(s.last_out), "HH:mm") : "",
+        s.total_duration || "",
+        s.status,
+        s.late_minutes || 0,
+      ];
+      if (!isEmp) row.unshift(s.profiles?.full_name || "");
+      return row;
+    });
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attendance-${month}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const isEmp = role === "employee";
+
+    doc.setFontSize(18);
+    doc.text("Attendance Records", 14, 20);
+    doc.setFontSize(12);
+    doc.text(monthLabel, 14, 28);
+
+    const head = isEmp
+      ? [["Date", "First In", "Last Out", "Duration", "Status", "Late (mins)"]]
+      : [["Employee", "Date", "First In", "Last Out", "Duration", "Status", "Late (mins)"]];
+
+    const body = filtered.map((s) => {
+      const row = [
+        format(new Date(s.date), "dd MMM yyyy"),
+        s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—",
+        s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
+        s.total_duration || "—",
+        s.status,
+        s.late_minutes || 0,
+      ];
+      if (!isEmp) row.unshift(s.profiles?.full_name || "—");
+      return row;
+    });
+
+    autoTable(doc, {
+      startY: 35,
+      head,
+      body,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    doc.save(`attendance-${month}.pdf`);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -122,7 +191,7 @@ export default function Attendance() {
           <p className="text-muted-foreground mt-1">View attendance details</p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           <Input
             type="month"
             value={month}
@@ -140,6 +209,14 @@ export default function Attendance() {
               />
             </div>
           )}
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>
+              <FileText className="w-4 h-4 mr-1" /> PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filtered.length === 0}>
+              <Download className="w-4 h-4 mr-1" /> CSV
+            </Button>
+          </div>
         </div>
 
         <Card className="border-border/50">

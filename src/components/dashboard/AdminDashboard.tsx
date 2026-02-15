@@ -4,16 +4,26 @@ import { useAuth } from "@/hooks/useAuth";
 import StatCard from "./StatCard";
 import LiveAttendanceFeed from "./LiveAttendanceFeed";
 import AttendanceStatusBadge from "./AttendanceStatusBadge";
-import { Users, Clock, AlertTriangle, CalendarCheck, UserCheck } from "lucide-react";
+import { Users, Clock, AlertTriangle, UserCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import CheckInOut from "./CheckInOut";
 
+interface TodayRecord {
+  userId: string;
+  fullName: string;
+  email: string;
+  firstIn: string | null;
+  lastOut: string | null;
+  status: string;
+  lateMinutes: number;
+}
+
 export default function AdminDashboard() {
   const { user, role } = useAuth();
   const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
-  const [todaySummaries, setTodaySummaries] = useState<any[]>([]);
+  const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [mySummaries, setMySummaries] = useState<any[]>([]);
 
   useEffect(() => {
@@ -23,13 +33,19 @@ export default function AdminDashboard() {
       const start = format(startOfMonth(now), "yyyy-MM-dd");
       const end = format(endOfMonth(now), "yyyy-MM-dd");
 
-      const [{ count: totalUsers }, { data: summaries }, myResult] = await Promise.all([
+      const [{ count: totalUsers }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
         supabase
           .from("daily_summaries")
           .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
           .eq("date", today)
           .order("first_in", { ascending: true }),
+        supabase
+          .from("attendance_raw")
+          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+          .gte("timestamp", `${today}T00:00:00`)
+          .lte("timestamp", `${today}T23:59:59`)
+          .order("timestamp", { ascending: true }),
         user
           ? supabase
               .from("daily_summaries")
@@ -41,12 +57,53 @@ export default function AdminDashboard() {
           : Promise.resolve({ data: [] as any[] }),
       ]);
 
-      const present = summaries?.filter((s: any) => s.status === "present").length || 0;
-      const late = summaries?.filter((s: any) => s.status === "late").length || 0;
-      const absent = summaries?.filter((s: any) => s.status === "absent").length || 0;
+      // Build today's records: prefer daily_summaries, fall back to attendance_raw
+      let records: TodayRecord[] = [];
+
+      if (summaries && summaries.length > 0) {
+        records = summaries.map((s: any) => ({
+          userId: s.user_id,
+          fullName: s.profiles?.full_name || "—",
+          email: s.profiles?.email || "",
+          firstIn: s.first_in,
+          lastOut: s.last_out,
+          status: s.status,
+          lateMinutes: s.late_minutes || 0,
+        }));
+      } else if (rawPunches && rawPunches.length > 0) {
+        // Group raw punches by user
+        const byUser = new Map<string, { punches: any[]; profile: any }>();
+        for (const p of rawPunches) {
+          if (!byUser.has(p.user_id)) {
+            byUser.set(p.user_id, { punches: [], profile: p.profiles });
+          }
+          byUser.get(p.user_id)!.punches.push(p);
+        }
+
+        records = Array.from(byUser.entries()).map(([userId, { punches, profile }]) => {
+          const logins = punches.filter((p: any) => p.punch_type === "login");
+          const logouts = punches.filter((p: any) => p.punch_type === "logout");
+          const firstIn = logins.length > 0 ? logins[0].timestamp : null;
+          const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
+
+          return {
+            userId,
+            fullName: profile?.full_name || "—",
+            email: profile?.email || "",
+            firstIn,
+            lastOut,
+            status: lastOut ? "present" : firstIn ? "present" : "absent",
+            lateMinutes: 0,
+          };
+        });
+      }
+
+      const present = records.filter((r) => r.status === "present" || r.status === "late").length;
+      const late = records.filter((r) => r.status === "late").length;
+      const absent = (totalUsers || 0) - present;
 
       setStats({ total: totalUsers || 0, present, late, absent });
-      setTodaySummaries(summaries || []);
+      setTodayRecords(records);
       setMySummaries(myResult.data || []);
     };
 
@@ -78,7 +135,7 @@ export default function AdminDashboard() {
               <CardTitle className="text-base font-semibold">Today's Attendance</CardTitle>
             </CardHeader>
             <CardContent>
-              {todaySummaries.length === 0 ? (
+              {todayRecords.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No attendance records for today</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -89,17 +146,15 @@ export default function AdminDashboard() {
                         <TableHead>First In</TableHead>
                         <TableHead>Last Out</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Late (mins)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {todaySummaries.map((s) => (
-                        <TableRow key={s.id}>
-                          <TableCell className="font-medium">{s.profiles?.full_name || "—"}</TableCell>
-                          <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
-                          <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                          <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
-                          <TableCell>{s.late_minutes || 0}</TableCell>
+                      {todayRecords.map((r) => (
+                        <TableRow key={r.userId}>
+                          <TableCell className="font-medium">{r.fullName}</TableCell>
+                          <TableCell>{r.firstIn ? format(new Date(r.firstIn), "hh:mm a") : "—"}</TableCell>
+                          <TableCell>{r.lastOut ? format(new Date(r.lastOut), "hh:mm a") : "—"}</TableCell>
+                          <TableCell><AttendanceStatusBadge status={r.status} /></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

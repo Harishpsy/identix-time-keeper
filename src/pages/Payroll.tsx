@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
@@ -89,6 +90,7 @@ export default function Payroll() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(() => format(new Date(), "yyyy-MM"));
   const [form, setForm] = useState({ ...defaultForm });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const fetchData = async () => {
     const monthDate = `${selectedMonth}-01`;
@@ -634,7 +636,7 @@ export default function Payroll() {
                             <Button variant="ghost" size="sm" onClick={() => openEdit(rec)} title="Edit">
                               <Pencil className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(rec.id)} title="Delete">
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: rec.id, name: getEmployeeName(rec.user_id) })} title="Delete">
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>
@@ -647,6 +649,32 @@ export default function Payroll() {
             </div>
           </CardContent>
         </Card>
+
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Payroll Entry</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the payroll entry for <span className="font-medium text-foreground">{deleteTarget?.name}</span>? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deleteTarget) {
+                    handleDelete(deleteTarget.id);
+                    setDeleteTarget(null);
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );

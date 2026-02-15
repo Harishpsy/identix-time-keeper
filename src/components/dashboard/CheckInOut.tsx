@@ -134,7 +134,7 @@ export default function CheckInOut() {
     const msec = Math.floor((abs % 1000) / 10);
     const pad = (n: number) => n.toString().padStart(2, "0");
     const prefix = ms < 0 ? "-" : "";
-    return `${prefix}${hrs}:${pad(mins)}:${pad(secs)}:${pad(msec)}`;
+    return `${prefix}${pad(hrs)}:${pad(mins)}:${pad(secs)}:${pad(msec)}`;
   };
 
   return (

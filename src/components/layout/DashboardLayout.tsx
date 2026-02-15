@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   ClipboardList,
+  RotateCcw,
   Timer,
   DollarSign,
   Receipt,
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { label: "Reports", href: "/reports", icon: <FileText className="w-5 h-5" />, roles: ["admin", "subadmin"] },
   { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin"] },
   { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["employee", "subadmin"] },
+  { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin"] },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

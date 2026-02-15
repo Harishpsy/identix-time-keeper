@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, CalendarCheck, Clock, AlertTriangle, Download, FileText } from "lucide-react";
+import { Users, CalendarCheck, Clock, AlertTriangle, Download, FileText, Loader2 } from "lucide-react";
 import { format, endOfMonth } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -19,6 +19,7 @@ export default function Reports() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [stats, setStats] = useState({ totalDays: 0, present: 0, late: 0, absent: 0 });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -34,6 +35,7 @@ export default function Reports() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       const [year, mon] = month.split("-").map(Number);
       const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
@@ -59,6 +61,7 @@ export default function Reports() {
         late: all.filter((s) => s.status === "late").length,
         absent: all.filter((s) => s.status === "absent").length,
       });
+      setLoading(false);
     };
 
     fetchData();
@@ -173,7 +176,9 @@ export default function Reports() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {summaries.length === 0 ? (
+                  {loading ? (
+                    <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                  ) : summaries.length === 0 ? (
                     <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No data for this month</TableCell></TableRow>
                   ) : summaries.map((s) => (
                     <TableRow key={s.id}>

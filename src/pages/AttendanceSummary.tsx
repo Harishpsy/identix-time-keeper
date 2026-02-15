@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { Search, Download, FileText, UserCheck, UserX, Clock, CalendarOff } from "lucide-react";
+import { Search, Download, FileText } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import EmployeeDailyDetails from "@/components/attendance/EmployeeDailyDetails";
 
 interface EmployeeSummary {
   userId: string;
@@ -29,6 +30,7 @@ export default function AttendanceSummary() {
   const [search, setSearch] = useState("");
   const [summaries, setSummaries] = useState<EmployeeSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeSummary | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -220,7 +222,7 @@ export default function AttendanceSummary() {
                     </TableRow>
                   ) : (
                     filtered.map((s) => (
-                      <TableRow key={s.userId}>
+                      <TableRow key={s.userId} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedEmployee(s)}>
                         <TableCell>
                           <div>
                             <p className="font-medium text-foreground">{s.name}</p>
@@ -253,6 +255,14 @@ export default function AttendanceSummary() {
           </CardContent>
         </Card>
       </div>
+
+      <EmployeeDailyDetails
+        open={!!selectedEmployee}
+        onOpenChange={(open) => { if (!open) setSelectedEmployee(null); }}
+        userId={selectedEmployee?.userId || ""}
+        userName={selectedEmployee?.name || ""}
+        month={month}
+      />
     </DashboardLayout>
   );
 }

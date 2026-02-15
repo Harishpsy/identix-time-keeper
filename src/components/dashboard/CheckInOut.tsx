@@ -112,9 +112,8 @@ export default function CheckInOut() {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
-    if (hrs > 0) return `${hrs}h ${mins}m`;
-    if (mins > 0) return `${mins}m ${secs}s`;
-    return `${secs}s`;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${hrs}:${pad(mins)}:${pad(secs)}`;
   };
 
   return (

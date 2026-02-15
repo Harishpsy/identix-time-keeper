@@ -295,6 +295,7 @@ export default function LeaveRequests() {
                     <TableHead>Type</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Submitted To</TableHead>
+                    <TableHead>Reason</TableHead>
                     <TableHead>Status</TableHead>
                     {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
                     {role === "employee" && <TableHead>Actions</TableHead>}
@@ -328,6 +329,7 @@ export default function LeaveRequests() {
                         }
                       </TableCell>
                       <TableCell>{r.approver?.full_name || "—"}</TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={r.reason || ""}>{r.reason || "—"}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
                           {r.status}

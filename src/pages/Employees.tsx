@@ -31,7 +31,6 @@ export default function Employees() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
-  const [presentDays, setPresentDays] = useState<Record<string, { present: number; late: number; absent: number; onLeave: number }>>({});
 
   // New employee form
   const [form, setForm] = useState({
@@ -62,27 +61,7 @@ export default function Employees() {
     setRoles(roleMap);
   };
 
-  const fetchPresentDays = async () => {
-    const now = new Date();
-    const start = format(startOfMonth(now), "yyyy-MM-dd");
-    const end = format(endOfMonth(now), "yyyy-MM-dd");
-    const { data } = await supabase
-      .from("daily_summaries")
-      .select("user_id, status")
-      .gte("date", start)
-      .lte("date", end);
-    const counts: Record<string, { present: number; late: number; absent: number; onLeave: number }> = {};
-    (data || []).forEach((r: any) => {
-      if (!counts[r.user_id]) counts[r.user_id] = { present: 0, late: 0, absent: 0, onLeave: 0 };
-      if (r.status === "present") counts[r.user_id].present++;
-      else if (r.status === "late") counts[r.user_id].late++;
-      else if (r.status === "absent") counts[r.user_id].absent++;
-      else if (r.status === "on_leave") counts[r.user_id].onLeave++;
-    });
-    setPresentDays(counts);
-  };
-
-  useEffect(() => { fetchEmployees(); fetchPresentDays(); }, []);
+  useEffect(() => { fetchEmployees(); }, []);
 
   const toggleActive = async (id: string, isActive: boolean) => {
     const { error } = await supabase.from("profiles").update({ is_active: !isActive }).eq("id", id);
@@ -362,7 +341,6 @@ export default function Employees() {
                     <TableHead>Shift</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Present (This Month)</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -444,21 +422,6 @@ export default function Employees() {
                           <Badge variant={emp.is_active ? "default" : "secondary"} className="text-xs">
                             {emp.is_active ? "Active" : "Inactive"}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const d = presentDays[emp.id];
-                            if (!d) return <span className="text-muted-foreground text-sm">0 days</span>;
-                            const total = d.present + d.late;
-                            return (
-                              <div className="text-sm space-y-0.5">
-                                <span className="font-medium text-green-600">{total} days</span>
-                                {d.late > 0 && <span className="text-yellow-600 ml-1">({d.late} late)</span>}
-                                {d.absent > 0 && <span className="text-destructive ml-1">· {d.absent} absent</span>}
-                                {d.onLeave > 0 && <span className="text-blue-600 ml-1">· {d.onLeave} leave</span>}
-                              </div>
-                            );
-                          })()}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">

@@ -15,6 +15,7 @@ import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
 import MyPayslips from "./pages/MyPayslips";
 import AttendanceReset from "./pages/AttendanceReset";
+import AttendanceSummary from "./pages/AttendanceSummary";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
             <Route path="/my-payslips" element={<ProtectedRoute><MyPayslips /></ProtectedRoute>} />
             <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />
+            <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceSummary /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

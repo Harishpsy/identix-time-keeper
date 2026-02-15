@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import StatCard from "./StatCard";
@@ -26,89 +26,105 @@ export default function AdminDashboard() {
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [mySummaries, setMySummaries] = useState<any[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const today = format(new Date(), "yyyy-MM-dd");
-      const now = new Date();
-      const start = format(startOfMonth(now), "yyyy-MM-dd");
-      const end = format(endOfMonth(now), "yyyy-MM-dd");
+  const fetchData = useCallback(async () => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const now = new Date();
+    const start = format(startOfMonth(now), "yyyy-MM-dd");
+    const end = format(endOfMonth(now), "yyyy-MM-dd");
 
-      const [{ count: totalUsers }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
-        supabase
-          .from("daily_summaries")
-          .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
-          .eq("date", today)
-          .order("first_in", { ascending: true }),
-        supabase
-          .from("attendance_raw")
-          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-          .gte("timestamp", `${today}T00:00:00`)
-          .lte("timestamp", `${today}T23:59:59`)
-          .order("timestamp", { ascending: true }),
-        user
-          ? supabase
-              .from("daily_summaries")
-              .select("*")
-              .eq("user_id", user.id)
-              .gte("date", start)
-              .lte("date", end)
-              .order("date", { ascending: false })
-          : Promise.resolve({ data: [] as any[] }),
-      ]);
+    const [{ count: totalUsers }, { data: summaries }, { data: rawPunches }, myResult] = await Promise.all([
+      supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_active", true),
+      supabase
+        .from("daily_summaries")
+        .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
+        .eq("date", today)
+        .order("first_in", { ascending: true }),
+      supabase
+        .from("attendance_raw")
+        .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+        .gte("timestamp", `${today}T00:00:00`)
+        .lte("timestamp", `${today}T23:59:59`)
+        .order("timestamp", { ascending: true }),
+      user
+        ? supabase
+            .from("daily_summaries")
+            .select("*")
+            .eq("user_id", user.id)
+            .gte("date", start)
+            .lte("date", end)
+            .order("date", { ascending: false })
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
 
-      // Build today's records: prefer daily_summaries, fall back to attendance_raw
-      let records: TodayRecord[] = [];
+    let records: TodayRecord[] = [];
 
-      if (summaries && summaries.length > 0) {
-        records = summaries.map((s: any) => ({
-          userId: s.user_id,
-          fullName: s.profiles?.full_name || "—",
-          email: s.profiles?.email || "",
-          firstIn: s.first_in,
-          lastOut: s.last_out,
-          status: s.status,
-          lateMinutes: s.late_minutes || 0,
-        }));
-      } else if (rawPunches && rawPunches.length > 0) {
-        // Group raw punches by user
-        const byUser = new Map<string, { punches: any[]; profile: any }>();
-        for (const p of rawPunches) {
-          if (!byUser.has(p.user_id)) {
-            byUser.set(p.user_id, { punches: [], profile: p.profiles });
-          }
-          byUser.get(p.user_id)!.punches.push(p);
+    if (summaries && summaries.length > 0) {
+      records = summaries.map((s: any) => ({
+        userId: s.user_id,
+        fullName: s.profiles?.full_name || "—",
+        email: s.profiles?.email || "",
+        firstIn: s.first_in,
+        lastOut: s.last_out,
+        status: s.status,
+        lateMinutes: s.late_minutes || 0,
+      }));
+    } else if (rawPunches && rawPunches.length > 0) {
+      const byUser = new Map<string, { punches: any[]; profile: any }>();
+      for (const p of rawPunches) {
+        if (!byUser.has(p.user_id)) {
+          byUser.set(p.user_id, { punches: [], profile: p.profiles });
         }
-
-        records = Array.from(byUser.entries()).map(([userId, { punches, profile }]) => {
-          const logins = punches.filter((p: any) => p.punch_type === "login");
-          const logouts = punches.filter((p: any) => p.punch_type === "logout");
-          const firstIn = logins.length > 0 ? logins[0].timestamp : null;
-          const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
-
-          return {
-            userId,
-            fullName: profile?.full_name || "—",
-            email: profile?.email || "",
-            firstIn,
-            lastOut,
-            status: lastOut ? "present" : firstIn ? "present" : "absent",
-            lateMinutes: 0,
-          };
-        });
+        byUser.get(p.user_id)!.punches.push(p);
       }
 
-      const present = records.filter((r) => r.status === "present" || r.status === "late").length;
-      const late = records.filter((r) => r.status === "late").length;
-      const absent = (totalUsers || 0) - present;
+      records = Array.from(byUser.entries()).map(([userId, { punches, profile }]) => {
+        const logins = punches.filter((p: any) => p.punch_type === "login");
+        const logouts = punches.filter((p: any) => p.punch_type === "logout");
+        const firstIn = logins.length > 0 ? logins[0].timestamp : null;
+        const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
 
-      setStats({ total: totalUsers || 0, present, late, absent });
-      setTodayRecords(records);
-      setMySummaries(myResult.data || []);
-    };
+        return {
+          userId,
+          fullName: profile?.full_name || "—",
+          email: profile?.email || "",
+          firstIn,
+          lastOut,
+          status: lastOut ? "present" : firstIn ? "present" : "absent",
+          lateMinutes: 0,
+        };
+      });
+    }
 
-    fetchData();
+    const present = records.filter((r) => r.status === "present" || r.status === "late").length;
+    const late = records.filter((r) => r.status === "late").length;
+    const absent = (totalUsers || 0) - present;
+
+    setStats({ total: totalUsers || 0, present, late, absent });
+    setTodayRecords(records);
+    setMySummaries(myResult.data || []);
   }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Auto-refresh via Realtime subscription on attendance_raw
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-dashboard-attendance")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "attendance_raw" },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData]);
 
   return (
     <div className="space-y-6">

@@ -49,6 +49,33 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          company_address: string | null
+          company_name: string
+          created_at: string
+          id: string
+          logo_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_name?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_address?: string | null
+          company_name?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_summaries: {
         Row: {
           created_at: string

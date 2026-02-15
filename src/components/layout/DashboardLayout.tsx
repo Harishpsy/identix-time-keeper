@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
   { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["employee", "subadmin"] },
   { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin"] },
   { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["admin"] },
+  { label: "Company Branding", href: "/company-branding", icon: <Settings className="w-5 h-5" />, roles: ["admin"] },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

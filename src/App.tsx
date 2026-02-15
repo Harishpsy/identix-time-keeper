@@ -11,7 +11,7 @@ import Employees from "./pages/Employees";
 import Shifts from "./pages/Shifts";
 import Departments from "./pages/Departments";
 import LeaveRequests from "./pages/LeaveRequests";
-import Reports from "./pages/Reports";
+
 import Payroll from "./pages/Payroll";
 import MyPayslips from "./pages/MyPayslips";
 import AttendanceReset from "./pages/AttendanceReset";
@@ -59,7 +59,7 @@ const App = () => (
             <Route path="/departments" element={<ProtectedRoute allowedRoles={["admin"]}><Departments /></ProtectedRoute>} />
             <Route path="/shifts" element={<ProtectedRoute allowedRoles={["admin"]}><Shifts /></ProtectedRoute>} />
             <Route path="/leave" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute allowedRoles={["admin", "subadmin"]}><Reports /></ProtectedRoute>} />
+            
             <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
             <Route path="/my-payslips" element={<ProtectedRoute><MyPayslips /></ProtectedRoute>} />
             <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />

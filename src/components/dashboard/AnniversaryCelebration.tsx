@@ -15,18 +15,19 @@ export default function AnniversaryCelebration() {
   useEffect(() => {
     if (!profile?.date_of_joining) return;
 
-    const joining = new Date(profile.date_of_joining);
+    // Parse date parts to avoid timezone issues with date-only strings
+    const [joinYear, joinMonth, joinDay] = profile.date_of_joining.split("-").map(Number);
     const today = new Date();
+    const todayMonth = today.getMonth() + 1; // getMonth() is 0-indexed
+    const todayDay = today.getDate();
+    const todayYear = today.getFullYear();
 
     // Check if today is the anniversary (same month & day)
-    if (
-      joining.getMonth() === today.getMonth() &&
-      joining.getDate() === today.getDate()
-    ) {
-      const years = today.getFullYear() - joining.getFullYear();
+    if (joinMonth === todayMonth && joinDay === todayDay) {
+      const years = todayYear - joinYear;
       if (years >= 1) {
         // Only show once per session
-        const key = `anniversary-shown-${profile.id}-${today.getFullYear()}`;
+        const key = `anniversary-shown-${profile.id}-${todayYear}`;
         if (!sessionStorage.getItem(key)) {
           setYearsCompleted(years);
           setOpen(true);

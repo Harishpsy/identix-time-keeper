@@ -122,17 +122,19 @@ export default function CheckInOut() {
   })();
 
   const maxBreakMs = (shiftConfig?.max_break_minutes ?? 60) * 60 * 1000;
-  const breakExceeded = totalBreakMs > maxBreakMs;
-  const excessBreakMs = breakExceeded ? totalBreakMs - maxBreakMs : 0;
+  const remainingBreakMs = maxBreakMs - totalBreakMs;
+  const breakExceeded = remainingBreakMs < 0;
 
   const formatDuration = (ms: number) => {
-    const totalSecs = Math.floor(ms / 1000);
+    const abs = Math.abs(ms);
+    const totalSecs = Math.floor(abs / 1000);
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
-    const msec = Math.floor((ms % 1000) / 10);
+    const msec = Math.floor((abs % 1000) / 10);
     const pad = (n: number) => n.toString().padStart(2, "0");
-    return `${hrs}:${pad(mins)}:${pad(secs)}:${pad(msec)}`;
+    const prefix = ms < 0 ? "-" : "";
+    return `${prefix}${hrs}:${pad(mins)}:${pad(secs)}:${pad(msec)}`;
   };
 
   return (
@@ -164,9 +166,9 @@ export default function CheckInOut() {
                   Last: <span className="font-medium text-foreground">{format(new Date(lastPunch.timestamp), "hh:mm a")}</span>
                 </div>
               )}
-              <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
+              <div className={`flex items-center gap-1 text-sm whitespace-nowrap ${breakExceeded ? "text-destructive" : "text-muted-foreground"}`}>
                 <Coffee className="w-3.5 h-3.5" />
-                Break: <span className="font-medium text-foreground tabular-nums">{totalBreakMs > 0 ? formatDuration(totalBreakMs) : "0s"}</span>
+                Break: <span className={`font-medium tabular-nums ${breakExceeded ? "text-destructive" : "text-foreground"}`}>{formatDuration(remainingBreakMs)}</span>
               </div>
               {firstIn && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
@@ -190,7 +192,7 @@ export default function CheckInOut() {
           <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-destructive/10 border border-destructive/30 text-destructive text-sm font-medium">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
-              Break time exceeded by <span className="font-bold tabular-nums">{formatDuration(excessBreakMs)}</span>
+              Break time exceeded by <span className="font-bold tabular-nums">{formatDuration(Math.abs(remainingBreakMs))}</span>
               {isOnBreak && " — Please end your break now!"}
             </span>
           </div>

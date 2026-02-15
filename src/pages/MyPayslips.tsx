@@ -69,11 +69,13 @@ export default function MyPayslips() {
     const companyAddress = brandingData?.company_address || "";
     const logoUrl = brandingData?.logo_url || "";
     const brandHex = brandingData?.brand_color || "#2980B9";
+    const textHex = brandingData?.text_color || "#FFFFFF";
     const hexToRgb = (hex: string): [number, number, number] => {
       const h = hex.replace("#", "");
       return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
     };
     const brandRgb = hexToRgb(brandHex);
+    const textRgb = hexToRgb(textHex);
 
     const doc = new jsPDF();
     const pw = doc.internal.pageSize.getWidth();
@@ -108,7 +110,7 @@ export default function MyPayslips() {
       doc.addImage(logoDataUrl, "PNG", 10, 4, 18, 18);
     }
 
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...textRgb);
     doc.setFontSize(18);
     doc.text(companyName, pw / 2, 14, { align: "center" });
     doc.setFontSize(9);
@@ -174,7 +176,7 @@ export default function MyPayslips() {
       head: [["Earnings", "Amount (Rs.)", "Deductions", "Amount (Rs.)"]],
       body: tableBody,
       styles: { fontSize: 9, cellPadding: 4, font: "helvetica" },
-      headStyles: { fillColor: brandRgb, fontStyle: "bold", halign: "left" },
+      headStyles: { fillColor: brandRgb, textColor: textRgb, fontStyle: "bold", halign: "left" },
       columnStyles: {
         0: { cellWidth: 55 },
         1: { cellWidth: 35, halign: "right" },
@@ -196,7 +198,7 @@ export default function MyPayslips() {
     // Net Salary box
     doc.setFillColor(...brandRgb);
     doc.roundedRect(14, finalY + 8, pw - 28, 20, 3, 3, "F");
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...textRgb);
     doc.setFontSize(12);
     doc.text("Net Salary (Take Home)", 20, finalY + 20);
     doc.setFontSize(16);

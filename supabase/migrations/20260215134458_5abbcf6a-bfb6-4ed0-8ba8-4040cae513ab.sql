@@ -1,0 +1,1 @@
+ALTER TABLE public.company_settings ADD COLUMN text_color text NOT NULL DEFAULT '#FFFFFF';

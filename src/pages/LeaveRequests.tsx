@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Check, X, CalendarDays, Settings, Trash2, Pencil } from "lucide-react";
+import { Plus, Check, X, CalendarDays, Settings, Trash2, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -36,6 +36,7 @@ export default function LeaveRequests() {
   const [leaveSettings, setLeaveSettings] = useState<any[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ date: format(new Date(), "yyyy-MM-dd"), to_date: format(new Date(), "yyyy-MM-dd"), type: "" as string, reason: "", submitted_to: "", permission_hours: "" });
 
   const fetchLeaveSettings = async () => {
@@ -59,6 +60,7 @@ export default function LeaveRequests() {
   };
 
   const fetchRequests = async () => {
+    setLoading(true);
     let query = supabase
       .from("leave_requests")
       .select("*, profiles!leave_requests_user_id_fkey(full_name), approver:profiles!leave_requests_submitted_to_fkey(full_name)")
@@ -72,6 +74,7 @@ export default function LeaveRequests() {
 
     const { data } = await query;
     setRequests(data || []);
+    setLoading(false);
   };
 
   const fetchLeaveBalance = async () => {
@@ -298,7 +301,13 @@ export default function LeaveRequests() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.length === 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={role === "admin" ? 8 : role === "employee" ? 7 : 6} className="text-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : requests.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={role === "admin" ? 8 : role === "employee" ? 7 : 6} className="text-center text-muted-foreground py-8">
                         No leave requests

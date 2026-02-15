@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { Search, ChevronLeft, ChevronRight, Download, FileText } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Download, FileText, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -20,9 +20,11 @@ export default function Attendance() {
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       const [year, mon] = month.split("-").map(Number);
       const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
@@ -98,6 +100,7 @@ export default function Attendance() {
       }
 
       setSummaries(results);
+      setLoading(false);
     };
 
     fetchData();
@@ -235,7 +238,13 @@ export default function Attendance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginated.length === 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center py-8">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ) : paginated.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center text-muted-foreground py-8">
                         No records found

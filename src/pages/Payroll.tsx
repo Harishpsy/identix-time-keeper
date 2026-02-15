@@ -439,10 +439,10 @@ export default function Payroll() {
   const employeesWithPayroll = new Set(records.map((r) => r.user_id));
   const availableEmployees = editingId ? employees : employees.filter((e) => !employeesWithPayroll.has(e.id));
 
-  const NumField = ({ label, field }: { label: string; field: keyof typeof form }) => (
+  const renderNumField = (label: string, field: keyof typeof form) => (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input type="number" min="0" step="0.01" value={form[field]} onChange={(e) => setForm({ ...form, [field]: e.target.value })} onFocus={(e) => e.target.select()} className="h-8 text-sm" />
+      <Input type="number" min="0" step="0.01" value={form[field]} onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))} onFocus={(e) => e.target.select()} className="h-8 text-sm" />
     </div>
   );
 
@@ -497,8 +497,8 @@ export default function Payroll() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <NumField label="Paid Days" field="paid_days" />
-                  <NumField label="LOP Days" field="lop_days" />
+                  {renderNumField("Paid Days", "paid_days")}
+                  {renderNumField("LOP Days", "lop_days")}
                 </div>
 
                 <Separator />
@@ -507,15 +507,15 @@ export default function Payroll() {
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-3">Earnings</h3>
                   <div className="grid grid-cols-3 gap-3">
-                    <NumField label="Basic Salary *" field="basic_salary" />
-                    <NumField label="HRA" field="hra" />
-                    <NumField label="Dearness Allowance (DA)" field="dearness_allowance" />
-                    <NumField label="Conveyance Allowance" field="conveyance_allowance" />
-                    <NumField label="Medical Allowance" field="medical_allowance" />
-                    <NumField label="Special Allowance" field="special_allowance" />
-                    <NumField label="Overtime" field="overtime" />
-                    <NumField label="Bonus" field="bonus" />
-                    <NumField label="Other Earnings" field="other_earnings" />
+                    {renderNumField("Basic Salary *", "basic_salary")}
+                    {renderNumField("HRA", "hra")}
+                    {renderNumField("Dearness Allowance (DA)", "dearness_allowance")}
+                    {renderNumField("Conveyance Allowance", "conveyance_allowance")}
+                    {renderNumField("Medical Allowance", "medical_allowance")}
+                    {renderNumField("Special Allowance", "special_allowance")}
+                    {renderNumField("Overtime", "overtime")}
+                    {renderNumField("Bonus", "bonus")}
+                    {renderNumField("Other Earnings", "other_earnings")}
                   </div>
                   <div className="mt-2 text-right text-sm font-medium text-foreground">
                     Gross Earnings: <span className="font-bold">₹{grossPreview.toFixed(2)}</span>
@@ -528,12 +528,12 @@ export default function Payroll() {
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-3">Deductions</h3>
                   <div className="grid grid-cols-3 gap-3">
-                    <NumField label="EPF (Employee)" field="epf_employee" />
-                    <NumField label="ESI (Employee)" field="esi_employee" />
-                    <NumField label="Professional Tax" field="professional_tax" />
-                    <NumField label="TDS / Income Tax" field="tds" />
-                    <NumField label="Loan Recovery" field="loan_recovery" />
-                    <NumField label="Other Deductions" field="other_deductions" />
+                    {renderNumField("EPF (Employee)", "epf_employee")}
+                    {renderNumField("ESI (Employee)", "esi_employee")}
+                    {renderNumField("Professional Tax", "professional_tax")}
+                    {renderNumField("TDS / Income Tax", "tds")}
+                    {renderNumField("Loan Recovery", "loan_recovery")}
+                    {renderNumField("Other Deductions", "other_deductions")}
                   </div>
                   <div className="mt-2 text-right text-sm font-medium text-foreground">
                     Total Deductions: <span className="font-bold">₹{deductionsPreview.toFixed(2)}</span>
@@ -546,8 +546,8 @@ export default function Payroll() {
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-3">Employer Contributions</h3>
                   <div className="grid grid-cols-3 gap-3">
-                    <NumField label="EPF (Employer)" field="epf_employer" />
-                    <NumField label="ESI (Employer)" field="esi_employer" />
+                    {renderNumField("EPF (Employer)", "epf_employer")}
+                    {renderNumField("ESI (Employer)", "esi_employer")}
                   </div>
                 </div>
 

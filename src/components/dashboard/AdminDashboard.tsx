@@ -213,10 +213,14 @@ export default function AdminDashboard() {
     };
   }, [fetchData]);
 
-  const todayTotalPages = Math.max(1, Math.ceil(todayRecords.length / PAGE_SIZE));
+  const leaveRecords = useMemo(
+    () => todayRecords.filter((r) => r.status === "absent" || r.status === "on_leave"),
+    [todayRecords]
+  );
+  const todayTotalPages = Math.max(1, Math.ceil(leaveRecords.length / PAGE_SIZE));
   const paginatedToday = useMemo(
-    () => todayRecords.slice((todayPage - 1) * PAGE_SIZE, todayPage * PAGE_SIZE),
-    [todayRecords, todayPage]
+    () => leaveRecords.slice((todayPage - 1) * PAGE_SIZE, todayPage * PAGE_SIZE),
+    [leaveRecords, todayPage]
   );
 
   const historyTotalPages = Math.max(1, Math.ceil(mySummaries.length / PAGE_SIZE));
@@ -249,11 +253,11 @@ export default function AdminDashboard() {
 
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Today's Attendance</CardTitle>
+          <CardTitle className="text-base font-semibold">Today's Leave</CardTitle>
         </CardHeader>
         <CardContent>
-          {todayRecords.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No attendance records for today</p>
+          {leaveRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">No employees on leave today</p>
           ) : (
             <>
               <div className="overflow-x-auto">

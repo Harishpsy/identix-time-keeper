@@ -46,43 +46,81 @@ export default function Attendance() {
       const { data } = await query;
       let results = data || [];
 
-      // If today is within selected month and has no daily_summary, build from raw punches + all active profiles
-      const today = format(new Date(), "yyyy-MM-dd");
-      if (today >= start && today <= end) {
-        // Check if any user already has a daily_summary for today
-        const usersWithTodaySummary = new Set(
-          results.filter((s: any) => s.date === today).map((s: any) => s.user_id)
-        );
+      // For recent days (today, yesterday, day before), correct/supplement daily_summaries with raw punch data
+      const today = new Date();
+      const recentDays = [
+        format(today, "yyyy-MM-dd"),
+        format(subDays(today, 1), "yyyy-MM-dd"),
+        format(subDays(today, 2), "yyyy-MM-dd"),
+      ].filter((d) => d >= start && d <= end);
 
-        if (role !== "employee") {
-          // Fetch all active profiles and raw punches in parallel
-          const [{ data: allProfiles }, { data: rawPunches }] = await Promise.all([
-            supabase.from("profiles").select("id, full_name, email").eq("is_active", true),
-            supabase
-              .from("attendance_raw")
-              .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-              .gte("timestamp", `${today}T00:00:00`)
-              .lte("timestamp", `${today}T23:59:59`)
-              .order("timestamp", { ascending: true }),
-          ]);
+      if (recentDays.length > 0 && role !== "employee") {
+        // Fetch all active profiles once
+        const { data: allProfiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .eq("is_active", true);
 
-          // Group punches by user
-          const byUser = new Map<string, { punches: any[]; profile: any }>();
-          for (const p of rawPunches || []) {
-            if (!byUser.has(p.user_id)) {
-              byUser.set(p.user_id, { punches: [], profile: p.profiles });
+        // Fetch raw punches for all recent days
+        const earliestDay = recentDays[recentDays.length - 1];
+        const latestDay = recentDays[0];
+        const { data: rawPunches } = await supabase
+          .from("attendance_raw")
+          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+          .gte("timestamp", `${earliestDay}T00:00:00`)
+          .lte("timestamp", `${latestDay}T23:59:59`)
+          .order("timestamp", { ascending: true });
+
+        // Group punches by date and user
+        const punchMap = new Map<string, Map<string, any[]>>();
+        for (const p of rawPunches || []) {
+          const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
+          if (!punchMap.has(punchDate)) punchMap.set(punchDate, new Map());
+          const userMap = punchMap.get(punchDate)!;
+          if (!userMap.has(p.user_id)) userMap.set(p.user_id, []);
+          userMap.get(p.user_id)!.push(p);
+        }
+
+        for (const day of recentDays) {
+          const existingSummaries = results.filter((s: any) => s.date === day);
+          const existingUserIds = new Set(existingSummaries.map((s: any) => s.user_id));
+          const dayPunches = punchMap.get(day) || new Map();
+
+          // Override existing summaries that show absent but have raw punches
+          results = results.map((s: any) => {
+            if (s.date !== day) return s;
+            const userPunches = dayPunches.get(s.user_id);
+            if (!userPunches || userPunches.length === 0) return s;
+            if (s.first_in) return s; // already has data, don't override
+            if (s.is_manual_override) return s; // respect manual overrides
+
+            const logins = userPunches.filter((p: any) => p.punch_type === "login");
+            const logouts = userPunches.filter((p: any) => p.punch_type === "logout");
+            const firstIn = logins.length > 0 ? logins[0].timestamp : null;
+            const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
+            let duration = null;
+            if (firstIn && lastOut) {
+              const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+              const h = Math.floor(ms / 3600000);
+              const m = Math.floor((ms % 3600000) / 60000);
+              duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
             }
-            byUser.get(p.user_id)!.punches.push(p);
-          }
+            return {
+              ...s,
+              first_in: firstIn,
+              last_out: lastOut,
+              total_duration: duration,
+              status: firstIn ? "present" : s.status,
+            };
+          });
 
-          // Build today records for ALL active profiles not already in daily_summaries
-          const todayRecords = (allProfiles || [])
-            .filter((prof: any) => !usersWithTodaySummary.has(prof.id))
+          // Add missing users for this day
+          const newRecords = (allProfiles || [])
+            .filter((prof: any) => !existingUserIds.has(prof.id))
             .map((prof: any) => {
-              const userData = byUser.get(prof.id);
-              const punches = userData?.punches || [];
-              const logins = punches.filter((p: any) => p.punch_type === "login");
-              const logouts = punches.filter((p: any) => p.punch_type === "logout");
+              const userPunches = dayPunches.get(prof.id) || [];
+              const logins = userPunches.filter((p: any) => p.punch_type === "login");
+              const logouts = userPunches.filter((p: any) => p.punch_type === "logout");
               const firstIn = logins.length > 0 ? logins[0].timestamp : null;
               const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
               let duration = null;
@@ -93,9 +131,9 @@ export default function Attendance() {
                 duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
               }
               return {
-                id: `today-${prof.id}`,
+                id: `synth-${day}-${prof.id}`,
                 user_id: prof.id,
-                date: today,
+                date: day,
                 first_in: firstIn,
                 last_out: lastOut,
                 total_duration: duration,
@@ -105,19 +143,37 @@ export default function Attendance() {
               };
             });
 
-          results = [...todayRecords, ...results] as any[];
-        } else if (!usersWithTodaySummary.has(user?.id)) {
-          // Employee: check own punches
-          const { data: rawPunches } = await supabase
-            .from("attendance_raw")
-            .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-            .eq("user_id", user?.id)
-            .gte("timestamp", `${today}T00:00:00`)
-            .lte("timestamp", `${today}T23:59:59`)
-            .order("timestamp", { ascending: true });
+          results = [...newRecords, ...results] as any[];
+        }
+      } else if (recentDays.length > 0 && role === "employee") {
+        // Employee: correct own records for recent days
+        const earliestDay = recentDays[recentDays.length - 1];
+        const latestDay = recentDays[0];
+        const { data: rawPunches } = await supabase
+          .from("attendance_raw")
+          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+          .eq("user_id", user?.id)
+          .gte("timestamp", `${earliestDay}T00:00:00`)
+          .lte("timestamp", `${latestDay}T23:59:59`)
+          .order("timestamp", { ascending: true });
 
-          const logins = (rawPunches || []).filter((p: any) => p.punch_type === "login");
-          const logouts = (rawPunches || []).filter((p: any) => p.punch_type === "logout");
+        const punchByDay = new Map<string, any[]>();
+        for (const p of rawPunches || []) {
+          const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
+          if (!punchByDay.has(punchDate)) punchByDay.set(punchDate, []);
+          punchByDay.get(punchDate)!.push(p);
+        }
+
+        // Override existing wrong summaries
+        results = results.map((s: any) => {
+          if (!recentDays.includes(s.date)) return s;
+          const dayPunches = punchByDay.get(s.date);
+          if (!dayPunches || dayPunches.length === 0) return s;
+          if (s.first_in) return s;
+          if (s.is_manual_override) return s;
+
+          const logins = dayPunches.filter((p: any) => p.punch_type === "login");
+          const logouts = dayPunches.filter((p: any) => p.punch_type === "logout");
           const firstIn = logins.length > 0 ? logins[0].timestamp : null;
           const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
           let duration = null;
@@ -127,18 +183,40 @@ export default function Attendance() {
             const m = Math.floor((ms % 3600000) / 60000);
             duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
           }
-          const profile = rawPunches?.[0]?.profiles || null;
-          results = [{
-            id: `today-${user?.id}`,
-            user_id: user?.id,
-            date: today,
-            first_in: firstIn,
-            last_out: lastOut,
-            total_duration: duration,
-            status: firstIn ? "present" : "absent",
-            late_minutes: 0,
-            profiles: profile,
-          }, ...results] as any[];
+          return { ...s, first_in: firstIn, last_out: lastOut, total_duration: duration, status: firstIn ? "present" : s.status };
+        });
+
+        // Add missing days for employee
+        for (const day of recentDays) {
+          const hasDay = results.some((s: any) => s.date === day);
+          if (!hasDay) {
+            const dayPunches = punchByDay.get(day) || [];
+            const logins = dayPunches.filter((p: any) => p.punch_type === "login");
+            const logouts = dayPunches.filter((p: any) => p.punch_type === "logout");
+            const firstIn = logins.length > 0 ? logins[0].timestamp : null;
+            const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
+            let duration = null;
+            if (firstIn && lastOut) {
+              const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+              const h = Math.floor(ms / 3600000);
+              const m = Math.floor((ms % 3600000) / 60000);
+              duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+            }
+            const profile = dayPunches[0]?.profiles || null;
+            (results as any[]).unshift({
+              id: `synth-${day}-${user?.id}`,
+              user_id: user?.id,
+              date: day,
+              first_in: firstIn,
+              last_out: lastOut,
+              total_duration: duration,
+              status: firstIn ? "present" : "absent",
+              late_minutes: 0,
+              profiles: profile,
+              created_at: new Date().toISOString(),
+              is_manual_override: false,
+            } as any);
+          }
         }
       }
 

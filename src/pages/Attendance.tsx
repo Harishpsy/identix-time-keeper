@@ -46,33 +46,41 @@ export default function Attendance() {
       const { data } = await query;
       let results = data || [];
 
-      // If today is within selected month and has no daily_summary, build from raw punches
+      // If today is within selected month and has no daily_summary, build from raw punches + all active profiles
       const today = format(new Date(), "yyyy-MM-dd");
       if (today >= start && today <= end) {
-        const hasTodaySummary = results.some((s: any) => s.date === today);
-        if (!hasTodaySummary) {
-          let rawQuery = supabase
-            .from("attendance_raw")
-            .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-            .gte("timestamp", `${today}T00:00:00`)
-            .lte("timestamp", `${today}T23:59:59`)
-            .order("timestamp", { ascending: true });
+        // Check if any user already has a daily_summary for today
+        const usersWithTodaySummary = new Set(
+          results.filter((s: any) => s.date === today).map((s: any) => s.user_id)
+        );
 
-          if (role === "employee") {
-            rawQuery = rawQuery.eq("user_id", user?.id);
+        if (role !== "employee") {
+          // Fetch all active profiles and raw punches in parallel
+          const [{ data: allProfiles }, { data: rawPunches }] = await Promise.all([
+            supabase.from("profiles").select("id, full_name, email").eq("is_active", true),
+            supabase
+              .from("attendance_raw")
+              .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+              .gte("timestamp", `${today}T00:00:00`)
+              .lte("timestamp", `${today}T23:59:59`)
+              .order("timestamp", { ascending: true }),
+          ]);
+
+          // Group punches by user
+          const byUser = new Map<string, { punches: any[]; profile: any }>();
+          for (const p of rawPunches || []) {
+            if (!byUser.has(p.user_id)) {
+              byUser.set(p.user_id, { punches: [], profile: p.profiles });
+            }
+            byUser.get(p.user_id)!.punches.push(p);
           }
 
-          const { data: rawPunches } = await rawQuery;
-          if (rawPunches && rawPunches.length > 0) {
-            const byUser = new Map<string, { punches: any[]; profile: any }>();
-            for (const p of rawPunches) {
-              if (!byUser.has(p.user_id)) {
-                byUser.set(p.user_id, { punches: [], profile: p.profiles });
-              }
-              byUser.get(p.user_id)!.punches.push(p);
-            }
-
-            const todayRecords = Array.from(byUser.entries()).map(([userId, { punches, profile }]) => {
+          // Build today records for ALL active profiles not already in daily_summaries
+          const todayRecords = (allProfiles || [])
+            .filter((prof: any) => !usersWithTodaySummary.has(prof.id))
+            .map((prof: any) => {
+              const userData = byUser.get(prof.id);
+              const punches = userData?.punches || [];
               const logins = punches.filter((p: any) => p.punch_type === "login");
               const logouts = punches.filter((p: any) => p.punch_type === "logout");
               const firstIn = logins.length > 0 ? logins[0].timestamp : null;
@@ -85,20 +93,52 @@ export default function Attendance() {
                 duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
               }
               return {
-                id: `today-${userId}`,
-                user_id: userId,
+                id: `today-${prof.id}`,
+                user_id: prof.id,
                 date: today,
                 first_in: firstIn,
                 last_out: lastOut,
                 total_duration: duration,
                 status: firstIn ? "present" : "absent",
                 late_minutes: 0,
-                profiles: profile,
+                profiles: { full_name: prof.full_name, email: prof.email },
               };
             });
 
-            results = [...todayRecords, ...results] as any[];
+          results = [...todayRecords, ...results] as any[];
+        } else if (!usersWithTodaySummary.has(user?.id)) {
+          // Employee: check own punches
+          const { data: rawPunches } = await supabase
+            .from("attendance_raw")
+            .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
+            .eq("user_id", user?.id)
+            .gte("timestamp", `${today}T00:00:00`)
+            .lte("timestamp", `${today}T23:59:59`)
+            .order("timestamp", { ascending: true });
+
+          const logins = (rawPunches || []).filter((p: any) => p.punch_type === "login");
+          const logouts = (rawPunches || []).filter((p: any) => p.punch_type === "logout");
+          const firstIn = logins.length > 0 ? logins[0].timestamp : null;
+          const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
+          let duration = null;
+          if (firstIn && lastOut) {
+            const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+            const h = Math.floor(ms / 3600000);
+            const m = Math.floor((ms % 3600000) / 60000);
+            duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
           }
+          const profile = rawPunches?.[0]?.profiles || null;
+          results = [{
+            id: `today-${user?.id}`,
+            user_id: user?.id,
+            date: today,
+            first_in: firstIn,
+            last_out: lastOut,
+            total_duration: duration,
+            status: firstIn ? "present" : "absent",
+            late_minutes: 0,
+            profiles: profile,
+          }, ...results] as any[];
         }
       }
 

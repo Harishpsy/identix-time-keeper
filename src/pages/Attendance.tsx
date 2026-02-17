@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { Search, ChevronLeft, ChevronRight, Download, FileText, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -21,6 +21,9 @@ export default function Attendance() {
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [quickFilter, setQuickFilter] = useState<"today" | "yesterday" | "previous" | null>(
+    role !== "employee" ? "today" : null
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,12 +109,22 @@ export default function Attendance() {
     fetchData();
   }, [month, user, role]);
 
-  const filtered = summaries.filter((s) =>
-    search
+  const getQuickFilterDate = (filter: "today" | "yesterday" | "previous") => {
+    if (filter === "today") return format(new Date(), "yyyy-MM-dd");
+    if (filter === "yesterday") return format(subDays(new Date(), 1), "yyyy-MM-dd");
+    return format(subDays(new Date(), 2), "yyyy-MM-dd");
+  };
+
+  const filtered = summaries.filter((s) => {
+    const matchesSearch = search
       ? s.profiles?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
         s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
-      : true
-  );
+      : true;
+    const matchesQuickFilter = quickFilter
+      ? s.date === getQuickFilterDate(quickFilter)
+      : true;
+    return matchesSearch && matchesQuickFilter;
+  });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -198,9 +211,27 @@ export default function Attendance() {
           <Input
             type="month"
             value={month}
-            onChange={(e) => setMonth(e.target.value)}
+            onChange={(e) => { setMonth(e.target.value); setQuickFilter(null); }}
             className="w-auto"
           />
+          {role !== "employee" && (
+            <div className="flex gap-1">
+              {(["today", "yesterday", "previous"] as const).map((filter) => (
+                <Button
+                  key={filter}
+                  variant={quickFilter === filter ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    const targetDate = filter === "today" ? new Date() : filter === "yesterday" ? subDays(new Date(), 1) : subDays(new Date(), 2);
+                    setMonth(format(targetDate, "yyyy-MM"));
+                    setQuickFilter(quickFilter === filter ? null : filter);
+                  }}
+                >
+                  {filter === "today" ? "Today" : filter === "yesterday" ? "Yesterday" : "Previous Day"}
+                </Button>
+              ))}
+            </div>
+          )}
           {role !== "employee" && (
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

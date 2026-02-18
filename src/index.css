@@ -4,6 +4,12 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap");
+
 @layer base {
   :root {
     --background: 220 20% 97%;
@@ -59,6 +65,9 @@
     --chart-3: 38 92% 50%;
     --chart-4: 0 72% 51%;
     --chart-5: 280 60% 55%;
+    --font-serif: "Playfair Display", ui-serif, Georgia, Cambria, Times New Roman, Times, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+    --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 
   .dark {
@@ -98,6 +107,9 @@
     --sidebar-accent-foreground: 220 10% 85%;
     --sidebar-border: 220 20% 14%;
     --sidebar-ring: 220 72% 55%;
+    --font-serif: "Playfair Display", ui-serif, Georgia, Cambria, Times New Roman, Times, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+    --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
   }
 }
 

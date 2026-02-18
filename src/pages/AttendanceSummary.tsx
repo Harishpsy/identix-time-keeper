@@ -38,56 +38,84 @@ export default function AttendanceSummary() {
     const start = format(startOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
     const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
 
-    const today = format(new Date(), "yyyy-MM-dd");
+    const todayDate = new Date();
+    const today = format(todayDate, "yyyy-MM-dd");
+    const yesterday = format(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1), "yyyy-MM-dd");
+    const dayBefore = format(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 2), "yyyy-MM-dd");
     const isCurrentMonth = today >= start && today <= end;
 
-    const [{ data: dailyData }, { data: profiles }, { data: departments }, { data: todayRawPunches }] = await Promise.all([
-      supabase.from("daily_summaries").select("user_id, status").gte("date", start).lte("date", end),
+    // Recent days that fall within the selected month
+    const recentDays = [today, yesterday, dayBefore].filter((d) => d >= start && d <= end);
+    const earliestRecent = recentDays[recentDays.length - 1];
+    const latestRecent = recentDays[0];
+
+    const [{ data: dailyData }, { data: profiles }, { data: departments }, { data: recentRawPunches }, { data: recentSummaries }] = await Promise.all([
+      supabase.from("daily_summaries").select("user_id, date, status, first_in, is_manual_override").gte("date", start).lte("date", end),
       supabase.from("profiles").select("id, full_name, email, department_id").eq("is_active", true).order("full_name"),
       supabase.from("departments").select("id, name"),
-      isCurrentMonth
-        ? supabase.from("attendance_raw").select("user_id").gte("timestamp", `${today}T00:00:00`).lte("timestamp", `${today}T23:59:59`)
+      isCurrentMonth && recentDays.length > 0
+        ? supabase.from("attendance_raw").select("user_id, punch_type, timestamp").gte("timestamp", `${earliestRecent}T00:00:00`).lte("timestamp", `${latestRecent}T23:59:59`)
+        : Promise.resolve({ data: [] }),
+      isCurrentMonth && recentDays.length > 0
+        ? supabase.from("daily_summaries").select("user_id, date, status, first_in, is_manual_override").in("date", recentDays)
         : Promise.resolve({ data: [] }),
     ]);
 
     const deptMap: Record<string, string> = {};
     (departments || []).forEach((d) => { deptMap[d.id] = d.name; });
 
+    // Build a map of recent summaries by date+user for quick lookup
+    const recentSummaryMap = new Map<string, any>();
+    (recentSummaries || []).forEach((s: any) => {
+      recentSummaryMap.set(`${s.date}:${s.user_id}`, s);
+    });
+
+    // Build punch map by date+user for recent days
+    const recentPunchMap = new Map<string, { hasLogin: boolean }>();
+    (recentRawPunches || []).forEach((p: any) => {
+      const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
+      if (!recentDays.includes(punchDate)) return;
+      const key = `${punchDate}:${p.user_id}`;
+      if (!recentPunchMap.has(key)) recentPunchMap.set(key, { hasLogin: false });
+      if (p.punch_type === "login") recentPunchMap.get(key)!.hasLogin = true;
+    });
+
+    // Helper to resolve effective status for a date+user
+    const getEffectiveStatus = (date: string, userId: string, summaryStatus: string, summaryFirstIn: string | null, isManualOverride: boolean) => {
+      if (!recentDays.includes(date)) return summaryStatus;
+      const punchInfo = recentPunchMap.get(`${date}:${userId}`);
+      // If there's a punch (login) but summary says absent and not manually overridden, correct to present
+      if (punchInfo?.hasLogin && !summaryFirstIn && !isManualOverride && summaryStatus === "absent") {
+        return "present";
+      }
+      return summaryStatus;
+    };
+
     const counts: Record<string, { present: number; late: number; absent: number; halfDay: number; onLeave: number; total: number }> = {};
     (dailyData || []).forEach((r: any) => {
       if (!counts[r.user_id]) counts[r.user_id] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
       counts[r.user_id].total++;
-      if (r.status === "present") counts[r.user_id].present++;
-      else if (r.status === "late") counts[r.user_id].late++;
-      else if (r.status === "absent") counts[r.user_id].absent++;
-      else if (r.status === "half_day") counts[r.user_id].halfDay++;
-      else if (r.status === "on_leave") counts[r.user_id].onLeave++;
+      const effectiveStatus = getEffectiveStatus(r.date, r.user_id, r.status, r.first_in, r.is_manual_override);
+      if (effectiveStatus === "present") counts[r.user_id].present++;
+      else if (effectiveStatus === "late") counts[r.user_id].late++;
+      else if (effectiveStatus === "absent") counts[r.user_id].absent++;
+      else if (effectiveStatus === "half_day") counts[r.user_id].halfDay++;
+      else if (effectiveStatus === "on_leave") counts[r.user_id].onLeave++;
     });
 
-    // For today: if a user has raw punches but no daily_summary yet, count them as present
-    if (isCurrentMonth && todayRawPunches && todayRawPunches.length > 0) {
-      const todaySummaryUsers = new Set(
-        (dailyData || []).filter((r: any) => {
-          // Check if this user already has a summary for today
-          return true; // We need date info - let's re-query
-        }).map((r: any) => r.user_id)
-      );
-
-      // Get today's daily_summaries to know who already has one
-      const { data: todaySummaries } = await supabase
-        .from("daily_summaries")
-        .select("user_id")
-        .eq("date", today);
-
-      const usersWithSummaryToday = new Set((todaySummaries || []).map((s: any) => s.user_id));
-      const usersWithPunchToday = new Set((todayRawPunches || []).map((p: any) => p.user_id));
-
-      for (const userId of usersWithPunchToday) {
-        if (!usersWithSummaryToday.has(userId)) {
-          if (!counts[userId]) counts[userId] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
-          counts[userId].present++;
-          counts[userId].total++;
-        }
+    // For recent days: add synthetic present records for users who punched but have no daily_summary yet
+    if (isCurrentMonth && recentDays.length > 0) {
+      for (const day of recentDays) {
+        recentPunchMap.forEach((punchInfo, key) => {
+          const [punchDay, userId] = key.split(":");
+          if (punchDay !== day) return;
+          const hasSummary = recentSummaryMap.has(`${day}:${userId}`);
+          if (!hasSummary && punchInfo.hasLogin) {
+            if (!counts[userId]) counts[userId] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
+            counts[userId].present++;
+            counts[userId].total++;
+          }
+        });
       }
     }
 

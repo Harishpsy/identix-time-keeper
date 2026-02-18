@@ -84,8 +84,8 @@ export default function AttendanceSummary() {
     const getEffectiveStatus = (date: string, userId: string, summaryStatus: string, summaryFirstIn: string | null, isManualOverride: boolean) => {
       if (!recentDays.includes(date)) return summaryStatus;
       const punchInfo = recentPunchMap.get(`${date}:${userId}`);
-      // If there's a punch (login) but summary says absent and not manually overridden, correct to present
-      if (punchInfo?.hasLogin && !summaryFirstIn && !isManualOverride && summaryStatus === "absent") {
+      // If there's a punch (login) but summary shows wrong status and not manually overridden, correct to present
+      if (punchInfo?.hasLogin && !summaryFirstIn && !isManualOverride && (summaryStatus === "absent" || summaryStatus === "on_leave")) {
         return "present";
       }
       return summaryStatus;

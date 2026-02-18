@@ -67,54 +67,95 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
       const [y, m] = month.split("-").map(Number);
       const start = format(startOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
-      const today = format(new Date(), "yyyy-MM-dd");
+
+      const todayDate = new Date();
+      const today = format(todayDate, "yyyy-MM-dd");
+      const yesterday = format(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1), "yyyy-MM-dd");
+      const dayBefore = format(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 2), "yyyy-MM-dd");
       const isCurrentMonth = today >= start && today <= end;
+
+      // Recent days within this month for raw punch correction
+      const recentDays = [today, yesterday, dayBefore].filter((d) => d >= start && d <= end);
+      const earliestRecent = recentDays[recentDays.length - 1];
+      const latestRecent = recentDays[0];
 
       const [{ data }, rawResult] = await Promise.all([
         supabase
           .from("daily_summaries")
-          .select("date, status, first_in, last_out, total_duration, late_minutes")
+          .select("date, status, first_in, last_out, total_duration, late_minutes, is_manual_override")
           .eq("user_id", userId)
           .gte("date", start)
           .lte("date", end)
           .order("date", { ascending: true }),
-        isCurrentMonth
+        isCurrentMonth && recentDays.length > 0
           ? supabase
               .from("attendance_raw")
               .select("timestamp, punch_type")
               .eq("user_id", userId)
-              .gte("timestamp", `${today}T00:00:00`)
-              .lte("timestamp", `${today}T23:59:59`)
+              .gte("timestamp", `${earliestRecent}T00:00:00`)
+              .lte("timestamp", `${latestRecent}T23:59:59`)
               .order("timestamp", { ascending: true })
           : Promise.resolve({ data: [] }),
       ]);
 
-      const records: DailyRecord[] = (data || []).map((d: any) => ({
-        date: d.date,
-        status: d.status,
-        first_in: d.first_in,
-        last_out: d.last_out,
-        total_duration: d.total_duration,
-        late_minutes: d.late_minutes,
-      }));
+      // Build punch map by date for recent days
+      const punchByDay = new Map<string, { logins: string[]; logouts: string[] }>();
+      for (const p of (rawResult.data || []) as any[]) {
+        const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
+        if (!recentDays.includes(punchDate)) continue;
+        if (!punchByDay.has(punchDate)) punchByDay.set(punchDate, { logins: [], logouts: [] });
+        const entry = punchByDay.get(punchDate)!;
+        if (p.punch_type === "login") entry.logins.push(p.timestamp);
+        else if (p.punch_type === "logout") entry.logouts.push(p.timestamp);
+      }
 
-      // Add today's live record from raw punches if no daily_summary exists yet
-      if (isCurrentMonth && rawResult.data && rawResult.data.length > 0) {
-        const hasTodaySummary = records.some((r) => r.date === today);
-        if (!hasTodaySummary) {
-          const punches = rawResult.data;
-          const firstIn = punches[0]?.timestamp || null;
-          const lastOut = punches.length > 1 ? punches[punches.length - 1]?.timestamp : null;
-          records.push({
-            date: today,
-            status: "present",
-            first_in: firstIn,
-            last_out: lastOut,
-            total_duration: null,
-            late_minutes: 0,
-          });
+      // Map daily_summaries and correct recent days using raw punches
+      const records: DailyRecord[] = (data || []).map((d: any) => {
+        if (!recentDays.includes(d.date) || d.is_manual_override) {
+          return { date: d.date, status: d.status, first_in: d.first_in, last_out: d.last_out, total_duration: d.total_duration, late_minutes: d.late_minutes };
+        }
+
+        const dayPunches = punchByDay.get(d.date);
+        // If summary already has first_in, trust it
+        if (d.first_in || !dayPunches || dayPunches.logins.length === 0) {
+          return { date: d.date, status: d.status, first_in: d.first_in, last_out: d.last_out, total_duration: d.total_duration, late_minutes: d.late_minutes };
+        }
+
+        // Override: user has punches but summary shows wrong status
+        const firstIn = dayPunches.logins[0];
+        const lastOut = dayPunches.logouts.length > 0 ? dayPunches.logouts[dayPunches.logouts.length - 1] : null;
+        let duration: string | null = null;
+        if (firstIn && lastOut) {
+          const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+          const h = Math.floor(ms / 3600000);
+          const min = Math.floor((ms % 3600000) / 60000);
+          duration = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`;
+        }
+        return { date: d.date, status: "present", first_in: firstIn, last_out: lastOut, total_duration: duration, late_minutes: d.late_minutes };
+      });
+
+      // Add synthetic records for recent days with punches but no daily_summary
+      for (const day of recentDays) {
+        const hasSummary = records.some((r) => r.date === day);
+        if (!hasSummary) {
+          const dayPunches = punchByDay.get(day);
+          if (dayPunches && dayPunches.logins.length > 0) {
+            const firstIn = dayPunches.logins[0];
+            const lastOut = dayPunches.logouts.length > 0 ? dayPunches.logouts[dayPunches.logouts.length - 1] : null;
+            let duration: string | null = null;
+            if (firstIn && lastOut) {
+              const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+              const h = Math.floor(ms / 3600000);
+              const min = Math.floor((ms % 3600000) / 60000);
+              duration = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`;
+            }
+            records.push({ date: day, status: "present", first_in: firstIn, last_out: lastOut, total_duration: duration, late_minutes: 0 });
+          }
         }
       }
+
+      // Sort by date ascending
+      records.sort((a, b) => a.date.localeCompare(b.date));
 
       setRecords(records);
       setLoading(false);

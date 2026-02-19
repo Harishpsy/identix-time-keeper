@@ -70,10 +70,12 @@ export default function AttendanceSummary() {
       recentSummaryMap.set(`${s.date}:${s.user_id}`, s);
     });
 
-    // Build punch map by date+user for recent days
+    // Build punch map by date+user for recent days (convert UTC → IST for date bucketing)
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
     const recentPunchMap = new Map<string, { hasLogin: boolean }>();
     (recentRawPunches || []).forEach((p: any) => {
-      const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
+      const istDate = new Date(new Date(p.timestamp).getTime() + IST_OFFSET_MS);
+      const punchDate = format(istDate, "yyyy-MM-dd");
       if (!recentDays.includes(punchDate)) return;
       const key = `${punchDate}:${p.user_id}`;
       if (!recentPunchMap.has(key)) recentPunchMap.set(key, { hasLogin: false });

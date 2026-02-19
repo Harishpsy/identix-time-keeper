@@ -70,10 +70,12 @@ export default function EmployeeDashboard() {
           : Promise.resolve({ data: [] }),
       ]);
 
-      // Build punch map by date for recent days
+      // Build punch map by date for recent days (convert UTC → IST for date bucketing)
+      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
       const punchByDay = new Map<string, { logins: string[]; logouts: string[] }>();
       for (const p of (rawResult.data || []) as any[]) {
-        const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
+        const istDate = new Date(new Date(p.timestamp).getTime() + IST_OFFSET_MS);
+        const punchDate = format(istDate, "yyyy-MM-dd");
         if (!recentDays.includes(punchDate)) continue;
         if (!punchByDay.has(punchDate)) punchByDay.set(punchDate, { logins: [], logouts: [] });
         const entry = punchByDay.get(punchDate)!;

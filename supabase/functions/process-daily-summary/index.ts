@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
       const body = await req.json();
       targetDate = body.date;
     } catch {
-      // No body or invalid JSON - use today IST
       const now = new Date();
       const istOffset = 5.5 * 60 * 60 * 1000;
       const istDate = new Date(now.getTime() + istOffset);
@@ -37,17 +36,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get all raw punches for the target date (using IST: UTC+5:30)
-    // Day starts at 00:00 IST = 18:30 previous day UTC
-    // Day ends at 23:59:59 IST = 18:29:59 same day UTC
-    const dayStartUTC = `${targetDate}T00:00:00+05:30`;
-    const dayEndUTC = `${targetDate}T23:59:59+05:30`;
+    // Fetch all punches for the target date in IST (UTC+5:30)
+    const dayStartIST = `${targetDate}T00:00:00+05:30`;
+    const dayEndIST = `${targetDate}T23:59:59+05:30`;
 
     const { data: punches, error: punchError } = await supabase
       .from("attendance_raw")
       .select("user_id, timestamp, punch_type")
-      .gte("timestamp", dayStartUTC)
-      .lte("timestamp", dayEndUTC)
+      .gte("timestamp", dayStartIST)
+      .lte("timestamp", dayEndIST)
       .order("timestamp", { ascending: true });
 
     if (punchError) throw punchError;
@@ -59,15 +56,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Group punches by user
-    const userPunches: Record<string, { timestamp: string; punch_type: string }[]> = {};
+    // Group punches by user — only track login/logout for first_in/last_out
+    const userPunches: Record<string, { logins: string[]; logouts: string[] }> = {};
     for (const p of punches) {
-      if (!userPunches[p.user_id]) userPunches[p.user_id] = [];
-      userPunches[p.user_id].push({ timestamp: p.timestamp, punch_type: p.punch_type || "in" });
+      if (!userPunches[p.user_id]) userPunches[p.user_id] = { logins: [], logouts: [] };
+      if (p.punch_type === "login") {
+        userPunches[p.user_id].logins.push(p.timestamp);
+      } else if (p.punch_type === "logout") {
+        userPunches[p.user_id].logouts.push(p.timestamp);
+      }
+    }
+
+    // Only process users who actually logged in
+    const userIds = Object.keys(userPunches).filter((uid) => userPunches[uid].logins.length > 0);
+
+    if (userIds.length === 0) {
+      return new Response(JSON.stringify({ message: "No login punches found for " + targetDate, processed: 0 }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get shift info for each user
-    const userIds = Object.keys(userPunches);
     const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("id, shift_id, shifts(start_time, grace_period_mins)")
@@ -91,39 +101,47 @@ Deno.serve(async (req) => {
     }> = [];
 
     for (const userId of userIds) {
-      const ups = userPunches[userId];
-      const firstIn = ups[0].timestamp;
-      const lastOut = ups.length > 1 ? ups[ups.length - 1].timestamp : null;
+      const { logins, logouts } = userPunches[userId];
 
-      // Calculate duration
+      // first_in = earliest login, last_out = latest logout
+      const firstIn = logins[0];
+      const lastOut = logouts.length > 0 ? logouts[logouts.length - 1] : null;
+
       const firstInDate = new Date(firstIn);
-      const lastOutDate = lastOut ? new Date(lastOut) : firstInDate;
-      const durationMs = lastOutDate.getTime() - firstInDate.getTime();
-      const durationHours = Math.floor(durationMs / 3600000);
-      const durationMins = Math.floor((durationMs % 3600000) / 60000);
-      const totalDuration = `${String(durationHours).padStart(2, "0")}:${String(durationMins).padStart(2, "0")}:00`;
+      const lastOutDate = lastOut ? new Date(lastOut) : null;
 
-      // Determine late status
+      // Calculate duration only if we have both login and logout
+      let totalDuration = "00:00:00";
+      let durationMs = 0;
+      if (lastOutDate) {
+        durationMs = lastOutDate.getTime() - firstInDate.getTime();
+        const durationHours = Math.floor(durationMs / 3600000);
+        const durationMins = Math.floor((durationMs % 3600000) / 60000);
+        totalDuration = `${String(durationHours).padStart(2, "0")}:${String(durationMins).padStart(2, "0")}:00`;
+      }
+
+      // Determine status based on shift
       let lateMinutes = 0;
       let status = "present";
       const profile = profileMap[userId];
 
       if (profile?.shifts) {
-        const shiftStart = profile.shifts.start_time; // e.g. "09:00:00"
-        const graceMins = profile.shifts.grace_period_mins || 15;
+        const shiftStart = profile.shifts.start_time; // e.g. "09:30:00"
+        const graceMins = profile.shifts.grace_period_mins || 0;
 
         // Parse shift start time for the target date in IST
         const shiftStartDate = new Date(`${targetDate}T${shiftStart}+05:30`);
         const graceDeadline = new Date(shiftStartDate.getTime() + graceMins * 60000);
 
         if (firstInDate > graceDeadline) {
+          // Late: calculate minutes late from shift start (not from grace deadline)
           lateMinutes = Math.floor((firstInDate.getTime() - shiftStartDate.getTime()) / 60000);
           status = "late";
         }
       }
 
-      // Check for half day (less than 4 hours)
-      if (durationMs > 0 && durationMs < 4 * 3600000 && lastOut) {
+      // Half day: logged in and out but worked less than 4 hours
+      if (lastOutDate && durationMs > 0 && durationMs < 4 * 3600000) {
         status = "half_day";
       }
 
@@ -138,9 +156,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Upsert summaries (update if exists, insert if not)
+    // Upsert summaries — skip manual overrides
+    let updatedCount = 0;
     for (const summary of summaries) {
-      // Check if a non-manual-override summary exists
       const { data: existing } = await supabase
         .from("daily_summaries")
         .select("id, is_manual_override")
@@ -149,7 +167,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (existing?.is_manual_override) {
-        console.log(`Skipping ${summary.user_id} - manual override in place`);
+        console.log(`Skipping ${summary.user_id} on ${summary.date} — manual override`);
         continue;
       }
 
@@ -167,9 +185,10 @@ Deno.serve(async (req) => {
       } else {
         await supabase.from("daily_summaries").insert(summary);
       }
+      updatedCount++;
     }
 
-    const result = { date: targetDate, processed: summaries.length };
+    const result = { date: targetDate, processed: updatedCount, total_punchers: summaries.length };
     console.log("Process daily summary result:", result);
 
     return new Response(JSON.stringify(result), {

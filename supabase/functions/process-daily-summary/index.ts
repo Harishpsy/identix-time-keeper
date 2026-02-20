@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
         totalDuration = `${String(durationHours).padStart(2, "0")}:${String(durationMins).padStart(2, "0")}:00`;
       }
 
-      // Determine status based on shift
+      // Determine late status based on shift
       let lateMinutes = 0;
       let status = "present";
       const profile = profileMap[userId];

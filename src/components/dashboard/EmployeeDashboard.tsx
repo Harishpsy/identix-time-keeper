@@ -28,6 +28,14 @@ function formatDuration(dur: string | null) {
   return dur;
 }
 
+function formatLateMinutes(mins: number | null) {
+  if (!mins || mins <= 0) return "00.00";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}.${String(m).padStart(2, "0")}`;
+}
+
+
 export default function EmployeeDashboard() {
   const { user } = useAuth();
   const [summaries, setSummaries] = useState<DailySummaryRow[]>([]);
@@ -84,25 +92,44 @@ export default function EmployeeDashboard() {
       }
 
       // Reconcile summaries with raw punches for recent days
+      // Always use raw punches as source of truth for recent days (not just when first_in is missing)
       const reconciledSummaries: DailySummaryRow[] = (sums || []).map((s: any) => {
         if (!recentDays.includes(s.date) || s.is_manual_override) return s;
 
         const dayPunches = punchByDay.get(s.date);
         if (!dayPunches || dayPunches.logins.length === 0) return s;
-        // If summary already has first_in, trust it
-        if (s.first_in) return s;
 
-        // Override wrong status using raw punches
+        // Always rebuild from raw punches for recent days to get latest last_out/duration
         const firstIn = dayPunches.logins[0];
         const lastOut = dayPunches.logouts.length > 0 ? dayPunches.logouts[dayPunches.logouts.length - 1] : null;
         let duration: string | null = null;
+        let durationMs = 0;
         if (firstIn && lastOut) {
-          const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
-          const h = Math.floor(ms / 3600000);
-          const min = Math.floor((ms % 3600000) / 60000);
+          durationMs = new Date(lastOut).getTime() - new Date(firstIn).getTime();
+          const h = Math.floor(durationMs / 3600000);
+          const min = Math.floor((durationMs % 3600000) / 60000);
           duration = `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}:00`;
         }
-        return { ...s, status: "present", first_in: firstIn, last_out: lastOut, total_duration: duration };
+
+        // Recalculate status: preserve late/half_day from summary if it was correctly set,
+        // but if summary says absent/on_leave and we have punches, recalculate properly
+        let status = s.status;
+        let lateMinutes = s.late_minutes || 0;
+
+        if (status === "absent" || status === "on_leave") {
+          // We have punches so user was present — recalculate status from raw punches
+          // Use the summary's late_minutes if it was already calculated by the edge function
+          // Otherwise mark as present (late calculation needs shift info we don't have client-side)
+          status = "present";
+          lateMinutes = 0;
+        }
+
+        // Half-day: if duration < 4 hours override status
+        if (lastOut && durationMs > 0 && durationMs < 4 * 3600000) {
+          status = "half_day";
+        }
+
+        return { ...s, status, first_in: firstIn, last_out: lastOut, total_duration: duration, late_minutes: lateMinutes };
       });
 
       // Add synthetic records for recent days with punches but no daily_summary
@@ -165,25 +192,27 @@ export default function EmployeeDashboard() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>First In</TableHead>
-                    <TableHead>Last Out</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {summaries.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">{format(parseLocalDate(s.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
-                      <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                      <TableCell>{formatDuration(s.total_duration)}</TableCell>
-                      <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>First In</TableHead>
+                      <TableHead>Last Out</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Late (HH.MM)</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
+                  </TableHeader>
+                  <TableBody>
+                    {summaries.map((s) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium">{format(parseLocalDate(s.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{formatDuration(s.total_duration)}</TableCell>
+                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                        <TableCell className="tabular-nums">{formatLateMinutes(s.late_minutes)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
               </Table>
             </div>
           )}

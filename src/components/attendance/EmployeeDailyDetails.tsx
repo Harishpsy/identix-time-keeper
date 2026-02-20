@@ -86,6 +86,11 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
       const earliestRecent = recentDays[recentDays.length - 1];
       const latestRecent = recentDays[0];
 
+      // IST = UTC+5:30. Convert IST day boundaries to UTC for DB queries.
+      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+      const earliestStartUTC = new Date(new Date(`${earliestRecent}T00:00:00`).getTime() - IST_OFFSET_MS).toISOString();
+      const latestEndUTC = new Date(new Date(`${latestRecent}T23:59:59`).getTime() - IST_OFFSET_MS).toISOString();
+
       const [{ data }, rawResult] = await Promise.all([
         supabase
           .from("daily_summaries")
@@ -99,14 +104,13 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
               .from("attendance_raw")
               .select("timestamp, punch_type")
               .eq("user_id", userId)
-              .gte("timestamp", `${earliestRecent}T00:00:00`)
-              .lte("timestamp", `${latestRecent}T23:59:59`)
+              .gte("timestamp", earliestStartUTC)
+              .lte("timestamp", latestEndUTC)
               .order("timestamp", { ascending: true })
           : Promise.resolve({ data: [] }),
       ]);
 
-      // Build punch map by date for recent days (convert UTC → IST for date bucketing)
-      const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+      // Build punch map by date — convert each UTC timestamp → IST date for bucketing
       const punchByDay = new Map<string, { logins: string[]; logouts: string[] }>();
       for (const p of (rawResult.data || []) as any[]) {
         const istDate = new Date(new Date(p.timestamp).getTime() + IST_OFFSET_MS);

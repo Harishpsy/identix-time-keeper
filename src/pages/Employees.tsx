@@ -232,7 +232,7 @@ export default function Employees() {
         s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
         s.total_duration || "—",
         s.status,
-        s.late_minutes || 0,
+        (() => { const mins = s.late_minutes; if (!mins || mins <= 0) return "00Mins.00Sec"; const h = Math.floor(mins / 60); const m = mins % 60; return `${String(h).padStart(2, "0")}Mins.${String(m).padStart(2, "0")}Sec`; })(),
       ]),
       styles: { fontSize: 9 },
       headStyles: { fillColor: [41, 128, 185] },

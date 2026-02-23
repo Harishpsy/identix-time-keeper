@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { Search, ChevronLeft, ChevronRight, Download, FileText, Loader2 } from "lucide-react";
+import ReprocessDialog from "@/components/attendance/ReprocessDialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -24,6 +25,7 @@ export default function Attendance() {
   const [quickFilter, setQuickFilter] = useState<"today" | "yesterday" | "previous" | null>(
     role !== "employee" ? "today" : null
   );
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -225,7 +227,7 @@ export default function Attendance() {
     };
 
     fetchData();
-  }, [month, user, role]);
+  }, [month, user, role, refreshKey]);
 
   const getQuickFilterDate = (filter: "today" | "yesterday" | "previous") => {
     if (filter === "today") return format(new Date(), "yyyy-MM-dd");
@@ -362,6 +364,9 @@ export default function Attendance() {
             </div>
           )}
           <div className="ml-auto flex gap-2">
+            {role === "admin" && (
+              <ReprocessDialog onComplete={() => setRefreshKey((k) => k + 1)} />
+            )}
             <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>
               <FileText className="w-4 h-4 mr-1" /> PDF
             </Button>

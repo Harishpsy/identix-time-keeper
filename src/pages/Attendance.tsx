@@ -15,6 +15,13 @@ import autoTable from "jspdf-autotable";
 
 const PAGE_SIZE = 10;
 
+function formatLateMinutes(mins: number | null) {
+  if (!mins || mins <= 0) return "00.00";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}.${String(m).padStart(2, "0")}`;
+}
+
 export default function Attendance() {
   const { user, role } = useAuth();
   const [summaries, setSummaries] = useState<any[]>([]);
@@ -267,7 +274,7 @@ export default function Attendance() {
         s.last_out ? format(new Date(s.last_out), "HH:mm") : "",
         s.total_duration || "",
         s.status,
-        s.late_minutes || 0,
+        formatLateMinutes(s.late_minutes),
       ];
       if (!isEmp) row.unshift(s.profiles?.full_name || "");
       return row;
@@ -302,7 +309,7 @@ export default function Attendance() {
         s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
         s.total_duration || "—",
         s.status,
-        s.late_minutes || 0,
+        formatLateMinutes(s.late_minutes),
       ];
       if (!isEmp) row.unshift(s.profiles?.full_name || "—");
       return row;
@@ -413,7 +420,7 @@ export default function Attendance() {
                         <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
                         <TableCell>{s.total_duration || "—"}</TableCell>
                         <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
-                        <TableCell>{s.late_minutes || 0}</TableCell>
+                        <TableCell>{formatLateMinutes(s.late_minutes)}</TableCell>
                       </TableRow>
                     ))
                   )}

@@ -16,10 +16,10 @@ import autoTable from "jspdf-autotable";
 const PAGE_SIZE = 10;
 
 function formatLateMinutes(mins: number | null) {
-  if (!mins || mins <= 0) return "00.00";
+  if (!mins || mins <= 0) return "00Mins.00Sec";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  return `${String(h).padStart(2, "0")}.${String(m).padStart(2, "0")}`;
+  return `${String(h).padStart(2, "0")}Mins.${String(m).padStart(2, "0")}Sec`;
 }
 
 export default function Attendance() {

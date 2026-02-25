@@ -396,9 +396,11 @@ export default function Employees() {
                                 <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
                                   <FileText className="w-4 h-4" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
-                                  <KeyRound className="w-4 h-4" />
-                                </Button>
+                                {emp.role !== "admin" && (
+                                  <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
+                                    <KeyRound className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </>
                             )}
                           </div>

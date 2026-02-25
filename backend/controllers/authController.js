@@ -131,6 +131,12 @@ const resetPassword = async (req, res) => {
     }
 
     try {
+        // Check if the target user is an admin – admin passwords can only be changed from the database
+        const [roles] = await pool.execute('SELECT role FROM user_roles WHERE user_id = ?', [userId]);
+        if (roles.length > 0 && roles[0].role === 'admin') {
+            return res.status(403).json({ error: 'Admin password can only be changed directly from the database' });
+        }
+
         const passwordHash = await bcrypt.hash(newPassword, 10);
         await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, userId]);
         res.json({ message: 'Password reset successfully' });

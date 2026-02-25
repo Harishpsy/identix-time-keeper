@@ -23,6 +23,13 @@ function formatLateMinutes(mins: number | null) {
   return `${String(h).padStart(2, "0")}Mins.${String(m).padStart(2, "0")}Sec`;
 }
 
+function formatDurationMins(mins: number | null) {
+  if (!mins && mins !== 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
+}
+
 export default function Attendance() {
   const { user, role } = useAuth();
   const [summaries, setSummaries] = useState<any[]>([]);
@@ -76,7 +83,7 @@ export default function Attendance() {
       s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
       : true;
     const matchesQuickFilter = quickFilter
-      ? s.date === getQuickFilterDate(quickFilter)
+      ? format(new Date(s.date), "yyyy-MM-dd") === getQuickFilterDate(quickFilter)
       : true;
     return matchesSearch && matchesQuickFilter;
   });
@@ -100,7 +107,7 @@ export default function Attendance() {
         s.date,
         s.first_in ? format(new Date(s.first_in), "HH:mm") : "",
         s.last_out ? format(new Date(s.last_out), "HH:mm") : "",
-        s.total_duration || "",
+        formatDurationMins(s.total_duration_minutes),
         s.status,
         formatLateMinutes(s.late_minutes),
       ];
@@ -135,7 +142,7 @@ export default function Attendance() {
         format(new Date(s.date), "dd MMM yyyy"),
         s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—",
         s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
-        s.total_duration || "—",
+        formatDurationMins(s.total_duration_minutes),
         s.status,
         formatLateMinutes(s.late_minutes),
       ];
@@ -246,7 +253,7 @@ export default function Attendance() {
                         <TableCell>{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
                         <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                         <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.total_duration || "—"}</TableCell>
+                        <TableCell>{formatDurationMins(s.total_duration_minutes)}</TableCell>
                         <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
                         <TableCell>{formatLateMinutes(s.late_minutes)}</TableCell>
                       </TableRow>

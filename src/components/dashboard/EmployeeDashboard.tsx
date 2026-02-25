@@ -15,15 +15,15 @@ interface DailySummaryRow {
   status: string;
   first_in: string | null;
   last_out: string | null;
-  total_duration: string | null;
+  total_duration_minutes: number | null;
   late_minutes: number | null;
 }
 
-function formatDuration(dur: string | null) {
-  if (!dur) return "—";
-  const match = dur.match(/(\d+):(\d+)/);
-  if (match) return `${match[1]}h ${match[2]}m`;
-  return dur;
+function formatDuration(mins: number | null) {
+  if (!mins && mins !== 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
 }
 
 function formatLateMinutes(mins: number | null) {
@@ -95,7 +95,7 @@ export default function EmployeeDashboard() {
                       <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                      <TableCell>{formatDuration(s.total_duration)}</TableCell>
+                      <TableCell>{formatDuration(s.total_duration_minutes)}</TableCell>
                       <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
                       <TableCell className="tabular-nums">{formatLateMinutes(s.late_minutes)}</TableCell>
                     </TableRow>

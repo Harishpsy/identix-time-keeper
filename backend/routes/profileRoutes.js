@@ -3,6 +3,7 @@ const {
     getProfiles,
     getProfileById,
     updateProfile,
+    deleteProfile,
     getDepartments,
     createDepartment,
     updateDepartment,
@@ -30,5 +31,6 @@ router.delete('/shifts/:id', authMiddleware, roleMiddleware(['admin']), deleteSh
 router.get('/shifts/:id', authMiddleware, getShiftById);
 router.get('/:id', authMiddleware, getProfileById);
 router.patch('/:id', authMiddleware, roleMiddleware(['admin']), updateProfile);
+router.delete('/:id', authMiddleware, roleMiddleware(['admin']), deleteProfile);
 
 module.exports = router;

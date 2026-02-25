@@ -11,9 +11,9 @@ const getAdminStats = async (req, res) => {
         // Today's summary stats
         const [summaryRes] = await pool.execute(
             'SELECT ' +
-            'COUNT(CASE WHEN status IN ("present", "late") THEN 1 END) as present, ' +
-            'COUNT(CASE WHEN status = "late" THEN 1 END) as late, ' +
-            'COUNT(CASE WHEN status IN ("absent", "on_leave") THEN 1 END) as absent ' +
+            "COUNT(CASE WHEN status IN ('present', 'late') THEN 1 END) as present, " +
+            "COUNT(CASE WHEN status = 'late' THEN 1 END) as late, " +
+            "COUNT(CASE WHEN status IN ('absent', 'on_leave') THEN 1 END) as absent " +
             'FROM daily_summaries WHERE date = ?',
             [today]
         );
@@ -35,14 +35,51 @@ const getAdminStats = async (req, res) => {
 const getTodayLeave = async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const [leaveRes] = await pool.execute(
+
+        // Get employees who are explicitly marked absent/on_leave/half_day in daily_summaries
+        const [explicitLeave] = await pool.execute(
             'SELECT s.*, p.full_name, p.email FROM daily_summaries s ' +
             'JOIN profiles p ON s.user_id = p.id ' +
-            'WHERE s.date = ? AND s.status IN ("absent", "on_leave", "half_day") ' +
+            "WHERE s.date = ? AND s.status IN ('absent', 'on_leave', 'half_day') " +
             'ORDER BY p.full_name ASC',
             [today]
         );
-        res.json(leaveRes);
+
+        // Get active employees who have NO attendance record today (absent by default)
+        const [noRecord] = await pool.execute(
+            "SELECT p.id as user_id, p.full_name, p.email, ? as date, 'absent' as status, " +
+            'NULL as first_in, NULL as last_out, NULL as total_duration_minutes, 0 as late_minutes ' +
+            'FROM profiles p ' +
+            'WHERE p.is_active = true ' +
+            'AND p.id NOT IN (SELECT user_id FROM daily_summaries WHERE date = ?) ' +
+            'AND p.id NOT IN (SELECT DISTINCT user_id FROM attendance_raw WHERE DATE(timestamp) = ?) ' +
+            'ORDER BY p.full_name ASC',
+            [today, today, today]
+        );
+
+        // Get employees with approved leave requests for today
+        const [leaveRequests] = await pool.execute(
+            "SELECT lr.user_id, p.full_name, p.email, ? as date, 'on_leave' as status, " +
+            'NULL as first_in, NULL as last_out, NULL as total_duration_minutes, 0 as late_minutes ' +
+            'FROM leave_requests lr ' +
+            'JOIN profiles p ON lr.user_id = p.id ' +
+            "WHERE lr.status = 'approved' AND ? BETWEEN lr.date AND lr.to_date " +
+            'AND lr.user_id NOT IN (SELECT user_id FROM daily_summaries WHERE date = ?) ' +
+            'ORDER BY p.full_name ASC',
+            [today, today, today]
+        );
+
+        // Combine and deduplicate by user_id
+        const seen = new Set();
+        const combined = [];
+        for (const record of [...explicitLeave, ...leaveRequests, ...noRecord]) {
+            if (!seen.has(record.user_id)) {
+                seen.add(record.user_id);
+                combined.push(record);
+            }
+        }
+
+        res.json(combined);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });

@@ -60,8 +60,8 @@ export default function AttendanceReset() {
 
       const employeeData: EmployeePunchData[] = profiles.map((profile: any) => {
         const punches = punchMap.get(profile.id) || [];
-        const breakStarts = punches.filter((p) => p.punch_type === "break-start").length;
-        const breakEnds = punches.filter((p) => p.punch_type === "break-end").length;
+        const breakStarts = punches.filter((p) => p.punch_type === "break_start").length;
+        const breakEnds = punches.filter((p) => p.punch_type === "break_end").length;
         return {
           userId: profile.id,
           fullName: profile.full_name,

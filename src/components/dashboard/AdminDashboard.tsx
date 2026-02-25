@@ -184,7 +184,7 @@ export default function AdminDashboard() {
                         <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
                         <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                         <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.total_duration || "—"}</TableCell>
+                        <TableCell>{s.total_duration_minutes != null ? `${Math.floor(s.total_duration_minutes / 60)}h ${s.total_duration_minutes % 60}m` : "—"}</TableCell>
                         <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
                       </TableRow>
                     ))}

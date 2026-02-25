@@ -10,10 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Loader2, Pencil, Check, X, FileText, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Search, Plus, Loader2, Pencil, Check, X, FileText, KeyRound, Eye, EyeOff, CalendarIcon, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, parse } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -32,7 +35,9 @@ export default function Employees() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
@@ -93,7 +98,7 @@ export default function Employees() {
       biometric_id: emp.biometric_id?.toString() || "",
       department_id: emp.department_id || "",
       shift_id: emp.shift_id || "",
-      date_of_joining: emp.date_of_joining || "",
+      date_of_joining: emp.date_of_joining ? format(new Date(emp.date_of_joining), "yyyy-MM-dd") : "",
     });
   };
 
@@ -128,6 +133,17 @@ export default function Employees() {
       toast.error(err.response?.data?.error || "Failed to create employee");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await apiClient.delete(`/profiles/${id}`);
+      toast.success("Employee deleted successfully");
+      setDeleteTarget(null);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to delete employee");
     }
   };
 
@@ -168,7 +184,7 @@ export default function Employees() {
       autoTable(doc, {
         startY: 30,
         head: [["Date", "Status", "Duration"]],
-        body: records.map((r: any) => [r.date, r.status, r.total_duration || "—"]),
+        body: records.map((r: any) => [r.date, r.status, r.total_duration_minutes != null ? `${Math.floor(r.total_duration_minutes / 60)}h ${r.total_duration_minutes % 60}m` : "—"]),
       });
       doc.save(`attendance-${empName.toLowerCase()}.pdf`);
     } catch (err) {
@@ -184,37 +200,58 @@ export default function Employees() {
             <h1 className="text-2xl font-bold text-foreground">Employee Management</h1>
             <p className="text-muted-foreground mt-1">Manage employees and their roles</p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) {
+              setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "" });
+              setShowCreatePassword(false);
+            }
+          }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Employee
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Create New Employee</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <Label htmlFor="emp-name">Full Name *</Label>
-                  <Input id="emp-name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Doe" />
+                  <Input id="emp-name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Doe" autoComplete="off" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="emp-email">Email *</Label>
-                  <Input id="emp-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@company.com" />
+                  <Input id="emp-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@company.com" autoComplete="off" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="emp-password">Password *</Label>
-                  <Input id="emp-password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" />
+                  <div className="relative">
+                    <Input id="emp-password" type={showCreatePassword ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" autoComplete="new-password" className="pr-10" />
+                    <button type="button" onClick={() => setShowCreatePassword(!showCreatePassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="emp-bio">Employee ID</Label>
                   <Input id="emp-bio" value={form.biometric_id} onChange={(e) => setForm({ ...form, biometric_id: e.target.value })} placeholder="e.g. CC01" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="emp-doj">Date of Joining</Label>
-                  <Input id="emp-doj" type="date" value={form.date_of_joining} onChange={(e) => setForm({ ...form, date_of_joining: e.target.value })} />
+                  <Label>Date of Joining</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !form.date_of_joining && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {form.date_of_joining ? format(parse(form.date_of_joining, "yyyy-MM-dd", new Date()), "dd MMM yyyy") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={form.date_of_joining ? parse(form.date_of_joining, "yyyy-MM-dd", new Date()) : undefined} onSelect={(date) => setForm({ ...form, date_of_joining: date ? format(date, "yyyy-MM-dd") : "" })} initialFocus />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -307,12 +344,17 @@ export default function Employees() {
                         </TableCell>
                         <TableCell>
                           {isEditing ? (
-                            <Input
-                              type="date"
-                              value={editForm.date_of_joining}
-                              onChange={(e) => setEditForm({ ...editForm, date_of_joining: e.target.value })}
-                              className="w-36 h-8 text-sm"
-                            />
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-36 h-8 justify-start text-left text-sm font-normal", !editForm.date_of_joining && "text-muted-foreground")}>
+                                  <CalendarIcon className="mr-1 h-3 w-3" />
+                                  {editForm.date_of_joining ? format(parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()), "dd MMM yyyy") : "Pick date"}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={editForm.date_of_joining ? parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()) : undefined} onSelect={(date) => setEditForm({ ...editForm, date_of_joining: date ? format(date, "yyyy-MM-dd") : "" })} initialFocus />
+                              </PopoverContent>
+                            </Popover>
                           ) : (
                             <span className="text-sm">{emp.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : "—"}</span>
                           )}
@@ -397,9 +439,14 @@ export default function Employees() {
                                   <FileText className="w-4 h-4" />
                                 </Button>
                                 {emp.role !== "admin" && (
-                                  <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
-                                    <KeyRound className="w-4 h-4" />
-                                  </Button>
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
+                                      <KeyRound className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: emp.id, name: emp.full_name })} title="Delete Employee">
+                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  </>
                                 )}
                               </>
                             )}
@@ -490,6 +537,28 @@ export default function Employees() {
                 }}
               >
                 Deactivate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently delete <span className="font-medium text-foreground">{deleteTarget?.name}</span>? This will remove all their data including attendance records, leave requests, and profile information. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deleteTarget) handleDelete(deleteTarget.id);
+                }}
+              >
+                Delete Permanently
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

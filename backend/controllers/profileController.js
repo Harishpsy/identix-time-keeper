@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { v4: uuidv4 } = require('uuid');
 
 const getProfiles = async (req, res) => {
     try {
@@ -34,14 +35,34 @@ const updateProfile = async (req, res) => {
     delete updates.id;
     delete updates.email;
 
-    const fields = Object.keys(updates);
-    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
-
-    const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const params = [...Object.values(updates), id];
+    // Handle role update separately (stored in user_roles table)
+    const role = updates.role;
+    delete updates.role;
 
     try {
-        await pool.execute(`UPDATE profiles SET ${setClause} WHERE id = ?`, params);
+        // Update profile fields if any
+        const fields = Object.keys(updates);
+        if (fields.length > 0) {
+            // Convert empty strings to null for date/nullable fields
+            for (const key of fields) {
+                if (updates[key] === '') {
+                    updates[key] = null;
+                }
+            }
+            const setClause = fields.map(f => `${f} = ?`).join(', ');
+            const params = [...Object.values(updates), id];
+            await pool.execute(`UPDATE profiles SET ${setClause} WHERE id = ?`, params);
+        }
+
+        // Update role if provided
+        if (role) {
+            await pool.execute('UPDATE user_roles SET role = ? WHERE user_id = ?', [role, id]);
+        }
+
+        if (fields.length === 0 && !role) {
+            return res.status(400).json({ error: 'No fields to update' });
+        }
+
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -61,9 +82,10 @@ const getDepartments = async (req, res) => {
 
 const createDepartment = async (req, res) => {
     const { name } = req.body;
+    const id = uuidv4();
     try {
-        const [result] = await pool.execute('INSERT INTO departments (name) VALUES (?)', [name]);
-        res.json({ id: result.insertId, name });
+        await pool.execute('INSERT INTO departments (id, name) VALUES (?, ?)', [id, name]);
+        res.json({ id, name });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
@@ -105,12 +127,13 @@ const getShifts = async (req, res) => {
 
 const createShift = async (req, res) => {
     const shift = req.body;
+    const id = uuidv4();
     try {
-        const [result] = await pool.execute(
-            'INSERT INTO shifts (name, start_time, end_time, grace_period_mins, total_working_hours, max_break_minutes) VALUES (?, ?, ?, ?, ?, ?)',
-            [shift.name, shift.start_time, shift.end_time, shift.grace_period_mins, shift.total_working_hours, shift.max_break_minutes]
+        await pool.execute(
+            'INSERT INTO shifts (id, name, start_time, end_time, grace_period_mins, total_working_hours, max_break_minutes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [id, shift.name, shift.start_time, shift.end_time, shift.grace_period_mins, shift.total_working_hours, shift.max_break_minutes]
         );
-        res.json({ id: result.insertId, ...shift });
+        res.json({ id, ...shift });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
@@ -155,4 +178,36 @@ const getShiftById = async (req, res) => {
     }
 };
 
-module.exports = { getProfiles, getProfileById, updateProfile, getDepartments, createDepartment, updateDepartment, deleteDepartment, getShifts, createShift, updateShift, deleteShift, getShiftById };
+const deleteProfile = async (req, res) => {
+    const { id } = req.params;
+    const connection = await pool.getConnection();
+    try {
+        // Prevent deleting admin accounts
+        const [roles] = await connection.execute('SELECT role FROM user_roles WHERE user_id = ?', [id]);
+        if (roles.length > 0 && roles[0].role === 'admin') {
+            connection.release();
+            return res.status(403).json({ error: 'Cannot delete admin accounts' });
+        }
+
+        await connection.beginTransaction();
+
+        // Delete related data in order (foreign key dependencies)
+        await connection.execute('DELETE FROM attendance_raw WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM daily_summaries WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM leave_requests WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM user_roles WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM profiles WHERE id = ?', [id]);
+        await connection.execute('DELETE FROM users WHERE id = ?', [id]);
+
+        await connection.commit();
+        res.json({ success: true });
+    } catch (err) {
+        await connection.rollback();
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        connection.release();
+    }
+};
+
+module.exports = { getProfiles, getProfileById, updateProfile, deleteProfile, getDepartments, createDepartment, updateDepartment, deleteDepartment, getShifts, createShift, updateShift, deleteShift, getShiftById };

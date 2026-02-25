@@ -10,7 +10,7 @@ interface DailyRecord {
   status: string;
   first_in: string | null;
   last_out: string | null;
-  total_duration: string | null;
+  total_duration_minutes: number | null;
   late_minutes: number | null;
 }
 
@@ -47,11 +47,11 @@ function formatTime(ts: string | null) {
   }
 }
 
-function formatDuration(dur: string | null) {
-  if (!dur) return "—";
-  const match = dur.match(/(\d+):(\d+)/);
-  if (match) return `${match[1]}h ${match[2]}m`;
-  return dur;
+function formatDuration(mins: number | null) {
+  if (!mins && mins !== 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
 }
 
 function formatLateMinutes(mins: number | null) {
@@ -87,7 +87,7 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
             status: d.status,
             first_in: d.first_in,
             last_out: d.last_out,
-            total_duration: d.total_duration,
+            total_duration_minutes: d.total_duration_minutes,
             late_minutes: d.late_minutes,
           }))
           .sort((a: DailyRecord, b: DailyRecord) => a.date.localeCompare(b.date));
@@ -144,7 +144,7 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
                   </TableCell>
                   <TableCell className="tabular-nums">{formatTime(r.first_in)}</TableCell>
                   <TableCell className="tabular-nums">{formatTime(r.last_out)}</TableCell>
-                  <TableCell className="tabular-nums">{formatDuration(r.total_duration)}</TableCell>
+                  <TableCell className="tabular-nums">{formatDuration(r.total_duration_minutes)}</TableCell>
                   <TableCell className="tabular-nums">{formatLateMinutes(r.late_minutes)}</TableCell>
                 </TableRow>
               ))

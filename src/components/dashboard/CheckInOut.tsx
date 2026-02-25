@@ -61,8 +61,8 @@ export default function CheckInOut() {
   const hasLoggedIn = todayPunches.some((p) => p.punch_type === "login");
   const hasLoggedOut = todayPunches.some((p) => p.punch_type === "logout");
   const isOnBreak = (() => {
-    const breakStarts = todayPunches.filter((p) => p.punch_type === "break-start").length;
-    const breakEnds = todayPunches.filter((p) => p.punch_type === "break-end").length;
+    const breakStarts = todayPunches.filter((p) => p.punch_type === "break_start").length;
+    const breakEnds = todayPunches.filter((p) => p.punch_type === "break_end").length;
     return breakStarts > breakEnds;
   })();
 
@@ -95,8 +95,8 @@ export default function CheckInOut() {
 
   // Calculate total break duration
   const totalBreakMs = (() => {
-    const starts = todayPunches.filter((p) => p.punch_type === "break-start");
-    const ends = todayPunches.filter((p) => p.punch_type === "break-end");
+    const starts = todayPunches.filter((p) => p.punch_type === "break_start");
+    const ends = todayPunches.filter((p) => p.punch_type === "break_end");
     let total = 0;
     for (let i = 0; i < starts.length; i++) {
       const endTime = ends[i]
@@ -205,8 +205,8 @@ export default function CheckInOut() {
               <Button
                 onClick={() =>
                   isOnBreak
-                    ? handlePunch("break-end", "Break Ended")
-                    : handlePunch("break-start", "Break Started")
+                    ? handlePunch("break_end", "Break Ended")
+                    : handlePunch("break_start", "Break Started")
                 }
                 disabled={loading}
                 size="lg"

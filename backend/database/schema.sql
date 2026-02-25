@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS company_settings (
     default_sick_leaves INT NOT NULL DEFAULT 12,
     default_casual_leaves INT NOT NULL DEFAULT 12,
     default_annual_leaves INT NOT NULL DEFAULT 15,
+    sidebar_order TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

@@ -18,6 +18,7 @@ import AttendanceReset from "./pages/AttendanceReset";
 import AttendanceSummary from "./pages/AttendanceSummary";
 import CompanyBranding from "./pages/CompanyBranding";
 import RolePermissions from "./pages/RolePermissions";
+import MenuOrder from "./pages/MenuOrder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />
             <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceSummary /></ProtectedRoute>} />
             <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["admin"]}><CompanyBranding /></ProtectedRoute>} />
+            <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["admin"]}><MenuOrder /></ProtectedRoute>} />
             <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["admin"]}><RolePermissions /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

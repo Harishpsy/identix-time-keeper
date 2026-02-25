@@ -4,46 +4,8 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
-import {
-  Fingerprint,
-  LayoutDashboard,
-  Users,
-  Clock,
-  CalendarDays,
-  FileText,
-  Settings,
-  LogOut,
-  ClipboardList,
-  RotateCcw,
-  Timer,
-  DollarSign,
-  Receipt,
-  BarChart3,
-  Shield,
-} from "lucide-react";
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: ReactNode;
-  roles: string[];
-  moduleKey?: string; // maps to role_permissions.module_key
-}
-
-const navItems: NavItem[] = [
-  { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
-  { label: "Attendance", href: "/attendance", icon: <Clock className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance" },
-  { label: "Employees", href: "/employees", icon: <Users className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "employees" },
-  { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "departments" },
-  { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "shifts" },
-  { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "leave_requests" },
-  { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "payroll" },
-  { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["subadmin", "employee"], moduleKey: "my_payslips" },
-  { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_reset" },
-  { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_summary" },
-  { label: "Company Branding", href: "/company-branding", icon: <Settings className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "company_branding" },
-  { label: "Role Permissions", href: "/role-permissions", icon: <Shield className="w-5 h-5" />, roles: ["admin"] },
-];
+import { navItems, NavItem } from "@/lib/navigation";
+import { Fingerprint, LogOut } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
@@ -51,12 +13,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [leavesEnabled, setLeavesEnabled] = useState(true);
   const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
+  const [sidebarOrder, setSidebarOrder] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const { data } = await apiClient.get("/settings");
-        if (data) setLeavesEnabled(data.leaves_enabled ?? true);
+        if (data) {
+          setLeavesEnabled(data.leaves_enabled ?? true);
+          if (data.sidebar_order) {
+            try {
+              setSidebarOrder(JSON.parse(data.sidebar_order));
+            } catch (e) {
+              console.error("Failed to parse sidebar order", e);
+            }
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch settings in layout", err);
       }
@@ -73,11 +45,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     fetchPermissions();
   }, []);
 
-  const filteredNav = navItems.filter((item) => {
+  const sortedNav = [...navItems].sort((a, b) => {
+    if (sidebarOrder.length === 0) return 0;
+    const indexA = sidebarOrder.indexOf(a.moduleKey!);
+    const indexB = sidebarOrder.indexOf(b.moduleKey!);
+
+    if (indexA === -1 && indexB === -1) return 0;
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  const filteredNav = sortedNav.filter((item) => {
     if (!role) return false;
 
-    // Admin always sees everything
-    if (role === "admin") return item.roles.includes(role);
+    // Admin always sees everything, but still check if it's the role_permissions item
+    if (role === "admin") {
+      return item.roles.includes(role);
+    }
 
     // For non-admin roles, check dynamic permissions
     if (item.moduleKey) {

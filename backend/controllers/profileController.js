@@ -3,7 +3,8 @@ const pool = require('../config/db');
 const getProfiles = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT p.*, d.name as department_name, s.name as shift_name FROM profiles p ' +
+            'SELECT p.*, r.role, d.name as department_name, s.name as shift_name FROM profiles p ' +
+            'LEFT JOIN user_roles r ON p.id = r.user_id ' +
             'LEFT JOIN departments d ON p.department_id = d.id ' +
             'LEFT JOIN shifts s ON p.shift_id = s.id'
         );

@@ -144,7 +144,7 @@ const getEmployeeDashboard = async (req, res) => {
         );
 
         const stats = {
-            present: summaries.filter(s => s.status === 'present').length,
+            present: summaries.filter(s => s.status === 'present' || s.status === 'late').length,
             late: summaries.filter(s => s.status === 'late').length,
             leaveTaken: summaries.filter(s => ['absent', 'on_leave', 'half_day'].includes(s.status)).length
         };

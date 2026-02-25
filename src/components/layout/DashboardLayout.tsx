@@ -19,6 +19,7 @@ import {
   DollarSign,
   Receipt,
   BarChart3,
+  Shield,
 } from "lucide-react";
 
 interface NavItem {
@@ -26,21 +27,22 @@ interface NavItem {
   href: string;
   icon: ReactNode;
   roles: string[];
+  moduleKey?: string; // maps to role_permissions.module_key
 }
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
-  { label: "Attendance", href: "/attendance", icon: <Clock className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
-  { label: "Employees", href: "/employees", icon: <Users className="w-5 h-5" />, roles: ["admin"] },
-  { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["admin"] },
-  { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin"] },
-  { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
-
-  { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin"] },
-  { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["employee", "subadmin"] },
-  { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin"] },
-  { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["admin"] },
-  { label: "Company Branding", href: "/company-branding", icon: <Settings className="w-5 h-5" />, roles: ["admin"] },
+  { label: "Attendance", href: "/attendance", icon: <Clock className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance" },
+  { label: "Employees", href: "/employees", icon: <Users className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "employees" },
+  { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "departments" },
+  { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "shifts" },
+  { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "leave_requests" },
+  { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "payroll" },
+  { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "my_payslips" },
+  { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_reset" },
+  { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_summary" },
+  { label: "Company Branding", href: "/company-branding", icon: <Settings className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "company_branding" },
+  { label: "Role Permissions", href: "/role-permissions", icon: <Shield className="w-5 h-5" />, roles: ["admin"] },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -48,6 +50,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [leavesEnabled, setLeavesEnabled] = useState(true);
+  const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -58,14 +61,40 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         console.error("Failed to fetch settings in layout", err);
       }
     };
+    const fetchPermissions = async () => {
+      try {
+        const { data } = await apiClient.get("/role-permissions");
+        setRolePermissions(data || {});
+      } catch (err) {
+        console.error("Failed to fetch role permissions", err);
+      }
+    };
     fetchSettings();
+    fetchPermissions();
   }, []);
 
   const filteredNav = navItems.filter((item) => {
-    if (!role || !item.roles.includes(role)) return false;
+    if (!role) return false;
 
-    // Visibility toggle for Leave Requests
-    if (item.label === "Leave Requests" && role !== "admin" && !leavesEnabled) {
+    // Admin always sees everything
+    if (role === "admin") return item.roles.includes(role);
+
+    // For non-admin roles, check dynamic permissions
+    if (item.moduleKey) {
+      const perms = rolePermissions[role];
+      if (perms && perms[item.moduleKey] !== undefined) {
+        if (!perms[item.moduleKey]) return false;
+      } else {
+        // Fallback to hardcoded roles if permissions not loaded yet
+        if (!item.roles.includes(role)) return false;
+      }
+    } else {
+      // No moduleKey means static (e.g. Dashboard) — use hardcoded roles
+      if (!item.roles.includes(role)) return false;
+    }
+
+    // Visibility toggle for Leave Requests (legacy setting)
+    if (item.label === "Leave Requests" && !leavesEnabled) {
       return false;
     }
 
@@ -99,8 +128,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 key={item.href}
                 to={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                    ? "bg-sidebar-accent text-sidebar-primary"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                  ? "bg-sidebar-accent text-sidebar-primary"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
                   }`}
               >
                 {item.icon}

@@ -31,6 +31,7 @@ export const navItems: NavItem[] = [
     { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "shifts" },
     { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "leave_requests" },
     { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "payroll" },
+    { label: "Loans", href: "/loans", icon: <Receipt className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "loans" },
     { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["subadmin", "employee"], moduleKey: "my_payslips" },
     { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_reset" },
     { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_summary" },

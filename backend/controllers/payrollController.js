@@ -52,6 +52,14 @@ const generatePayroll = async (req, res) => {
             if (prev.length > 0) {
                 const record = prev[0];
                 const id = uuid.v4();
+
+                // Fetch active loan repayment for this month if exists
+                const [activeLoans] = await pool.execute(
+                    'SELECT SUM(monthly_installment) as total_installment FROM loans WHERE user_id = ? AND status = "approved" AND repayment_start_date <= CURDATE()',
+                    [emp.user_id]
+                );
+                const loan_recovery = activeLoans[0].total_installment || 0;
+
                 await pool.execute(`
                     INSERT INTO payroll (
                         id, user_id, month, basic_salary, hra, dearness_allowance, 
@@ -65,9 +73,10 @@ const generatePayroll = async (req, res) => {
                     id, emp.user_id, month, record.basic_salary, record.hra, record.dearness_allowance,
                     record.conveyance_allowance, record.medical_allowance, record.special_allowance,
                     0, 0, 0, record.epf_employee, record.esi_employee,
-                    record.professional_tax, record.tds, record.loan_recovery, record.other_deductions,
-                    record.gross_earnings, record.total_deductions, record.net_salary, record.paid_days,
-                    0, 'Auto-generated'
+                    record.professional_tax, record.tds, loan_recovery, record.other_deductions,
+                    record.gross_earnings, record.total_deductions + (loan_recovery - record.loan_recovery),
+                    record.net_salary - (loan_recovery - record.loan_recovery),
+                    record.paid_days, 0, 'Auto-generated'
                 ]);
                 createdCount++;
             } else {

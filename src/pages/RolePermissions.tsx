@@ -18,6 +18,7 @@ import {
     Settings,
     Shield,
     Loader2,
+    Landmark,
 } from "lucide-react";
 
 interface ModuleInfo {
@@ -38,6 +39,7 @@ const modules: ModuleInfo[] = [
     { key: "attendance_reset", label: "Attendance Reset", description: "Reset and reprocess attendance data", icon: <RotateCcw className="w-5 h-5" /> },
     { key: "attendance_summary", label: "Attendance Summary", description: "View attendance reports and analytics", icon: <BarChart3 className="w-5 h-5" /> },
     { key: "company_branding", label: "Company Branding", description: "Manage company logo and settings", icon: <Settings className="w-5 h-5" /> },
+    { key: "loans", label: "Loans", description: "Request and manage employee loans", icon: <Landmark className="w-5 h-5" /> },
 ];
 
 type RolePermissions = Record<string, boolean>;
@@ -111,15 +113,15 @@ export default function RolePermissions() {
                         <div
                             key={mod.key}
                             className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${isEnabled
-                                    ? "bg-primary/5 border-primary/20 shadow-sm"
-                                    : "bg-muted/30 border-border"
+                                ? "bg-primary/5 border-primary/20 shadow-sm"
+                                : "bg-muted/30 border-border"
                                 }`}
                         >
                             <div className="flex items-center gap-4">
                                 <div
                                     className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${isEnabled
-                                            ? "bg-primary/10 text-primary"
-                                            : "bg-muted text-muted-foreground"
+                                        ? "bg-primary/10 text-primary"
+                                        : "bg-muted text-muted-foreground"
                                         }`}
                                 >
                                     {mod.icon}

@@ -129,3 +129,35 @@ CREATE TABLE IF NOT EXISTS company_settings (
 -- Insert default company settings
 INSERT INTO company_settings (id, company_name, default_sick_leaves, default_casual_leaves, default_annual_leaves) 
 VALUES (UUID(), 'My Company', 12, 12, 15);
+
+-- Create loans table
+CREATE TABLE IF NOT EXISTS loans (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    interest_rate DECIMAL(5, 2) DEFAULT 0.00,
+    term_months INT NOT NULL,
+    monthly_installment DECIMAL(10, 2) NOT NULL,
+    total_repayable DECIMAL(10, 2) NOT NULL,
+    status ENUM('pending', 'approved', 'rejected', 'completed') NOT NULL DEFAULT 'pending',
+    purpose TEXT,
+    repayment_start_date DATE,
+    approved_by CHAR(36),
+    approved_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id)
+);
+
+-- Create loan_repayments table
+CREATE TABLE IF NOT EXISTS loan_repayments (
+    id CHAR(36) PRIMARY KEY,
+    loan_id CHAR(36) NOT NULL,
+    payroll_id CHAR(36),
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_date DATE NOT NULL,
+    method ENUM('payroll_deduction', 'manual') DEFAULT 'payroll_deduction',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
+);

@@ -18,6 +18,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const rolePermissionsRoutes = require('./routes/rolePermissionsRoutes');
+const loanRoutes = require('./routes/loanRoutes');
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/api/profiles', profileRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/role-permissions', rolePermissionsRoutes);
+app.use('/api/loans', loanRoutes);
 
 app.get('/', (req, res) => {
     res.send('Identix Time Keeper API is running');

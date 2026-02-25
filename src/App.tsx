@@ -19,6 +19,7 @@ import AttendanceSummary from "./pages/AttendanceSummary";
 import CompanyBranding from "./pages/CompanyBranding";
 import RolePermissions from "./pages/RolePermissions";
 import MenuOrder from "./pages/MenuOrder";
+import LoanManagement from "./pages/LoanManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/leave" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
 
             <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
+            <Route path="/loans" element={<ProtectedRoute><LoanManagement /></ProtectedRoute>} />
             <Route path="/my-payslips" element={<ProtectedRoute><MyPayslips /></ProtectedRoute>} />
             <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />
             <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceSummary /></ProtectedRoute>} />

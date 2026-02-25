@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,7 +19,6 @@ import autoTable from "jspdf-autotable";
 
 export default function Employees() {
   const [employees, setEmployees] = useState<any[]>([]);
-  const [roles, setRoles] = useState<Record<string, string>>({});
   const [departments, setDepartments] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -36,7 +35,6 @@ export default function Employees() {
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // New employee form
   const [form, setForm] = useState({
     full_name: "",
     email: "",
@@ -48,40 +46,45 @@ export default function Employees() {
     date_of_joining: "",
   });
 
-  const fetchEmployees = async () => {
+  const fetchData = async () => {
     setLoading(true);
-    const [{ data: profs }, { data: userRoles }, { data: deps }, { data: sh }] = await Promise.all([
-      supabase.from("profiles").select("*").order("full_name"),
-      supabase.from("user_roles").select("user_id, role"),
-      supabase.from("departments").select("*"),
-      supabase.from("shifts").select("*"),
-    ]);
+    try {
+      const [profsRes, depsRes, shiftsRes] = await Promise.all([
+        apiClient.get("/profiles"),
+        apiClient.get("/profiles/departments"),
+        apiClient.get("/profiles/shifts"),
+      ]);
 
-    setEmployees(profs || []);
-    setDepartments(deps || []);
-    setShifts(sh || []);
-
-    const roleMap: Record<string, string> = {};
-    userRoles?.forEach((r: any) => { roleMap[r.user_id] = r.role; });
-    setRoles(roleMap);
-    setLoading(false);
+      setEmployees(profsRes.data);
+      setDepartments(depsRes.data);
+      setShifts(shiftsRes.data);
+    } catch (err) {
+      console.error("Failed to fetch data", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchEmployees(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const toggleActive = async (id: string, isActive: boolean) => {
-    const { error } = await supabase.from("profiles").update({ is_active: !isActive }).eq("id", id);
-    if (error) toast.error("Failed to update");
-    else { toast.success(`Employee ${isActive ? "deactivated" : "activated"}`); fetchEmployees(); }
+    try {
+      await apiClient.patch(`/profiles/${id}`, { is_active: !isActive });
+      toast.success(`Employee ${isActive ? "deactivated" : "activated"}`);
+      fetchData();
+    } catch (err) {
+      toast.error("Failed to update status");
+    }
   };
 
   const updateRole = async (userId: string, newRole: string) => {
-    const { error } = await supabase
-      .from("user_roles")
-      .update({ role: newRole as any })
-      .eq("user_id", userId);
-    if (error) toast.error("Failed to update role");
-    else { toast.success("Role updated"); fetchEmployees(); }
+    try {
+      await apiClient.patch(`/profiles/${userId}`, { role: newRole });
+      toast.success("Role updated");
+      fetchData();
+    } catch (err) {
+      toast.error("Failed to update role");
+    }
   };
 
   const startEdit = (emp: any) => {
@@ -98,62 +101,31 @@ export default function Employees() {
     setEditingId(null);
   };
 
-   const saveEdit = async (id: string) => {
-    const updates: Record<string, any> = {
-      biometric_id: editForm.biometric_id?.trim() || null,
-      department_id: editForm.department_id || null,
-      shift_id: editForm.shift_id || null,
-      date_of_joining: editForm.date_of_joining || null,
-    };
-    const { error } = await supabase.from("profiles").update(updates).eq("id", id);
-    if (error) toast.error("Failed to update profile");
-    else { toast.success("Profile updated"); setEditingId(null); fetchEmployees(); }
+  const saveEdit = async (id: string) => {
+    try {
+      await apiClient.patch(`/profiles/${id}`, editForm);
+      toast.success("Profile updated");
+      setEditingId(null);
+      fetchData();
+    } catch (err) {
+      toast.error("Failed to update profile");
+    }
   };
 
   const handleCreate = async () => {
-    const trimmedEmail = form.email.trim().toLowerCase();
-    if (!form.full_name.trim() || !trimmedEmail || !form.password.trim()) {
+    if (!form.full_name.trim() || !form.email.trim() || !form.password.trim()) {
       toast.error("Name, email and password are required");
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    if (form.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
     setCreating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("create-employee", {
-        body: {
-          full_name: form.full_name.trim(),
-          email: trimmedEmail,
-          password: form.password,
-          biometric_id: form.biometric_id || null,
-          department_id: form.department_id || null,
-          shift_id: form.shift_id || null,
-          date_of_joining: form.date_of_joining || null,
-          role: form.role,
-        },
-      });
-
-      if (res.error) {
-        toast.error(res.error.message || "Failed to create employee");
-      } else if (res.data?.error) {
-        toast.error(res.data.error);
-      } else {
-        toast.success("Employee created successfully");
-        setDialogOpen(false);
-        setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "" });
-        fetchEmployees();
-      }
+      await apiClient.post("/auth/register", form);
+      toast.success("Employee created successfully");
+      setDialogOpen(false);
+      setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "" });
+      fetchData();
     } catch (err: any) {
-      toast.error(err.message || "Failed to create employee");
+      toast.error(err.response?.data?.error || "Failed to create employee");
     } finally {
       setCreating(false);
     }
@@ -161,28 +133,13 @@ export default function Employees() {
 
   const handleResetPassword = async () => {
     if (!resetTarget || !newPassword.trim()) return;
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
     setResetting(true);
     try {
-      const res = await supabase.functions.invoke("reset-password", {
-        body: { user_id: resetTarget.id, new_password: newPassword },
-      });
-      if (res.error) {
-        toast.error(res.error.message || "Failed to reset password");
-      } else if (res.data?.error) {
-        toast.error(res.data.error);
-      } else {
-        toast.success(`Password reset for ${resetTarget.name}`);
-        setResetPasswordOpen(false);
-        setNewPassword("");
-        setResetTarget(null);
-        setShowNewPassword(false);
-      }
+      await apiClient.post("/auth/reset-password", { userId: resetTarget.id, newPassword: newPassword.trim() });
+      toast.success(`Password reset for ${resetTarget.name}`);
+      setResetPasswordOpen(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to reset password");
+      toast.error(err.response?.data?.error || "Failed to reset password");
     } finally {
       setResetting(false);
     }
@@ -200,46 +157,23 @@ export default function Employees() {
     const now = new Date();
     const start = format(startOfMonth(now), "yyyy-MM-dd");
     const end = format(endOfMonth(now), "yyyy-MM-dd");
-    const monthName = format(now, "MMMM yyyy");
 
-    const { data } = await supabase
-      .from("daily_summaries")
-      .select("*")
-      .eq("user_id", empId)
-      .gte("date", start)
-      .lte("date", end)
-      .order("date", { ascending: false });
+    try {
+      const response = await apiClient.get("/attendance/summary", { params: { user_id: empId, start_date: start, end_date: end } });
+      const records = response.data;
 
-    const records = data || [];
-    const present = records.filter((s) => s.status === "present").length;
-    const late = records.filter((s) => s.status === "late").length;
-    const absent = records.filter((s) => s.status === "absent").length;
-
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text("Attendance Report", 14, 20);
-    doc.setFontSize(12);
-    doc.text(`${empName} — ${monthName}`, 14, 28);
-    doc.setFontSize(10);
-    doc.text(`Present: ${present}  |  Late: ${late}  |  Absent: ${absent}  |  Total: ${records.length}`, 14, 35);
-
-    autoTable(doc, {
-      startY: 42,
-      head: [["Date", "First In", "Last Out", "Duration", "Status", "Late (mins)"]],
-      body: records.map((s) => [
-        format(new Date(s.date), "dd MMM yyyy"),
-        s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—",
-        s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
-        s.total_duration || "—",
-        s.status,
-        (() => { const mins = s.late_minutes; if (!mins || mins <= 0) return "00Mins.00Sec"; const h = Math.floor(mins / 60); const m = mins % 60; return `${String(h).padStart(2, "0")}Mins.${String(m).padStart(2, "0")}Sec`; })(),
-      ]),
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [41, 128, 185] },
-    });
-
-    doc.save(`attendance-${empName.replace(/\s+/g, "-").toLowerCase()}-${format(now, "yyyy-MM")}.pdf`);
-    toast.success(`PDF downloaded for ${empName}`);
+      const doc = new jsPDF();
+      doc.setFontSize(18);
+      doc.text("Attendance Report", 14, 20);
+      autoTable(doc, {
+        startY: 30,
+        head: [["Date", "Status", "Duration"]],
+        body: records.map((r: any) => [r.date, r.status, r.total_duration || "—"]),
+      });
+      doc.save(`attendance-${empName.toLowerCase()}.pdf`);
+    } catch (err) {
+      toast.error("Failed to download PDF");
+    }
   };
 
   return (
@@ -275,7 +209,7 @@ export default function Employees() {
                   <Input id="emp-password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 6 characters" />
                 </div>
                 <div className="space-y-2">
-                   <Label htmlFor="emp-bio">Employee ID</Label>
+                  <Label htmlFor="emp-bio">Employee ID</Label>
                   <Input id="emp-bio" value={form.biometric_id} onChange={(e) => setForm({ ...form, biometric_id: e.target.value })} placeholder="e.g. CC01" />
                 </div>
                 <div className="space-y-2">
@@ -341,7 +275,7 @@ export default function Employees() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                     <TableHead>Employee ID</TableHead>
+                    <TableHead>Employee ID</TableHead>
                     <TableHead>DOJ</TableHead>
                     <TableHead>Department</TableHead>
                     <TableHead>Shift</TableHead>
@@ -361,7 +295,7 @@ export default function Employees() {
                         <TableCell className="text-muted-foreground">{emp.email}</TableCell>
                         <TableCell>
                           {isEditing ? (
-                             <Input
+                            <Input
                               value={editForm.biometric_id}
                               onChange={(e) => setEditForm({ ...editForm, biometric_id: e.target.value })}
                               className="w-24 h-8 font-mono text-sm"
@@ -413,7 +347,7 @@ export default function Employees() {
                         </TableCell>
                         <TableCell>
                           <Select
-                            value={roles[emp.id] || "employee"}
+                            value={emp.role || "employee"}
                             onValueChange={(val) => updateRole(emp.id, val)}
                           >
                             <SelectTrigger className="w-32 h-8">

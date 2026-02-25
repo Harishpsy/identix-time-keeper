@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,104 +38,50 @@ export default function AttendanceSummary() {
     const start = format(startOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
     const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
 
-    const todayDate = new Date();
-    const today = format(todayDate, "yyyy-MM-dd");
-    const yesterday = format(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 1), "yyyy-MM-dd");
-    const dayBefore = format(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate() - 2), "yyyy-MM-dd");
-    const isCurrentMonth = today >= start && today <= end;
+    try {
+      const [summariesRes, profilesRes, departmentsRes] = await Promise.all([
+        apiClient.get("/attendance/summary", { params: { start_date: start, end_date: end } }),
+        apiClient.get("/profiles"),
+        apiClient.get("/profiles/departments"),
+      ]);
 
-    // Recent days that fall within the selected month
-    const recentDays = [today, yesterday, dayBefore].filter((d) => d >= start && d <= end);
-    const earliestRecent = recentDays[recentDays.length - 1];
-    const latestRecent = recentDays[0];
+      const dailyData = summariesRes.data;
+      const profiles = profilesRes.data;
+      const departments = departmentsRes.data;
 
-    const [{ data: dailyData }, { data: profiles }, { data: departments }, { data: recentRawPunches }, { data: recentSummaries }] = await Promise.all([
-      supabase.from("daily_summaries").select("user_id, date, status, first_in, is_manual_override").gte("date", start).lte("date", end),
-      supabase.from("profiles").select("id, full_name, email, department_id").eq("is_active", true).order("full_name"),
-      supabase.from("departments").select("id, name"),
-      isCurrentMonth && recentDays.length > 0
-        ? supabase.from("attendance_raw").select("user_id, punch_type, timestamp").gte("timestamp", `${earliestRecent}T00:00:00`).lte("timestamp", `${latestRecent}T23:59:59`)
-        : Promise.resolve({ data: [] }),
-      isCurrentMonth && recentDays.length > 0
-        ? supabase.from("daily_summaries").select("user_id, date, status, first_in, is_manual_override").in("date", recentDays)
-        : Promise.resolve({ data: [] }),
-    ]);
+      const deptMap: Record<string, string> = {};
+      departments.forEach((d: any) => { deptMap[d.id] = d.name; });
 
-    const deptMap: Record<string, string> = {};
-    (departments || []).forEach((d) => { deptMap[d.id] = d.name; });
+      const counts: Record<string, any> = {};
+      dailyData.forEach((r: any) => {
+        if (!counts[r.user_id]) counts[r.user_id] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
+        counts[r.user_id].total++;
+        if (r.status === "present") counts[r.user_id].present++;
+        else if (r.status === "late") counts[r.user_id].late++;
+        else if (r.status === "absent") counts[r.user_id].absent++;
+        else if (r.status === "half_day") counts[r.user_id].halfDay++;
+        else if (r.status === "on_leave") counts[r.user_id].onLeave++;
+      });
 
-    // Build a map of recent summaries by date+user for quick lookup
-    const recentSummaryMap = new Map<string, any>();
-    (recentSummaries || []).forEach((s: any) => {
-      recentSummaryMap.set(`${s.date}:${s.user_id}`, s);
-    });
+      const result: EmployeeSummary[] = profiles.map((p: any) => ({
+        userId: p.id,
+        name: p.full_name,
+        email: p.email,
+        department: deptMap[p.department_id || ""] || "—",
+        present: counts[p.id]?.present || 0,
+        late: counts[p.id]?.late || 0,
+        absent: counts[p.id]?.absent || 0,
+        halfDay: counts[p.id]?.halfDay || 0,
+        onLeave: counts[p.id]?.onLeave || 0,
+        total: counts[p.id]?.total || 0,
+      }));
 
-    // Build punch map by date+user for recent days (convert UTC → IST for date bucketing)
-    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
-    const recentPunchMap = new Map<string, { hasLogin: boolean }>();
-    (recentRawPunches || []).forEach((p: any) => {
-      const istDate = new Date(new Date(p.timestamp).getTime() + IST_OFFSET_MS);
-      const punchDate = format(istDate, "yyyy-MM-dd");
-      if (!recentDays.includes(punchDate)) return;
-      const key = `${punchDate}:${p.user_id}`;
-      if (!recentPunchMap.has(key)) recentPunchMap.set(key, { hasLogin: false });
-      if (p.punch_type === "login") recentPunchMap.get(key)!.hasLogin = true;
-    });
-
-    // Helper to resolve effective status for a date+user
-    const getEffectiveStatus = (date: string, userId: string, summaryStatus: string, summaryFirstIn: string | null, isManualOverride: boolean) => {
-      if (!recentDays.includes(date)) return summaryStatus;
-      const punchInfo = recentPunchMap.get(`${date}:${userId}`);
-      // If there's a punch (login) but summary shows wrong status and not manually overridden, correct to present
-      if (punchInfo?.hasLogin && !summaryFirstIn && !isManualOverride && (summaryStatus === "absent" || summaryStatus === "on_leave")) {
-        return "present";
-      }
-      return summaryStatus;
-    };
-
-    const counts: Record<string, { present: number; late: number; absent: number; halfDay: number; onLeave: number; total: number }> = {};
-    (dailyData || []).forEach((r: any) => {
-      if (!counts[r.user_id]) counts[r.user_id] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
-      counts[r.user_id].total++;
-      const effectiveStatus = getEffectiveStatus(r.date, r.user_id, r.status, r.first_in, r.is_manual_override);
-      if (effectiveStatus === "present") counts[r.user_id].present++;
-      else if (effectiveStatus === "late") counts[r.user_id].late++;
-      else if (effectiveStatus === "absent") counts[r.user_id].absent++;
-      else if (effectiveStatus === "half_day") counts[r.user_id].halfDay++;
-      else if (effectiveStatus === "on_leave") counts[r.user_id].onLeave++;
-    });
-
-    // For recent days: add synthetic present records for users who punched but have no daily_summary yet
-    if (isCurrentMonth && recentDays.length > 0) {
-      for (const day of recentDays) {
-        recentPunchMap.forEach((punchInfo, key) => {
-          const [punchDay, userId] = key.split(":");
-          if (punchDay !== day) return;
-          const hasSummary = recentSummaryMap.has(`${day}:${userId}`);
-          if (!hasSummary && punchInfo.hasLogin) {
-            if (!counts[userId]) counts[userId] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
-            counts[userId].present++;
-            counts[userId].total++;
-          }
-        });
-      }
+      setSummaries(result);
+    } catch (err) {
+      console.error("Failed to fetch attendance summary", err);
+    } finally {
+      setLoading(false);
     }
-
-    const result: EmployeeSummary[] = (profiles || []).map((p) => ({
-      userId: p.id,
-      name: p.full_name,
-      email: p.email,
-      department: deptMap[p.department_id || ""] || "—",
-      present: counts[p.id]?.present || 0,
-      late: counts[p.id]?.late || 0,
-      absent: counts[p.id]?.absent || 0,
-      halfDay: counts[p.id]?.halfDay || 0,
-      onLeave: counts[p.id]?.onLeave || 0,
-      total: counts[p.id]?.total || 0,
-    }));
-
-    setSummaries(result);
-    setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [month]);
@@ -149,7 +95,6 @@ export default function AttendanceSummary() {
   const [y, m] = month.split("-").map(Number);
   const monthLabel = format(new Date(y, m - 1, 1), "MMMM yyyy");
 
-  // Totals
   const totals = filtered.reduce(
     (acc, s) => ({
       present: acc.present + s.present,
@@ -222,8 +167,6 @@ export default function AttendanceSummary() {
             </Button>
           </div>
         </div>
-
-
 
         <Card className="border-border/50">
           <CardContent className="p-0">

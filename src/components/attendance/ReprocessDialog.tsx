@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import { toast } from "sonner";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
 
@@ -35,10 +35,7 @@ export default function ReprocessDialog({ onComplete }: { onComplete?: () => voi
     for (const day of days) {
       const dateStr = format(day, "yyyy-MM-dd");
       try {
-        const { error } = await supabase.functions.invoke("process-daily-summary", {
-          body: { date: dateStr },
-        });
-        if (error) throw error;
+        await apiClient.post("/attendance/reprocess", { date: dateStr });
         successCount++;
       } catch {
         errorCount++;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,9 +21,14 @@ export default function Shifts() {
 
   const fetchShifts = async () => {
     setLoading(true);
-    const { data } = await supabase.from("shifts").select("*").order("name");
-    setShifts(data || []);
-    setLoading(false);
+    try {
+      const { data } = await apiClient.get("/profiles/shifts");
+      setShifts(data || []);
+    } catch (err) {
+      toast.error("Failed to fetch shifts");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchShifts(); }, []);
@@ -31,22 +36,31 @@ export default function Shifts() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Name is required"); return; }
 
-    if (editing) {
-      const { error } = await supabase.from("shifts").update(form).eq("id", editing.id);
-      if (error) toast.error(error.message);
-      else { toast.success("Shift updated"); setDialogOpen(false); setEditing(null); fetchShifts(); }
-    } else {
-      const { error } = await supabase.from("shifts").insert(form);
-      if (error) toast.error(error.message);
-      else { toast.success("Shift created"); setDialogOpen(false); fetchShifts(); }
+    try {
+      if (editing) {
+        await apiClient.patch(`/profiles/shifts/${editing.id}`, form);
+        toast.success("Shift updated");
+      } else {
+        await apiClient.post("/profiles/shifts", form);
+        toast.success("Shift created");
+      }
+      setDialogOpen(false);
+      setEditing(null);
+      fetchShifts();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to save shift");
     }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const { error } = await supabase.from("shifts").delete().eq("id", deleteTarget.id);
-    if (error) toast.error(error.message);
-    else { toast.success("Shift deleted"); fetchShifts(); }
+    try {
+      await apiClient.delete(`/profiles/shifts/${deleteTarget.id}`);
+      toast.success("Shift deleted");
+      fetchShifts();
+    } catch (err) {
+      toast.error("Failed to delete shift");
+    }
     setDeleteTarget(null);
   };
 

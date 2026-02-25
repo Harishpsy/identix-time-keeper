@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient, { API_BASE_URL } from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,18 +24,18 @@ export default function CompanyBranding() {
   }, []);
 
   const fetchSettings = async () => {
-    const { data } = await supabase
-      .from("company_settings")
-      .select("*")
-      .limit(1)
-      .single();
-    if (data) {
-      setSettingsId(data.id);
-      setCompanyName(data.company_name || "");
-      setCompanyAddress(data.company_address || "");
-      setLogoUrl(data.logo_url || "");
-      setBrandColor(data.brand_color || "#2980B9");
-      setTextColor(data.text_color || "#FFFFFF");
+    try {
+      const { data } = await apiClient.get("/settings");
+      if (data) {
+        setSettingsId(data.id);
+        setCompanyName(data.company_name || "");
+        setCompanyAddress(data.company_address || "");
+        setLogoUrl(data.logo_url || "");
+        setBrandColor(data.brand_color || "#2980B9");
+        setTextColor(data.text_color || "#FFFFFF");
+      }
+    } catch (err) {
+      toast.error("Failed to fetch settings");
     }
   };
 
@@ -53,29 +53,20 @@ export default function CompanyBranding() {
     }
 
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const filePath = `logo.${ext}`;
+    const formData = new FormData();
+    formData.append("logo", file);
 
-    // Remove old logo if exists
-    await supabase.storage.from("company-assets").remove([filePath]);
-
-    const { error } = await supabase.storage
-      .from("company-assets")
-      .upload(filePath, file, { upsert: true });
-
-    if (error) {
-      toast.error("Upload failed: " + error.message);
+    try {
+      const { data } = await apiClient.post("/settings/logo", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      setLogoUrl(data.url);
+      toast.success("Logo uploaded");
+    } catch (err: any) {
+      toast.error("Upload failed: " + (err.response?.data?.error || err.message));
+    } finally {
       setUploading(false);
-      return;
     }
-
-    const { data: urlData } = supabase.storage
-      .from("company-assets")
-      .getPublicUrl(filePath);
-
-    setLogoUrl(urlData.publicUrl);
-    setUploading(false);
-    toast.success("Logo uploaded");
   };
 
   const handleRemoveLogo = async () => {
@@ -93,31 +84,17 @@ export default function CompanyBranding() {
       text_color: textColor,
     };
 
-    if (settingsId) {
-      const { error } = await supabase
-        .from("company_settings")
-        .update(payload)
-        .eq("id", settingsId);
-      if (error) {
-        toast.error("Failed to save: " + error.message);
-      } else {
-        toast.success("Company branding saved");
-      }
-    } else {
-      const { error, data } = await supabase
-        .from("company_settings")
-        .insert(payload)
-        .select()
-        .single();
-      if (error) {
-        toast.error("Failed to save: " + error.message);
-      } else {
-        setSettingsId(data.id);
-        toast.success("Company branding saved");
-      }
+    try {
+      await apiClient.patch("/settings", payload);
+      toast.success("Company branding saved");
+    } catch (err: any) {
+      toast.error("Failed to save: " + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
+
+  const fullLogoUrl = logoUrl ? (logoUrl.startsWith("http") ? logoUrl : `${API_BASE_URL.replace("/api", "")}${logoUrl}`) : "";
 
   return (
     <DashboardLayout>
@@ -142,7 +119,7 @@ export default function CompanyBranding() {
                 <div className="space-y-3">
                   <div className="border rounded-lg p-4 bg-muted/30 flex items-center justify-center">
                     <img
-                      src={logoUrl}
+                      src={fullLogoUrl}
                       alt="Company Logo"
                       className="max-h-32 max-w-full object-contain"
                     />
@@ -276,7 +253,7 @@ export default function CompanyBranding() {
             <div style={{ backgroundColor: brandColor, color: textColor }} className="rounded-lg p-6 flex items-center gap-4">
               {logoUrl && (
                 <img
-                  src={logoUrl}
+                  src={fullLogoUrl}
                   alt="Logo"
                   className="w-14 h-14 object-contain bg-white rounded p-1"
                 />

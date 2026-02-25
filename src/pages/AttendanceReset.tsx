@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { RotateCcw, Search, ShieldAlert, Loader2 } from "lucide-react";
 
@@ -49,27 +49,16 @@ export default function AttendanceReset() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("is_active", true);
-
-      if (!profiles) return;
-
-      const { data: rawPunches } = await supabase
-        .from("attendance_raw")
-        .select("*")
-        .gte("timestamp", `${today}T00:00:00`)
-        .lte("timestamp", `${today}T23:59:59`)
-        .order("timestamp", { ascending: true });
+      const { data } = await apiClient.get("/attendance/recent", { params: { date: today } });
+      const { profiles, punches: rawPunches } = data;
 
       const punchMap = new Map<string, any[]>();
-      (rawPunches || []).forEach((p) => {
+      (rawPunches || []).forEach((p: any) => {
         if (!punchMap.has(p.user_id)) punchMap.set(p.user_id, []);
         punchMap.get(p.user_id)!.push(p);
       });
 
-      const employeeData: EmployeePunchData[] = profiles.map((profile) => {
+      const employeeData: EmployeePunchData[] = profiles.map((profile: any) => {
         const punches = punchMap.get(profile.id) || [];
         const breakStarts = punches.filter((p) => p.punch_type === "break-start").length;
         const breakEnds = punches.filter((p) => p.punch_type === "break-end").length;
@@ -85,6 +74,8 @@ export default function AttendanceReset() {
       });
 
       setEmployees(employeeData);
+    } catch (err) {
+      toast.error("Failed to fetch data");
     } finally {
       setLoading(false);
     }
@@ -97,25 +88,16 @@ export default function AttendanceReset() {
       if (logoutPunches.length === 0) return;
 
       const logoutIds = logoutPunches.map((p) => p.id);
+      await apiClient.post("/attendance/delete-punches", { ids: logoutIds });
 
-      const { error } = await supabase
-        .from("attendance_raw")
-        .delete()
-        .in("id", logoutIds);
-
-      if (error) throw error;
-
-      toast({
-        title: "Logout Reset ✓",
-        description: `${employee.fullName}'s logout punch has been removed. They can now continue working.`,
+      toast.success("Logout Reset", {
+        description: `${employee.fullName}'s logout punch has been removed.`,
       });
 
       await fetchData();
     } catch (err: any) {
-      toast({
-        title: "Reset Failed",
-        description: err.message || "Could not reset the logout punch",
-        variant: "destructive",
+      toast.error("Reset Failed", {
+        description: err.response?.data?.error || "Could not reset the logout punch",
       });
     } finally {
       setResetting(null);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient, { API_BASE_URL } from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -96,13 +96,18 @@ export default function Payroll() {
   const fetchData = async () => {
     setLoading(true);
     const monthDate = `${selectedMonth}-01`;
-    const [{ data: payrollData }, { data: empData }] = await Promise.all([
-      supabase.from("payroll").select("*").eq("month", monthDate).order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id, full_name, email, biometric_id, date_of_joining").eq("is_active", true).order("full_name"),
-    ]);
-    setRecords((payrollData as unknown as PayrollRecord[]) || []);
-    setEmployees(empData || []);
-    setLoading(false);
+    try {
+      const [{ data: payrollData }, { data: profileData }] = await Promise.all([
+        apiClient.get("/payroll", { params: { month: monthDate } }),
+        apiClient.get("/profiles"),
+      ]);
+      setRecords((payrollData as unknown as PayrollRecord[]) || []);
+      setEmployees(profileData || []);
+    } catch (err) {
+      toast.error("Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, [selectedMonth]);
@@ -126,149 +131,158 @@ export default function Payroll() {
     const empName = getEmployeeName(rec.user_id);
     const empEmail = getEmployeeEmail(rec.user_id);
 
-    // Fetch company branding
-    const { data: brandingData } = await supabase.from("company_settings").select("*").limit(1).single();
-    const companyName = brandingData?.company_name || "PAYSLIP";
-    const companyAddress = brandingData?.company_address || "";
-    const logoUrl = brandingData?.logo_url || "";
-    const brandHex = brandingData?.brand_color || "#2980B9";
-    const textHex = brandingData?.text_color || "#FFFFFF";
-    const hexToRgb = (hex: string): [number, number, number] => {
-      const h = hex.replace("#", "");
-      return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
-    };
-    const brandRgb = hexToRgb(brandHex);
-    const textRgb = hexToRgb(textHex);
+    try {
+      // Fetch company branding
+      const { data: brandingData } = await apiClient.get("/settings");
+      const companyName = brandingData?.company_name || "PAYSLIP";
+      const companyAddress = brandingData?.company_address || "";
+      let logoUrl = brandingData?.logo_url || "";
+      const brandHex = brandingData?.brand_color || "#2980B9";
+      const textHex = brandingData?.text_color || "#FFFFFF";
 
-    const doc = new jsPDF();
-    const pw = doc.internal.pageSize.getWidth();
-
-    // Load logo if available
-    let logoDataUrl: string | null = null;
-    if (logoUrl) {
-      try {
-        const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-          const i = new Image();
-          i.crossOrigin = "anonymous";
-          i.onload = () => resolve(i);
-          i.onerror = reject;
-          i.src = logoUrl;
-        });
-        const canvas = document.createElement("canvas");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        canvas.getContext("2d")!.drawImage(img, 0, 0);
-        logoDataUrl = canvas.toDataURL("image/png");
-      } catch {
-        logoDataUrl = null;
+      if (logoUrl && !logoUrl.startsWith("http")) {
+        logoUrl = `${API_BASE_URL.replace("/api", "")}${logoUrl}`;
       }
-    }
 
-    // Header
-    const headerHeight = companyAddress ? 42 : 35;
-    doc.setFillColor(...brandRgb);
-    doc.rect(0, 0, pw, headerHeight, "F");
+      const hexToRgb = (hex: string): [number, number, number] => {
+        const h = hex.replace("#", "");
+        return [parseInt(h.substring(0, 2), 16), parseInt(h.substring(2, 4), 16), parseInt(h.substring(4, 6), 16)];
+      };
+      const brandRgb = hexToRgb(brandHex);
+      const textRgb = hexToRgb(textHex);
 
-    if (logoDataUrl) {
-      doc.addImage(logoDataUrl, "PNG", 10, 4, 18, 18);
-    }
+      const doc = new jsPDF();
+      const pw = doc.internal.pageSize.getWidth();
 
-    doc.setTextColor(...textRgb);
-    doc.setFontSize(18);
-    doc.text(companyName, pw / 2, 14, { align: "center" });
-    doc.setFontSize(9);
-    if (companyAddress) {
-      doc.text(companyAddress, pw / 2, 21, { align: "center" });
-      doc.setFontSize(10);
-      doc.text(`Payslip - ${monthLabel}`, pw / 2, 29, { align: "center" });
-      doc.text("Confidential", pw / 2, 35, { align: "center" });
-    } else {
-      doc.text(monthLabel, pw / 2, 22, { align: "center" });
-      doc.text("Confidential", pw / 2, 28, { align: "center" });
-    }
-
-    const infoY = headerHeight + 10;
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
-    doc.text(`Employee Name: ${empName}`, 14, infoY);
-    doc.text(`Email: ${empEmail}`, 14, infoY + 7);
-    doc.text(`Paid Days: ${rec.paid_days - rec.lop_days} / ${rec.paid_days}`, pw - 14, infoY, { align: "right" });
-    doc.text(`LOP Days: ${rec.lop_days}`, pw - 14, infoY + 7, { align: "right" });
-
-    const earnings = [
-      ["Basic Salary", rec.basic_salary],
-      ["HRA", rec.hra],
-      ["Dearness Allowance", rec.dearness_allowance],
-      ["Conveyance Allowance", rec.conveyance_allowance],
-      ["Medical Allowance", rec.medical_allowance],
-      ["Special Allowance", rec.special_allowance],
-      ["Overtime", rec.overtime],
-      ["Bonus", rec.bonus],
-      ["Other Earnings", rec.other_earnings],
-    ].filter(([, v]) => Number(v) > 0);
-
-    const deductions = [
-      ["EPF (Employee)", rec.epf_employee],
-      ["ESI (Employee)", rec.esi_employee],
-      ["Professional Tax", rec.professional_tax],
-      ["TDS / Income Tax", rec.tds],
-      ["Loan Recovery", rec.loan_recovery],
-      ["Other Deductions", rec.other_deductions],
-    ].filter(([, v]) => Number(v) > 0);
-
-    const maxRows = Math.max(earnings.length, deductions.length);
-    const tableBody: (string | number)[][] = [];
-    for (let i = 0; i < maxRows; i++) {
-      tableBody.push([
-        (earnings[i]?.[0] as string) || "",
-        earnings[i] ? `Rs.${Number(earnings[i][1]).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "",
-        (deductions[i]?.[0] as string) || "",
-        deductions[i] ? `Rs.${Number(deductions[i][1]).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "",
-      ]);
-    }
-    tableBody.push([
-      "Gross Earnings", `Rs.${Number(rec.gross_earnings).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-      "Total Deductions", `Rs.${Number(rec.total_deductions).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-    ]);
-
-    autoTable(doc, {
-      startY: infoY + 15,
-      head: [["Earnings", "Amount (Rs.)", "Deductions", "Amount (Rs.)"]],
-      body: tableBody,
-      styles: { fontSize: 9, cellPadding: 4, font: "helvetica" },
-      headStyles: { fillColor: brandRgb, textColor: textRgb, fontStyle: "bold", halign: "left" },
-      columnStyles: {
-        0: { cellWidth: 55 },
-        1: { cellWidth: 35, halign: "right" },
-        2: { cellWidth: 55 },
-        3: { cellWidth: 35, halign: "right" },
-      },
-      tableWidth: pw - 28,
-      margin: { left: 14, right: 14 },
-      didParseCell: (data) => {
-        if (data.row.index === tableBody.length - 1) {
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [235, 245, 255];
+      // Load logo if available
+      let logoDataUrl: string | null = null;
+      if (logoUrl) {
+        try {
+          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const i = new Image();
+            i.crossOrigin = "anonymous";
+            i.onload = () => resolve(i);
+            i.onerror = reject;
+            i.src = logoUrl;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d")!.drawImage(img, 0, 0);
+          logoDataUrl = canvas.toDataURL("image/png");
+        } catch {
+          logoDataUrl = null;
         }
-      },
-    });
+      }
 
-    const finalY = (doc as any).lastAutoTable?.finalY || 160;
+      // Header
+      const headerHeight = companyAddress ? 42 : 35;
+      doc.setFillColor(...brandRgb);
+      doc.rect(0, 0, pw, headerHeight, "F");
 
-    doc.setFillColor(...brandRgb);
-    doc.roundedRect(14, finalY + 8, pw - 28, 20, 3, 3, "F");
-    doc.setTextColor(...textRgb);
-    doc.setFontSize(12);
-    doc.text("Net Salary (Take Home)", 20, finalY + 20);
-    doc.setFontSize(16);
-    doc.text(`Rs.${Number(rec.net_salary).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, pw - 20, finalY + 21, { align: "right" });
+      if (logoDataUrl) {
+        doc.addImage(logoDataUrl, "PNG", 10, 4, 18, 18);
+      }
 
-    doc.setTextColor(150, 150, 150);
-    doc.setFontSize(8);
-    doc.text("This is a system-generated payslip. No signature required.", pw / 2, finalY + 38, { align: "center" });
+      doc.setTextColor(...textRgb);
+      doc.setFontSize(18);
+      doc.text(companyName, pw / 2, 14, { align: "center" });
+      doc.setFontSize(9);
+      if (companyAddress) {
+        doc.text(companyAddress, pw / 2, 21, { align: "center" });
+        doc.setFontSize(10);
+        doc.text(`Payslip - ${monthLabel}`, pw / 2, 29, { align: "center" });
+        doc.text("Confidential", pw / 2, 35, { align: "center" });
+      } else {
+        doc.text(monthLabel, pw / 2, 22, { align: "center" });
+        doc.text("Confidential", pw / 2, 28, { align: "center" });
+      }
 
-    doc.save(`payslip-${empName.replace(/\s+/g, "-").toLowerCase()}-${format(parse(rec.month, "yyyy-MM-dd", new Date()), "yyyy-MM")}.pdf`);
-    toast.success("Payslip downloaded");
+      const infoY = headerHeight + 10;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
+      doc.text(`Employee Name: ${empName}`, 14, infoY);
+      doc.text(`Email: ${empEmail}`, 14, infoY + 7);
+      doc.text(`Paid Days: ${rec.paid_days - rec.lop_days} / ${rec.paid_days}`, pw - 14, infoY, { align: "right" });
+      doc.text(`LOP Days: ${rec.lop_days}`, pw - 14, infoY + 7, { align: "right" });
+
+      const earnings = [
+        ["Basic Salary", rec.basic_salary],
+        ["HRA", rec.hra],
+        ["Dearness Allowance", rec.dearness_allowance],
+        ["Conveyance Allowance", rec.conveyance_allowance],
+        ["Medical Allowance", rec.medical_allowance],
+        ["Special Allowance", rec.special_allowance],
+        ["Overtime", rec.overtime],
+        ["Bonus", rec.bonus],
+        ["Other Earnings", rec.other_earnings],
+      ].filter(([, v]) => Number(v) > 0);
+
+      const deductions = [
+        ["EPF (Employee)", rec.epf_employee],
+        ["ESI (Employee)", rec.esi_employee],
+        ["Professional Tax", rec.professional_tax],
+        ["TDS / Income Tax", rec.tds],
+        ["Loan Recovery", rec.loan_recovery],
+        ["Other Deductions", rec.other_deductions],
+      ].filter(([, v]) => Number(v) > 0);
+
+      const maxRows = Math.max(earnings.length, deductions.length);
+      const tableBody: (string | number)[][] = [];
+      for (let i = 0; i < maxRows; i++) {
+        tableBody.push([
+          (earnings[i]?.[0] as string) || "",
+          earnings[i] ? `Rs.${Number(earnings[i][1]).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "",
+          (deductions[i]?.[0] as string) || "",
+          deductions[i] ? `Rs.${Number(deductions[i][1]).toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "",
+        ]);
+      }
+      tableBody.push([
+        "Gross Earnings", `Rs.${Number(rec.gross_earnings).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+        "Total Deductions", `Rs.${Number(rec.total_deductions).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+      ]);
+
+      autoTable(doc, {
+        startY: infoY + 15,
+        head: [["Earnings", "Amount (Rs.)", "Deductions", "Amount (Rs.)"]],
+        body: tableBody,
+        styles: { fontSize: 9, cellPadding: 4, font: "helvetica" },
+        headStyles: { fillColor: brandRgb, textColor: textRgb, fontStyle: "bold", halign: "left" },
+        columnStyles: {
+          0: { cellWidth: 55 },
+          1: { cellWidth: 35, halign: "right" },
+          2: { cellWidth: 55 },
+          3: { cellWidth: 35, halign: "right" },
+        },
+        tableWidth: pw - 28,
+        margin: { left: 14, right: 14 },
+        didParseCell: (data) => {
+          if (data.row.index === tableBody.length - 1) {
+            data.cell.styles.fontStyle = "bold";
+            data.cell.styles.fillColor = [235, 245, 255];
+          }
+        },
+      });
+
+      const finalY = (doc as any).lastAutoTable?.finalY || 160;
+
+      doc.setFillColor(...brandRgb);
+      doc.roundedRect(14, finalY + 8, pw - 28, 20, 3, 3, "F");
+      doc.setTextColor(...textRgb);
+      doc.setFontSize(12);
+      doc.text("Net Salary (Take Home)", 20, finalY + 20);
+      doc.setFontSize(16);
+      doc.text(`Rs.${Number(rec.net_salary).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, pw - 20, finalY + 21, { align: "right" });
+
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(8);
+      doc.text("This is a system-generated payslip. No signature required.", pw / 2, finalY + 38, { align: "center" });
+
+      doc.save(`payslip-${empName.replace(/\s+/g, "-").toLowerCase()}-${format(parse(rec.month, "yyyy-MM-dd", new Date()), "yyyy-MM")}.pdf`);
+      toast.success("Payslip downloaded");
+    } catch (err) {
+      toast.error("Failed to generate payslip");
+    }
   };
 
   const resetForm = () => { setForm({ ...defaultForm }); setEditingId(null); };
@@ -280,39 +294,37 @@ export default function Payroll() {
     setForm((prev) => ({ ...prev, user_id: userId }));
     if (editingId) return; // Don't carry forward when editing
 
-    const { data } = await supabase
-      .from("payroll")
-      .select("*")
-      .eq("user_id", userId)
-      .order("month", { ascending: false })
-      .limit(1);
-
-    if (data && data.length > 0) {
-      const prev = data[0] as unknown as PayrollRecord;
-      setForm({
-        user_id: userId,
-        basic_salary: prev.basic_salary.toString(),
-        hra: prev.hra.toString(),
-        dearness_allowance: prev.dearness_allowance.toString(),
-        conveyance_allowance: prev.conveyance_allowance.toString(),
-        medical_allowance: prev.medical_allowance.toString(),
-        special_allowance: prev.special_allowance.toString(),
-        overtime: "0",
-        bonus: "0",
-        other_earnings: "0",
-        epf_employee: prev.epf_employee.toString(),
-        esi_employee: prev.esi_employee.toString(),
-        professional_tax: prev.professional_tax.toString(),
-        tds: prev.tds.toString(),
-        loan_recovery: prev.loan_recovery.toString(),
-        other_deductions: prev.other_deductions.toString(),
-        epf_employer: prev.epf_employer.toString(),
-        esi_employer: prev.esi_employer.toString(),
-        paid_days: prev.paid_days.toString(),
-        lop_days: "0",
-        notes: "",
-      });
-      toast.info("Salary details carried forward from previous month. Adjust as needed.");
+    try {
+      const { data } = await apiClient.get("/payroll", { params: { user_id: userId, limit: 1 } });
+      if (data && data.length > 0) {
+        const prev = data[0] as unknown as PayrollRecord;
+        setForm({
+          user_id: userId,
+          basic_salary: prev.basic_salary.toString(),
+          hra: prev.hra.toString(),
+          dearness_allowance: prev.dearness_allowance.toString(),
+          conveyance_allowance: prev.conveyance_allowance.toString(),
+          medical_allowance: prev.medical_allowance.toString(),
+          special_allowance: prev.special_allowance.toString(),
+          overtime: "0",
+          bonus: "0",
+          other_earnings: "0",
+          epf_employee: prev.epf_employee.toString(),
+          esi_employee: prev.esi_employee.toString(),
+          professional_tax: prev.professional_tax.toString(),
+          tds: prev.tds.toString(),
+          loan_recovery: prev.loan_recovery.toString(),
+          other_deductions: prev.other_deductions.toString(),
+          epf_employer: prev.epf_employer.toString(),
+          esi_employer: prev.esi_employer.toString(),
+          paid_days: prev.paid_days.toString(),
+          lop_days: "0",
+          notes: "",
+        });
+        toast.info("Salary details carried forward from previous month. Adjust as needed.");
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -392,106 +404,45 @@ export default function Payroll() {
       notes: form.notes.trim() || null,
     };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase.from("payroll").update(payload).eq("id", editingId));
-    } else {
-      ({ error } = await supabase.from("payroll").insert(payload));
-    }
-
-    if (error) {
-      if (error.code === "23505") toast.error("Payroll entry already exists for this employee and month");
-      else toast.error(error.message || "Failed to save");
-    } else {
+    try {
+      if (editingId) {
+        await apiClient.patch(`/payroll/${editingId}`, payload);
+      } else {
+        await apiClient.post("/payroll", payload);
+      }
       toast.success(editingId ? "Payroll updated" : "Payroll created");
       setDialogOpen(false);
       resetForm();
       fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to save");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("payroll").delete().eq("id", id);
-    if (error) toast.error("Failed to delete");
-    else { toast.success("Deleted"); fetchData(); }
+    try {
+      await apiClient.delete(`/payroll/${id}`);
+      toast.success("Deleted");
+      fetchData();
+    } catch (err) {
+      toast.error("Failed to delete");
+    }
   };
 
   const handleGenerateAll = async () => {
     setGenerating(true);
     const monthDate = `${selectedMonth}-01`;
-    
-    // Get employees who already have payroll this month
-    const existingUserIds = new Set(records.map((r) => r.user_id));
-    
-    // Get employees who DON'T have payroll this month yet
-    const missingEmployees = employees.filter((e) => !existingUserIds.has(e.id));
-    
-    if (missingEmployees.length === 0) {
-      toast.info("All active employees already have payroll for this month");
+    try {
+      const { data } = await apiClient.post("/payroll/generate", { month: monthDate });
+      toast.success(data.message);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to generate payroll");
+    } finally {
       setGenerating(false);
-      return;
     }
-
-    // For each missing employee, fetch their latest payroll record
-    const insertPayloads: any[] = [];
-    let skippedCount = 0;
-
-    for (const emp of missingEmployees) {
-      const { data } = await supabase
-        .from("payroll")
-        .select("*")
-        .eq("user_id", emp.id)
-        .order("month", { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0) {
-        const prev = data[0] as unknown as PayrollRecord;
-        insertPayloads.push({
-          user_id: emp.id,
-          month: monthDate,
-          basic_salary: prev.basic_salary,
-          hra: prev.hra,
-          dearness_allowance: prev.dearness_allowance,
-          conveyance_allowance: prev.conveyance_allowance,
-          medical_allowance: prev.medical_allowance,
-          special_allowance: prev.special_allowance,
-          overtime: prev.overtime,
-          bonus: prev.bonus,
-          other_earnings: prev.other_earnings,
-          epf_employee: prev.epf_employee,
-          esi_employee: prev.esi_employee,
-          professional_tax: prev.professional_tax,
-          tds: prev.tds,
-          loan_recovery: prev.loan_recovery,
-          other_deductions: prev.other_deductions,
-          epf_employer: prev.epf_employer,
-          esi_employer: prev.esi_employer,
-          paid_days: prev.paid_days,
-          lop_days: 0,
-          notes: "Auto-generated from previous month",
-        });
-      } else {
-        skippedCount++;
-      }
-    }
-
-    if (insertPayloads.length > 0) {
-      const { error } = await supabase.from("payroll").insert(insertPayloads);
-      if (error) {
-        toast.error("Failed to generate payroll: " + error.message);
-      } else {
-        toast.success(`Payroll generated for ${insertPayloads.length} employee(s)`);
-        if (skippedCount > 0) {
-          toast.info(`${skippedCount} employee(s) skipped — no previous payroll record found. Add them manually.`);
-        }
-        fetchData();
-      }
-    } else {
-      toast.warning("No employees with previous payroll data found. Please add payroll manually for first-time entries.");
-    }
-
-    setGenerating(false);
   };
 
   const filtered = records.filter((r) =>
@@ -525,114 +476,117 @@ export default function Payroll() {
               variant="outline"
               onClick={async () => {
                 const monthDate = `${selectedMonth}-01`;
-                const { error } = await supabase.from("payroll").update({ released: true } as any).eq("month", monthDate).eq("released", false);
-                if (error) { toast.error("Failed to release payslips"); return; }
-                toast.success("All payslips released for " + format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy"));
-                fetchData();
+                try {
+                  await apiClient.post("/payroll/release-all", { month: monthDate });
+                  toast.success("All payslips released for " + format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy"));
+                  fetchData();
+                } catch (err) {
+                  toast.error("Failed to release payslips");
+                }
               }}
             >
               <Send className="w-4 h-4 mr-2" />
               Release All
             </Button>
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreate}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Payroll
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingId ? "Edit Payroll" : "New Payroll Entry"}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-5 pt-2">
-                {/* Employee & Days */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Employee *</Label>
-                    <Select value={form.user_id} onValueChange={handleEmployeeSelect} disabled={!!editingId}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select employee" /></SelectTrigger>
-                      <SelectContent>
-                        {(editingId ? employees : availableEmployees).map((e) => (
-                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {renderNumField("Paid Days", "paid_days")}
-                  {renderNumField("LOP Days", "lop_days")}
-                </div>
-
-                <Separator />
-
-                {/* Earnings */}
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Earnings</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {renderNumField("Basic Salary *", "basic_salary")}
-                    {renderNumField("HRA", "hra")}
-                    {renderNumField("Dearness Allowance (DA)", "dearness_allowance")}
-                    {renderNumField("Conveyance Allowance", "conveyance_allowance")}
-                    {renderNumField("Medical Allowance", "medical_allowance")}
-                    {renderNumField("Special Allowance", "special_allowance")}
-                    {renderNumField("Overtime", "overtime")}
-                    {renderNumField("Bonus", "bonus")}
-                    {renderNumField("Other Earnings", "other_earnings")}
-                  </div>
-                  <div className="mt-2 text-right text-sm font-medium text-foreground">
-                    Gross Earnings: <span className="font-bold">₹{grossPreview.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Deductions */}
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Deductions</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {renderNumField("EPF (Employee)", "epf_employee")}
-                    {renderNumField("ESI (Employee)", "esi_employee")}
-                    {renderNumField("Professional Tax", "professional_tax")}
-                    {renderNumField("TDS / Income Tax", "tds")}
-                    {renderNumField("Loan Recovery", "loan_recovery")}
-                    {renderNumField("Other Deductions", "other_deductions")}
-                  </div>
-                  <div className="mt-2 text-right text-sm font-medium text-foreground">
-                    Total Deductions: <span className="font-bold">₹{deductionsPreview.toFixed(2)}</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Employer Contributions */}
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Employer Contributions</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {renderNumField("EPF (Employer)", "epf_employer")}
-                    {renderNumField("ESI (Employer)", "esi_employer")}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Net Salary */}
-                <div className="rounded-lg bg-primary/10 p-4 text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Net Salary (Take Home)</p>
-                  <p className="text-2xl font-bold text-primary">₹{netPreview.toFixed(2)}</p>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">Notes</Label>
-                  <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." rows={2} className="text-sm" />
-                </div>
-
-                <Button className="w-full" onClick={handleSave} disabled={saving}>
-                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingId ? "Update" : "Create"} Payroll Entry
+              <DialogTrigger asChild>
+                <Button onClick={openCreate}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Payroll
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editingId ? "Edit Payroll" : "New Payroll Entry"}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-5 pt-2">
+                  {/* Employee & Days */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Employee *</Label>
+                      <Select value={form.user_id} onValueChange={handleEmployeeSelect} disabled={!!editingId}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select employee" /></SelectTrigger>
+                        <SelectContent>
+                          {(editingId ? employees : availableEmployees).map((e) => (
+                            <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {renderNumField("Paid Days", "paid_days")}
+                    {renderNumField("LOP Days", "lop_days")}
+                  </div>
+
+                  <Separator />
+
+                  {/* Earnings */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Earnings</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {renderNumField("Basic Salary *", "basic_salary")}
+                      {renderNumField("HRA", "hra")}
+                      {renderNumField("Dearness Allowance (DA)", "dearness_allowance")}
+                      {renderNumField("Conveyance Allowance", "conveyance_allowance")}
+                      {renderNumField("Medical Allowance", "medical_allowance")}
+                      {renderNumField("Special Allowance", "special_allowance")}
+                      {renderNumField("Overtime", "overtime")}
+                      {renderNumField("Bonus", "bonus")}
+                      {renderNumField("Other Earnings", "other_earnings")}
+                    </div>
+                    <div className="mt-2 text-right text-sm font-medium text-foreground">
+                      Gross Earnings: <span className="font-bold">₹{grossPreview.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Deductions */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Deductions</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {renderNumField("EPF (Employee)", "epf_employee")}
+                      {renderNumField("ESI (Employee)", "esi_employee")}
+                      {renderNumField("Professional Tax", "professional_tax")}
+                      {renderNumField("TDS / Income Tax", "tds")}
+                      {renderNumField("Loan Recovery", "loan_recovery")}
+                      {renderNumField("Other Deductions", "other_deductions")}
+                    </div>
+                    <div className="mt-2 text-right text-sm font-medium text-foreground">
+                      Total Deductions: <span className="font-bold">₹{deductionsPreview.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Employer Contributions */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground mb-3">Employer Contributions</h3>
+                    <div className="grid grid-cols-3 gap-3">
+                      {renderNumField("EPF (Employer)", "epf_employer")}
+                      {renderNumField("ESI (Employer)", "esi_employer")}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Net Salary */}
+                  <div className="rounded-lg bg-primary/10 p-4 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Net Salary (Take Home)</p>
+                    <p className="text-2xl font-bold text-primary">₹{netPreview.toFixed(2)}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Notes</Label>
+                    <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." rows={2} className="text-sm" />
+                  </div>
+
+                  <Button className="w-full" onClick={handleSave} disabled={saving}>
+                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {editingId ? "Update" : "Create"} Payroll Entry
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
@@ -648,7 +602,7 @@ export default function Payroll() {
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
-                 <TableHeader>
+                <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>
                     <TableHead>Emp ID</TableHead>
@@ -688,10 +642,13 @@ export default function Payroll() {
                               size="sm"
                               onClick={async () => {
                                 const newVal = !rec.released;
-                                const { error } = await supabase.from("payroll").update({ released: newVal } as any).eq("id", rec.id);
-                                if (error) { toast.error("Failed to update release status"); return; }
-                                toast.success(newVal ? "Payslip released to employee" : "Payslip release revoked");
-                                fetchData();
+                                try {
+                                  await apiClient.patch(`/payroll/${rec.id}`, { released: newVal });
+                                  toast.success(newVal ? "Payslip released to employee" : "Payslip release revoked");
+                                  fetchData();
+                                } catch (err) {
+                                  toast.error("Failed to update release status");
+                                }
                               }}
                               title={rec.released ? "Revoke early release" : "Release to employee now"}
                             >

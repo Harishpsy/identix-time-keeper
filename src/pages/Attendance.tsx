@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import AttendanceStatusBadge from "@/components/dashboard/AttendanceStatusBadge";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
 import { Search, ChevronLeft, ChevronRight, Download, FileText, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import ReprocessDialog from "@/components/attendance/ReprocessDialog";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -37,200 +38,27 @@ export default function Attendance() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [year, mon] = month.split("-").map(Number);
-      const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
-      const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
+      try {
+        const [year, mon] = month.split("-").map(Number);
+        const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
+        const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
 
-      let query = supabase
-        .from("daily_summaries")
-        .select("*, profiles!daily_summaries_user_id_fkey(full_name, email)")
-        .gte("date", start)
-        .lte("date", end)
-        .order("date", { ascending: false });
-
-      if (role === "employee") {
-        query = query.eq("user_id", user?.id);
-      }
-
-      const { data } = await query;
-      let results = data || [];
-
-      // For recent days (today, yesterday, day before), correct/supplement daily_summaries with raw punch data
-      const today = new Date();
-      const recentDays = [
-        format(today, "yyyy-MM-dd"),
-        format(subDays(today, 1), "yyyy-MM-dd"),
-        format(subDays(today, 2), "yyyy-MM-dd"),
-      ].filter((d) => d >= start && d <= end);
-
-      if (recentDays.length > 0 && role !== "employee") {
-        // Fetch all active profiles once
-        const { data: allProfiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, email")
-          .eq("is_active", true);
-
-        // Fetch raw punches for all recent days
-        const earliestDay = recentDays[recentDays.length - 1];
-        const latestDay = recentDays[0];
-        const { data: rawPunches } = await supabase
-          .from("attendance_raw")
-          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-          .gte("timestamp", `${earliestDay}T00:00:00`)
-          .lte("timestamp", `${latestDay}T23:59:59`)
-          .order("timestamp", { ascending: true });
-
-        // Group punches by date and user
-        const punchMap = new Map<string, Map<string, any[]>>();
-        for (const p of rawPunches || []) {
-          const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
-          if (!punchMap.has(punchDate)) punchMap.set(punchDate, new Map());
-          const userMap = punchMap.get(punchDate)!;
-          if (!userMap.has(p.user_id)) userMap.set(p.user_id, []);
-          userMap.get(p.user_id)!.push(p);
-        }
-
-        for (const day of recentDays) {
-          const existingSummaries = results.filter((s: any) => s.date === day);
-          const existingUserIds = new Set(existingSummaries.map((s: any) => s.user_id));
-          const dayPunches = punchMap.get(day) || new Map();
-
-          // Override existing summaries that show absent but have raw punches
-          results = results.map((s: any) => {
-            if (s.date !== day) return s;
-            const userPunches = dayPunches.get(s.user_id);
-            if (!userPunches || userPunches.length === 0) return s;
-            if (s.first_in) return s; // already has data, don't override
-            if (s.is_manual_override) return s; // respect manual overrides
-
-            const logins = userPunches.filter((p: any) => p.punch_type === "login");
-            const logouts = userPunches.filter((p: any) => p.punch_type === "logout");
-            const firstIn = logins.length > 0 ? logins[0].timestamp : null;
-            const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
-            let duration = null;
-            if (firstIn && lastOut) {
-              const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
-              const h = Math.floor(ms / 3600000);
-              const m = Math.floor((ms % 3600000) / 60000);
-              duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
-            }
-            return {
-              ...s,
-              first_in: firstIn,
-              last_out: lastOut,
-              total_duration: duration,
-              status: firstIn ? "present" : s.status,
-            };
-          });
-
-          // Add missing users for this day
-          const newRecords = (allProfiles || [])
-            .filter((prof: any) => !existingUserIds.has(prof.id))
-            .map((prof: any) => {
-              const userPunches = dayPunches.get(prof.id) || [];
-              const logins = userPunches.filter((p: any) => p.punch_type === "login");
-              const logouts = userPunches.filter((p: any) => p.punch_type === "logout");
-              const firstIn = logins.length > 0 ? logins[0].timestamp : null;
-              const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
-              let duration = null;
-              if (firstIn && lastOut) {
-                const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
-                const h = Math.floor(ms / 3600000);
-                const m = Math.floor((ms % 3600000) / 60000);
-                duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
-              }
-              return {
-                id: `synth-${day}-${prof.id}`,
-                user_id: prof.id,
-                date: day,
-                first_in: firstIn,
-                last_out: lastOut,
-                total_duration: duration,
-                status: firstIn ? "present" : "absent",
-                late_minutes: 0,
-                profiles: { full_name: prof.full_name, email: prof.email },
-              };
-            });
-
-          results = [...newRecords, ...results] as any[];
-        }
-      } else if (recentDays.length > 0 && role === "employee") {
-        // Employee: correct own records for recent days
-        const earliestDay = recentDays[recentDays.length - 1];
-        const latestDay = recentDays[0];
-        const { data: rawPunches } = await supabase
-          .from("attendance_raw")
-          .select("*, profiles!attendance_raw_user_id_fkey(full_name, email)")
-          .eq("user_id", user?.id)
-          .gte("timestamp", `${earliestDay}T00:00:00`)
-          .lte("timestamp", `${latestDay}T23:59:59`)
-          .order("timestamp", { ascending: true });
-
-        const punchByDay = new Map<string, any[]>();
-        for (const p of rawPunches || []) {
-          const punchDate = format(new Date(p.timestamp), "yyyy-MM-dd");
-          if (!punchByDay.has(punchDate)) punchByDay.set(punchDate, []);
-          punchByDay.get(punchDate)!.push(p);
-        }
-
-        // Override existing wrong summaries
-        results = results.map((s: any) => {
-          if (!recentDays.includes(s.date)) return s;
-          const dayPunches = punchByDay.get(s.date);
-          if (!dayPunches || dayPunches.length === 0) return s;
-          if (s.first_in) return s;
-          if (s.is_manual_override) return s;
-
-          const logins = dayPunches.filter((p: any) => p.punch_type === "login");
-          const logouts = dayPunches.filter((p: any) => p.punch_type === "logout");
-          const firstIn = logins.length > 0 ? logins[0].timestamp : null;
-          const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
-          let duration = null;
-          if (firstIn && lastOut) {
-            const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
-            const h = Math.floor(ms / 3600000);
-            const m = Math.floor((ms % 3600000) / 60000);
-            duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
-          }
-          return { ...s, first_in: firstIn, last_out: lastOut, total_duration: duration, status: firstIn ? "present" : s.status };
+        const response = await apiClient.get("/attendance/summary", {
+          params: { start_date: start, end_date: end }
         });
 
-        // Add missing days for employee
-        for (const day of recentDays) {
-          const hasDay = results.some((s: any) => s.date === day);
-          if (!hasDay) {
-            const dayPunches = punchByDay.get(day) || [];
-            const logins = dayPunches.filter((p: any) => p.punch_type === "login");
-            const logouts = dayPunches.filter((p: any) => p.punch_type === "logout");
-            const firstIn = logins.length > 0 ? logins[0].timestamp : null;
-            const lastOut = logouts.length > 0 ? logouts[logouts.length - 1].timestamp : null;
-            let duration = null;
-            if (firstIn && lastOut) {
-              const ms = new Date(lastOut).getTime() - new Date(firstIn).getTime();
-              const h = Math.floor(ms / 3600000);
-              const m = Math.floor((ms % 3600000) / 60000);
-              duration = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
-            }
-            const profile = dayPunches[0]?.profiles || null;
-            (results as any[]).unshift({
-              id: `synth-${day}-${user?.id}`,
-              user_id: user?.id,
-              date: day,
-              first_in: firstIn,
-              last_out: lastOut,
-              total_duration: duration,
-              status: firstIn ? "present" : "absent",
-              late_minutes: 0,
-              profiles: profile,
-              created_at: new Date().toISOString(),
-              is_manual_override: false,
-            } as any);
-          }
-        }
-      }
+        // Map backend response to match frontend expectations
+        const results = response.data.map((s: any) => ({
+          ...s,
+          profiles: { full_name: s.full_name, email: s.email }
+        }));
 
-      setSummaries(results);
-      setLoading(false);
+        setSummaries(results);
+      } catch (err) {
+        toast.error("Failed to fetch attendance data");
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
@@ -245,7 +73,7 @@ export default function Attendance() {
   const filtered = summaries.filter((s) => {
     const matchesSearch = search
       ? s.profiles?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-        s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
+      s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
       : true;
     const matchesQuickFilter = quickFilter
       ? s.date === getQuickFilterDate(quickFilter)

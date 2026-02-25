@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,15 +23,24 @@ export default function Departments() {
 
   const fetchDepartments = async () => {
     setLoading(true);
-    const [{ data: deps }, { data: profiles }] = await Promise.all([
-      supabase.from("departments").select("*").order("name"),
-      supabase.from("profiles").select("department_id").not("department_id", "is", null),
-    ]);
-    setDepartments(deps || []);
-    const counts: Record<string, number> = {};
-    profiles?.forEach((p: any) => { counts[p.department_id] = (counts[p.department_id] || 0) + 1; });
-    setEmpCounts(counts);
-    setLoading(false);
+    try {
+      const [{ data: deps }, { data: profiles }] = await Promise.all([
+        apiClient.get("/profiles/departments"),
+        apiClient.get("/profiles"),
+      ]);
+      setDepartments(deps || []);
+      const counts: Record<string, number> = {};
+      profiles?.forEach((p: any) => {
+        if (p.department_id) {
+          counts[p.department_id] = (counts[p.department_id] || 0) + 1;
+        }
+      });
+      setEmpCounts(counts);
+    } catch (err) {
+      toast.error("Failed to fetch departments");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchDepartments(); }, []);
@@ -39,22 +48,31 @@ export default function Departments() {
   const handleSave = async () => {
     if (!name.trim()) { toast.error("Department name is required"); return; }
 
-    if (editing) {
-      const { error } = await supabase.from("departments").update({ name: name.trim() }).eq("id", editing.id);
-      if (error) toast.error(error.message);
-      else { toast.success("Department updated"); setDialogOpen(false); setEditing(null); fetchDepartments(); }
-    } else {
-      const { error } = await supabase.from("departments").insert({ name: name.trim() });
-      if (error) toast.error(error.message);
-      else { toast.success("Department created"); setDialogOpen(false); fetchDepartments(); }
+    try {
+      if (editing) {
+        await apiClient.patch(`/profiles/departments/${editing.id}`, { name: name.trim() });
+        toast.success("Department updated");
+      } else {
+        await apiClient.post("/profiles/departments", { name: name.trim() });
+        toast.success("Department created");
+      }
+      setDialogOpen(false);
+      setEditing(null);
+      fetchDepartments();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to save department");
     }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const { error } = await supabase.from("departments").delete().eq("id", deleteTarget.id);
-    if (error) toast.error(error.message);
-    else { toast.success("Department deleted"); fetchDepartments(); }
+    try {
+      await apiClient.delete(`/profiles/departments/${deleteTarget.id}`);
+      toast.success("Department deleted");
+      fetchDepartments();
+    } catch (err) {
+      toast.error("Failed to delete department");
+    }
     setDeleteTarget(null);
   };
 
@@ -86,7 +104,7 @@ export default function Departments() {
             <Table>
               <TableHeader>
                 <TableRow>
-                   <TableHead>Department Name</TableHead>
+                  <TableHead>Department Name</TableHead>
                   <TableHead className="w-40">Employees</TableHead>
                   <TableHead className="w-32">Actions</TableHead>
                 </TableRow>

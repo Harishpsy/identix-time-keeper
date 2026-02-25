@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LogIn, LogOut, Clock, Coffee, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { getLocalDayBoundsUTC } from "@/lib/timezone";
 
 export default function CheckInOut() {
   const { user, profile } = useAuth();
@@ -40,27 +39,23 @@ export default function CheckInOut() {
   // Fetch shift config for the user
   useEffect(() => {
     if (!profile?.shift_id) return;
-    supabase
-      .from("shifts")
-      .select("total_working_hours, max_break_minutes")
-      .eq("id", profile.shift_id)
-      .single()
+    apiClient
+      .get(`/profiles/shifts/${profile.shift_id}`)
       .then(({ data }) => {
         if (data) setShiftConfig({ total_working_hours: data.total_working_hours as number ?? 9, max_break_minutes: data.max_break_minutes ?? 60 });
-      });
+      })
+      .catch(err => console.error("Failed to fetch shift config", err));
   }, [profile?.shift_id]);
 
   const fetchTodayPunches = async () => {
     if (!user) return;
-    const { start, end } = getLocalDayBoundsUTC(new Date());
-    const { data } = await supabase
-      .from("attendance_raw")
-      .select("*")
-      .eq("user_id", user.id)
-      .gte("timestamp", start)
-      .lte("timestamp", end)
-      .order("timestamp", { ascending: true });
-    setTodayPunches(data || []);
+    const today = format(new Date(), "yyyy-MM-dd");
+    try {
+      const { data } = await apiClient.get("/attendance/my-punches", { params: { date: today } });
+      setTodayPunches(data || []);
+    } catch (err) {
+      console.error("Failed to fetch punches", err);
+    }
   };
 
   const hasLoggedIn = todayPunches.some((p) => p.punch_type === "login");
@@ -75,16 +70,8 @@ export default function CheckInOut() {
     if (!user) return;
     setLoading(true);
     try {
-      const now = new Date().toISOString();
-
-      const { error } = await supabase.from("attendance_raw").insert({
-        user_id: user.id,
-        timestamp: now,
-        punch_type: punchType,
-        device_id: "web-app",
-      });
-
-      if (error) throw error;
+      const { data } = await apiClient.post("/attendance/punch", { punch_type: punchType });
+      const now = data.timestamp;
 
       toast({
         title: `${label} ✓`,
@@ -95,7 +82,7 @@ export default function CheckInOut() {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "Failed to record punch",
+        description: err.response?.data?.error || "Failed to record punch",
         variant: "destructive",
       });
     } finally {
@@ -115,8 +102,8 @@ export default function CheckInOut() {
       const endTime = ends[i]
         ? new Date(ends[i].timestamp).getTime()
         : isOnBreak && i === starts.length - 1
-        ? currentTime.getTime()
-        : new Date(starts[i].timestamp).getTime();
+          ? currentTime.getTime()
+          : new Date(starts[i].timestamp).getTime();
       total += endTime - new Date(starts[i].timestamp).getTime();
     }
     return total;

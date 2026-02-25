@@ -1,1 +1,0 @@
-ALTER TABLE public.profiles ADD COLUMN date_of_joining date;

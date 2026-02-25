@@ -1,1 +1,0 @@
-ALTER TABLE public.leave_requests ADD COLUMN permission_hours numeric DEFAULT 0;

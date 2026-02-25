@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,25 +21,9 @@ const Auth = () => {
 
     const { error } = await signIn(email, password);
     if (error) {
-      toast.error(error.message);
+      toast.error(error); // Error is now a string from useAuth
       setLoading(false);
       return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("is_active")
-        .eq("id", user.id)
-        .single();
-
-      if (profile && !profile.is_active) {
-        toast.error("Your account has been deactivated. Please contact your administrator.");
-        await supabase.auth.signOut();
-        setLoading(false);
-        return;
-      }
     }
 
     toast.success("Welcome back!");

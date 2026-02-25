@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import {
   Fingerprint,
@@ -33,7 +35,7 @@ const navItems: NavItem[] = [
   { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["admin"] },
   { label: "Shifts", href: "/shifts", icon: <Timer className="w-5 h-5" />, roles: ["admin"] },
   { label: "Leave Requests", href: "/leave", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"] },
-  
+
   { label: "Payroll", href: "/payroll", icon: <DollarSign className="w-5 h-5" />, roles: ["admin"] },
   { label: "My Payslips", href: "/my-payslips", icon: <Receipt className="w-5 h-5" />, roles: ["employee", "subadmin"] },
   { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin"] },
@@ -45,8 +47,30 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [leavesEnabled, setLeavesEnabled] = useState(true);
 
-  const filteredNav = navItems.filter((item) => role && item.roles.includes(role));
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await apiClient.get("/settings");
+        if (data) setLeavesEnabled(data.leaves_enabled ?? true);
+      } catch (err) {
+        console.error("Failed to fetch settings in layout", err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const filteredNav = navItems.filter((item) => {
+    if (!role || !item.roles.includes(role)) return false;
+
+    // Visibility toggle for Leave Requests
+    if (item.label === "Leave Requests" && role !== "admin" && !leavesEnabled) {
+      return false;
+    }
+
+    return true;
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -74,11 +98,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
                     ? "bg-sidebar-accent text-sidebar-primary"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                }`}
+                  }`}
               >
                 {item.icon}
                 {item.label}

@@ -118,9 +118,13 @@ CREATE TABLE IF NOT EXISTS company_settings (
     company_name VARCHAR(255) NOT NULL DEFAULT '',
     company_address TEXT,
     logo_url TEXT,
+    default_sick_leaves INT NOT NULL DEFAULT 12,
+    default_casual_leaves INT NOT NULL DEFAULT 12,
+    default_annual_leaves INT NOT NULL DEFAULT 15,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Insert default company settings
-INSERT INTO company_settings (id, company_name) VALUES (UUID(), 'My Company');
+INSERT INTO company_settings (id, company_name, default_sick_leaves, default_casual_leaves, default_annual_leaves) 
+VALUES (UUID(), 'My Company', 12, 12, 15);

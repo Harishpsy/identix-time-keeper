@@ -24,7 +24,7 @@ const getLeaveRequests = async (req, res) => {
 };
 
 const applyLeave = async (req, res) => {
-    const { date, type, reason } = req.body;
+    const { date, type, reason, start_time, end_time } = req.body;
     const userId = req.user.id;
 
     if (!date || !type) {
@@ -34,8 +34,8 @@ const applyLeave = async (req, res) => {
     try {
         const id = uuidv4();
         await pool.execute(
-            'INSERT INTO leave_requests (id, user_id, date, type, reason, status) VALUES (?, ?, ?, ?, ?, ?)',
-            [id, userId, date, type, reason || '', 'pending']
+            'INSERT INTO leave_requests (id, user_id, date, type, reason, status, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, userId, date, type, reason || '', 'pending', start_time || null, end_time || null]
         );
         res.status(201).json({ success: true, id });
     } catch (err) {
@@ -75,18 +75,53 @@ const updateLeaveStatus = async (req, res) => {
             // Handle leave balance updates
             if (status === 'approved' && oldStatus !== 'approved') {
                 const year = new Date(request.date).getFullYear();
-                const typeColumn = `${request.type}_used`;
 
-                // Ensure balance exists
-                await connection.execute(
-                    'INSERT IGNORE INTO leave_balances (id, user_id, year) VALUES (?, ?, ?)',
-                    [uuidv4(), request.user_id, year]
-                );
+                if (request.type === 'half_day') {
+                    // Half day: update daily_summaries status to 'half_day', no balance deduction
+                    const dateStr = new Date(request.date).toISOString().split('T')[0];
+                    const [existing] = await connection.execute(
+                        'SELECT id FROM daily_summaries WHERE user_id = ? AND date = ?',
+                        [request.user_id, dateStr]
+                    );
+                    if (existing.length > 0) {
+                        await connection.execute(
+                            'UPDATE daily_summaries SET status = ? WHERE user_id = ? AND date = ?',
+                            ['half_day', request.user_id, dateStr]
+                        );
+                    }
+                } else {
+                    const typeColumn = `${request.type}_used`;
 
-                await connection.execute(
-                    `UPDATE leave_balances SET ${typeColumn} = ${typeColumn} + 1 WHERE user_id = ? AND year = ?`,
-                    [request.user_id, year]
-                );
+                    let amount = 1;
+                    if (request.type === 'permission' && request.start_time && request.end_time) {
+                        // Calculate hours between start_time and end_time
+                        const start = new Date(`1970-01-01T${request.start_time}`);
+                        const end = new Date(`1970-01-01T${request.end_time}`);
+                        const diffMs = end - start;
+                        amount = Math.max(0, diffMs / (1000 * 60 * 60));
+                    }
+
+                    // Ensure balance exists, use company defaults if it doesn't
+                    const [balances] = await connection.execute(
+                        'SELECT id FROM leave_balances WHERE user_id = ? AND year = ?',
+                        [request.user_id, year]
+                    );
+
+                    if (balances.length === 0) {
+                        const [settings] = await connection.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
+                        const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 0 };
+
+                        await connection.execute(
+                            'INSERT INTO leave_balances (id, user_id, year, sick_total, casual_total, annual_total, permission_total) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                            [uuidv4(), request.user_id, year, s.default_sick_leaves, s.default_casual_leaves, s.default_annual_leaves, s.default_permission_leaves]
+                        );
+                    }
+
+                    await connection.execute(
+                        `UPDATE leave_balances SET ${typeColumn} = ${typeColumn} + ? WHERE user_id = ? AND year = ?`,
+                        [amount, request.user_id, year]
+                    );
+                }
             }
 
             await connection.commit();
@@ -112,11 +147,126 @@ const getLeaveBalances = async (req, res) => {
             'SELECT * FROM leave_balances WHERE user_id = ? AND year = ?',
             [userId, year]
         );
-        res.json(balances[0] || null);
+
+        if (balances.length > 0) {
+            return res.json(balances[0]);
+        }
+
+        // Fallback to company settings if no balance record exists
+        const [settings] = await pool.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
+        const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 0 };
+
+        res.json({
+            user_id: userId,
+            year,
+            sick_total: s.default_sick_leaves,
+            sick_used: 0,
+            casual_total: s.default_casual_leaves,
+            casual_used: 0,
+            annual_total: s.default_annual_leaves,
+            annual_used: 0,
+            permission_total: s.default_permission_leaves,
+            permission_used: 0
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
     }
 };
 
-module.exports = { getLeaveRequests, applyLeave, updateLeaveStatus, getLeaveBalances };
+const getAllLeaveBalances = async (req, res) => {
+    try {
+        const year = new Date().getFullYear();
+        const [balances] = await pool.execute(
+            `SELECT DISTINCT lb.*, p.full_name 
+             FROM leave_balances lb 
+             JOIN profiles p ON lb.user_id = p.id 
+             WHERE lb.year = ? 
+             ORDER BY p.full_name ASC`,
+            [year]
+        );
+        res.json(balances);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+const updateEmployeeBalance = async (req, res) => {
+    const { userId, year, sick_total, casual_total, annual_total, permission_total } = req.body;
+
+    if (!userId || !year) {
+        return res.status(400).json({ error: 'User ID and year are required' });
+    }
+
+    try {
+        await pool.execute(
+            `INSERT INTO leave_balances (id, user_id, year, sick_total, casual_total, annual_total, permission_total) 
+             VALUES (?, ?, ?, ?, ?, ?, ?) 
+             ON DUPLICATE KEY UPDATE 
+             sick_total = VALUES(sick_total), 
+             casual_total = VALUES(casual_total), 
+             annual_total = VALUES(annual_total),
+             permission_total = VALUES(permission_total)`,
+            [uuidv4(), userId, year, sick_total || 12, casual_total || 12, annual_total || 15, permission_total || 0]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+const syncAllBalances = async (req, res) => {
+    const year = new Date().getFullYear();
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const [settings] = await connection.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
+        const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 0 };
+
+        // 1. Update existing balances for the current year
+        await connection.execute(
+            `UPDATE leave_balances 
+             SET sick_total = ?, casual_total = ?, annual_total = ?, permission_total = ? 
+             WHERE year = ?`,
+            [s.default_sick_leaves, s.default_casual_leaves, s.default_annual_leaves, s.default_permission_leaves, year]
+        );
+
+        // 2. Initialize missing balances for existing active employees
+        const [employees] = await connection.execute(
+            `SELECT p.id FROM profiles p 
+             LEFT JOIN leave_balances lb ON p.id = lb.user_id AND lb.year = ?
+             WHERE p.is_active = true AND lb.id IS NULL`,
+            [year]
+        );
+
+        for (const emp of employees) {
+            await connection.execute(
+                'INSERT INTO leave_balances (id, user_id, year, sick_total, casual_total, annual_total, permission_total) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [uuidv4(), emp.id, year, s.default_sick_leaves, s.default_casual_leaves, s.default_annual_leaves, s.default_permission_leaves]
+            );
+        }
+
+        await connection.commit();
+        res.json({ success: true, initializedCount: employees.length });
+    } catch (err) {
+        await connection.rollback();
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        connection.release();
+    }
+};
+
+module.exports = {
+    getLeaveRequests,
+    applyLeave,
+    updateLeaveStatus,
+    getLeaveBalances,
+    getAllLeaveBalances,
+    updateEmployeeBalance,
+    syncAllBalances
+};

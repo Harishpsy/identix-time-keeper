@@ -195,6 +195,7 @@ const deleteProfile = async (req, res) => {
         await connection.execute('DELETE FROM attendance_raw WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM daily_summaries WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM leave_requests WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM leave_balances WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM user_roles WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM profiles WHERE id = ?', [id]);
         await connection.execute('DELETE FROM users WHERE id = ?', [id]);

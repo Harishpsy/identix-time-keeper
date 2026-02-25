@@ -42,6 +42,15 @@ const processDailySummary = async (userId, date) => {
         }
     }
 
+    // Check for approved half_day or on_leave requests — override status if found
+    const [approvedLeaves] = await pool.execute(
+        "SELECT type FROM leave_requests WHERE user_id = ? AND date = ? AND status = 'approved' AND type IN ('half_day') LIMIT 1",
+        [userId, date]
+    );
+    if (approvedLeaves.length > 0) {
+        status = approvedLeaves[0].type;
+    }
+
     // Check if summary already exists
     const [existing] = await pool.execute(
         'SELECT id FROM daily_summaries WHERE user_id = ? AND date = ?',

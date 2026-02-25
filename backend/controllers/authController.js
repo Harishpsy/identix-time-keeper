@@ -46,6 +46,16 @@ const register = async (req, res) => {
                 [uuidv4(), userId, role || 'employee']
             );
 
+            // Initialize leave balances for the current year
+            const year = new Date().getFullYear();
+            const [settings] = await connection.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
+            const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 0 };
+
+            await connection.execute(
+                'INSERT INTO leave_balances (id, user_id, year, sick_total, casual_total, annual_total, permission_total) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [uuidv4(), userId, year, s.default_sick_leaves, s.default_casual_leaves, s.default_annual_leaves, s.default_permission_leaves]
+            );
+
             await connection.commit();
             res.status(201).json({ message: 'User registered successfully', userId });
         } catch (err) {

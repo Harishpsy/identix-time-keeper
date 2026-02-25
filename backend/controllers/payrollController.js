@@ -53,12 +53,34 @@ const generatePayroll = async (req, res) => {
                 const record = prev[0];
                 const id = uuid.v4();
 
-                // Fetch active loan repayment for this month if exists
+                // Fetch active approved loans
                 const [activeLoans] = await pool.execute(
-                    'SELECT SUM(monthly_installment) as total_installment FROM loans WHERE user_id = ? AND status = "approved" AND repayment_start_date <= CURDATE()',
+                    'SELECT id, monthly_installment, total_repayable FROM loans WHERE user_id = ? AND status = "approved" AND repayment_start_date <= CURDATE()',
                     [emp.user_id]
                 );
-                const loan_recovery = activeLoans[0].total_installment || 0;
+
+                let total_loan_recovery = 0;
+                let loanRepaymentsToInsert = [];
+
+                for (const loan of activeLoans) {
+                    // Check how much is already paid
+                    const [payments] = await pool.execute(
+                        'SELECT SUM(amount) as total_paid FROM loan_repayments WHERE loan_id = ?',
+                        [loan.id]
+                    );
+                    const total_paid = payments[0].total_paid || 0;
+                    const remaining = loan.total_repayable - total_paid;
+
+                    if (remaining > 0) {
+                        const deduction = Math.min(loan.monthly_installment, remaining);
+                        total_loan_recovery += deduction;
+                        loanRepaymentsToInsert.push({
+                            loan_id: loan.id,
+                            amount: deduction,
+                            isComplete: (remaining - deduction) <= 0.01 // Floating point safety
+                        });
+                    }
+                }
 
                 await pool.execute(`
                     INSERT INTO payroll (
@@ -73,11 +95,24 @@ const generatePayroll = async (req, res) => {
                     id, emp.user_id, month, record.basic_salary, record.hra, record.dearness_allowance,
                     record.conveyance_allowance, record.medical_allowance, record.special_allowance,
                     0, 0, 0, record.epf_employee, record.esi_employee,
-                    record.professional_tax, record.tds, loan_recovery, record.other_deductions,
-                    record.gross_earnings, record.total_deductions + (loan_recovery - record.loan_recovery),
-                    record.net_salary - (loan_recovery - record.loan_recovery),
+                    record.professional_tax, record.tds, total_loan_recovery, record.other_deductions,
+                    record.gross_earnings, record.total_deductions + (total_loan_recovery - record.loan_recovery),
+                    record.net_salary - (total_loan_recovery - record.loan_recovery),
                     record.paid_days, 0, 'Auto-generated'
                 ]);
+
+                // Record repayments and update loan status if complete
+                for (const rep of loanRepaymentsToInsert) {
+                    await pool.execute(
+                        'INSERT INTO loan_repayments (id, loan_id, payroll_id, amount, payment_date, method) VALUES (?, ?, ?, ?, CURDATE(), "payroll_deduction")',
+                        [uuid.v4(), rep.loan_id, id, rep.amount]
+                    );
+
+                    if (rep.isComplete) {
+                        await pool.execute('UPDATE loans SET status = "completed" WHERE id = ?', [rep.loan_id]);
+                    }
+                }
+
                 createdCount++;
             } else {
                 skippedCount++;

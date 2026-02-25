@@ -7,7 +7,8 @@ const getLoans = async (req, res) => {
 
     try {
         let query = `
-            SELECT l.*, p.full_name as employee_name, a.full_name as approved_by_name
+            SELECT l.*, p.full_name as employee_name, a.full_name as approved_by_name,
+            (SELECT COALESCE(SUM(amount), 0) FROM loan_repayments WHERE loan_id = l.id) as total_paid
             FROM loans l
             JOIN profiles p ON l.user_id = p.id
             LEFT JOIN profiles a ON l.approved_by = a.id
@@ -43,6 +44,22 @@ const createLoan = async (req, res) => {
     const monthly_installment = total_repayable / term_months;
 
     try {
+        // Eligibility check for employees
+        if (role !== 'admin') {
+            const [profile] = await pool.execute('SELECT date_of_joining FROM profiles WHERE id = ?', [userId]);
+            if (!profile[0] || !profile[0].date_of_joining) {
+                return res.status(403).json({ error: 'Employment details not found. Please contact Admin.' });
+            }
+
+            const joiningDate = new Date(profile[0].date_of_joining);
+            const oneYearAgo = new Date();
+            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+            if (joiningDate > oneYearAgo) {
+                return res.status(403).json({ error: 'You need at least 1 year of service to apply for a loan. Please contact Hr or Admin.' });
+            }
+        }
+
         await pool.execute(`
             INSERT INTO loans (
                 id, user_id, amount, interest_rate, term_months, 

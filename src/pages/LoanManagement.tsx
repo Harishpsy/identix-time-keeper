@@ -30,13 +30,14 @@ interface Loan {
 }
 
 const Loans = () => {
-    const { role } = useAuth();
+    const { role, profile } = useAuth();
     const { toast } = useToast();
     const [loans, setLoans] = useState<Loan[]>([]);
     const [profiles, setProfiles] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
     const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [isEligibleModalOpen, setIsEligibleModalOpen] = useState(false);
     const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
     // Form states
@@ -161,12 +162,27 @@ const Loans = () => {
                         <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
                         <p className="text-muted-foreground">Manage and track employee loans</p>
                     </div>
+                    <Button
+                        className="flex items-center gap-2"
+                        onClick={() => {
+                            if (role !== 'admin' && profile?.date_of_joining) {
+                                // Check eligibility (1 year)
+                                const joiningDate = new Date(profile.date_of_joining);
+                                const oneYearAgo = new Date();
+                                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+                                if (joiningDate > oneYearAgo) {
+                                    setIsEligibleModalOpen(true);
+                                    return;
+                                }
+                            }
+                            setIsRequestModalOpen(true);
+                        }}
+                    >
+                        <Plus className="w-4 h-4" /> {role === 'admin' ? 'Add Loan' : 'Request Loan'}
+                    </Button>
+
                     <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
-                        <DialogTrigger asChild>
-                            <Button className="flex items-center gap-2">
-                                <Plus className="w-4 h-4" /> {role === 'admin' ? 'Add Loan' : 'Request Loan'}
-                            </Button>
-                        </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
                                 <DialogTitle>{role === 'admin' ? 'Add Loan for Employee' : 'Loan Request'}</DialogTitle>
@@ -374,8 +390,37 @@ const Loans = () => {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                {/* Eligibility Modal */}
+                <Dialog open={isEligibleModalOpen} onOpenChange={setIsEligibleModalOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-red-600">
+                                <Landmark className="w-5 h-5" />
+                                Loan Eligibility
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4 text-center">
+                            <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                                <Landmark className="w-6 h-6" />
+                            </div>
+                            <div className="space-y-2">
+                                <p className="font-semibold text-lg">Not Yet Eligible</p>
+                                <p className="text-muted-foreground">
+                                    You need at least <span className="font-bold text-foreground">1 year of service</span> to apply for a loan.
+                                </p>
+                                <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                                    Please contact <span className="font-semibold">Hr or Admin</span> for more information or if you have an emergency.
+                                </p>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button onClick={() => setIsEligibleModalOpen(false)}>Close</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
-        </DashboardLayout>
+        </DashboardLayout >
     );
 };
 

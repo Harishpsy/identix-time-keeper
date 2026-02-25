@@ -40,6 +40,7 @@ const modules: ModuleInfo[] = [
     { key: "attendance_summary", label: "Attendance Summary", description: "View attendance reports and analytics", icon: <BarChart3 className="w-5 h-5" /> },
     { key: "company_branding", label: "Company Branding", description: "Manage company logo and settings", icon: <Settings className="w-5 h-5" /> },
     { key: "loans", label: "Loans", description: "Request and manage employee loans", icon: <Landmark className="w-5 h-5" /> },
+    { key: "holidays", label: "Holidays Details", description: "View and manage company holiday list", icon: <CalendarDays className="w-5 h-5" /> },
 ];
 
 type RolePermissions = Record<string, boolean>;

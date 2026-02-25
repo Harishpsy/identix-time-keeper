@@ -36,6 +36,7 @@ export const navItems: NavItem[] = [
     { label: "Attendance Reset", href: "/attendance-reset", icon: <RotateCcw className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_reset" },
     { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "attendance_summary" },
     { label: "Company Branding", href: "/company-branding", icon: <Settings className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "company_branding" },
+    { label: "Holidays", href: "/holidays", icon: <CalendarDays className="w-5 h-5" />, roles: ["admin", "subadmin", "employee"], moduleKey: "holidays" },
     { label: "Menu Order", href: "/menu-order", icon: <GripVertical className="w-5 h-5" />, roles: ["admin"], moduleKey: "menu_order" },
     { label: "Role Permissions", href: "/role-permissions", icon: <Shield className="w-5 h-5" />, roles: ["admin"], moduleKey: "role_permissions" },
 ];

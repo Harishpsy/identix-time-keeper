@@ -28,6 +28,7 @@ async function migrate() {
             { role: 'employee', module_key: 'attendance_summary', is_enabled: false },
             { role: 'employee', module_key: 'company_branding', is_enabled: false },
             { role: 'employee', module_key: 'loans', is_enabled: true },
+            { role: 'employee', module_key: 'holidays', is_enabled: true },
             // Subadmin defaults
             { role: 'subadmin', module_key: 'attendance', is_enabled: true },
             { role: 'subadmin', module_key: 'leave_requests', is_enabled: true },
@@ -40,6 +41,7 @@ async function migrate() {
             { role: 'subadmin', module_key: 'attendance_summary', is_enabled: false },
             { role: 'subadmin', module_key: 'company_branding', is_enabled: false },
             { role: 'subadmin', module_key: 'loans', is_enabled: true },
+            { role: 'subadmin', module_key: 'holidays', is_enabled: true },
         ];
 
         console.log('Seeding default permissions...');

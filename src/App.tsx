@@ -20,6 +20,7 @@ import CompanyBranding from "./pages/CompanyBranding";
 import RolePermissions from "./pages/RolePermissions";
 import MenuOrder from "./pages/MenuOrder";
 import LoanManagement from "./pages/LoanManagement";
+import Holidays from "./pages/Holidays";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["admin"]}><CompanyBranding /></ProtectedRoute>} />
             <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["admin"]}><MenuOrder /></ProtectedRoute>} />
             <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["admin"]}><RolePermissions /></ProtectedRoute>} />
+            <Route path="/holidays" element={<ProtectedRoute><Holidays /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

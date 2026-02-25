@@ -29,7 +29,7 @@ export default function Holidays() {
         try {
             const { data } = await apiClient.get(`/holidays?year=${year}`);
             setDetails(data.details || "");
-            setPdfUrl(data.pdf_url || null);
+            setPdfUrl(data.has_pdf ? "present" : null); // We just need to know if it exists
         } catch (err) {
             console.error("Failed to fetch holidays", err);
             toast({ title: "Error", description: "Failed to load holidays", variant: "destructive" });
@@ -65,16 +65,12 @@ export default function Holidays() {
         formData.append("pdf", file);
 
         try {
-            const { data } = await apiClient.post("/holidays/upload-pdf", formData, {
+            await apiClient.post(`/holidays/upload-pdf?year=${year}`, formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
-            const newPdfUrl = data.pdf_url;
-            setPdfUrl(newPdfUrl);
+            setPdfUrl("present");
 
-            // Auto-save to the holiday record so the link is persistent immediately
-            await apiClient.post("/holidays", { year, details, pdf_url: newPdfUrl });
-
-            toast({ title: "Uploaded & Saved", description: "Holiday PDF uploaded and saved successfully" });
+            toast({ title: "Uploaded", description: "Holiday PDF uploaded and saved successfully to database" });
         } catch (err) {
             console.error("Failed to upload PDF", err);
             toast({ title: "Error", description: "Failed to upload PDF", variant: "destructive" });
@@ -87,11 +83,31 @@ export default function Holidays() {
         try {
             setPdfUrl(null);
             // Auto-save the removal
-            await apiClient.post("/holidays", { year, details, pdf_url: null });
-            toast({ title: "Removed", description: "Holiday PDF removed and saved" });
+            await apiClient.post("/holidays", { year, details, remove_pdf: true });
+            toast({ title: "Removed", description: "Holiday PDF removed from database" });
         } catch (err) {
             console.error("Failed to remove PDF", err);
             toast({ title: "Error", description: "Failed to update record", variant: "destructive" });
+        }
+    };
+
+    const handleDownloadPdf = async () => {
+        try {
+            const response = await apiClient.get(`/holidays/download/${year}`, {
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Holidays_${year}.pdf`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Failed to download PDF", err);
+            toast({ title: "Error", description: "Failed to download PDF", variant: "destructive" });
         }
     };
 
@@ -212,19 +228,12 @@ export default function Holidays() {
                                                 <p className="text-xs text-muted-foreground mt-1">Official holiday list for {year}</p>
                                             </div>
                                             <Button
-                                                asChild
+                                                onClick={handleDownloadPdf}
                                                 variant="outline"
                                                 className="w-full gap-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all"
                                             >
-                                                <a
-                                                    href={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}${pdfUrl}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    download={`Holidays_${year}.pdf`}
-                                                >
-                                                    <FileDown className="w-4 h-4" />
-                                                    Download PDF
-                                                </a>
+                                                <FileDown className="w-4 h-4" />
+                                                Download PDF
                                             </Button>
                                             {isAdmin && (
                                                 <Button

@@ -24,6 +24,7 @@ interface EmployeePunchData {
   userId: string;
   fullName: string;
   email: string;
+  shiftId: string | null;
   punches: any[];
   hasLogin: boolean;
   hasLogout: boolean;
@@ -39,8 +40,47 @@ export default function AttendanceReset() {
     open: false,
     employee: null,
   });
+  const [shiftMap, setShiftMap] = useState<Record<string, Date>>({});
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const today = format(new Date(), "yyyy-MM-dd");
+
+  // Update current time every minute to check shift status
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch all shifts and build a map of shift_id -> end time
+  useEffect(() => {
+    apiClient.get("/profiles/shifts").then(({ data }) => {
+      if (data && data.length > 0) {
+        const map: Record<string, Date> = {};
+        data.forEach((shift: any) => {
+          const startTime = shift.start_time || "09:00:00";
+          const endTime = shift.end_time;
+          const [h, m] = (endTime || startTime).split(":").map(Number);
+          const shiftEnd = new Date();
+          if (endTime) {
+            shiftEnd.setHours(h, m, 0, 0);
+          } else {
+            // Fallback: start_time + total_working_hours
+            const [sh, sm] = startTime.split(":").map(Number);
+            const totalHours = shift.total_working_hours ?? 9;
+            shiftEnd.setHours(sh + totalHours, sm, 0, 0);
+          }
+          map[shift.id] = shiftEnd;
+        });
+        setShiftMap(map);
+      }
+    }).catch(() => { });
+  }, []);
+
+  // Check if a specific employee's shift is over
+  const isEmployeeShiftOver = (emp: EmployeePunchData) => {
+    if (!emp.shiftId || !shiftMap[emp.shiftId]) return false;
+    return currentTime >= shiftMap[emp.shiftId];
+  };
 
   useEffect(() => {
     fetchData();
@@ -66,6 +106,7 @@ export default function AttendanceReset() {
           userId: profile.id,
           fullName: profile.full_name,
           email: profile.email,
+          shiftId: profile.shift_id || null,
           punches,
           hasLogin: punches.some((p) => p.punch_type === "login"),
           hasLogout: punches.some((p) => p.punch_type === "logout"),
@@ -192,15 +233,19 @@ export default function AttendanceReset() {
                             <Badge variant="secondary">{emp.punches.length} punches</Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              disabled={resetting === emp.userId}
-                              onClick={() => setConfirmDialog({ open: true, employee: emp })}
-                            >
-                              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                              {resetting === emp.userId ? "Resetting..." : "Reset Logout"}
-                            </Button>
+                            {isEmployeeShiftOver(emp) ? (
+                              <span className="text-xs text-muted-foreground">Shift ended</span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={resetting === emp.userId}
+                                onClick={() => setConfirmDialog({ open: true, employee: emp })}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                                {resetting === emp.userId ? "Resetting..." : "Reset Logout"}
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );

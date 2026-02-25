@@ -8,19 +8,10 @@ import { Users, Clock, AlertTriangle, UserCheck, ChevronLeft, ChevronRight } fro
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth } from "date-fns";
-import CheckInOut from "./CheckInOut";
+import { format } from "date-fns";
 import UpcomingAnniversaries from "./UpcomingAnniversaries";
 
-interface TodayRecord {
-  userId: string;
-  fullName: string;
-  email: string;
-  firstIn: string | null;
-  lastOut: string | null;
-  status: string;
-  lateMinutes: number;
-}
+
 
 const PAGE_SIZE = 10;
 
@@ -44,37 +35,24 @@ function PaginationControls({ page, totalPages, onPageChange }: { page: number; 
 }
 
 export default function AdminDashboard() {
-  const { user, role } = useAuth();
+  const { role } = useAuth();
   const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
   const [leaveRecords, setLeaveRecords] = useState<any[]>([]);
-  const [mySummaries, setMySummaries] = useState<any[]>([]);
   const [todayPage, setTodayPage] = useState(1);
-  const [historyPage, setHistoryPage] = useState(1);
 
   const fetchData = useCallback(async () => {
     try {
-      const now = new Date();
-      const start = format(startOfMonth(now), "yyyy-MM-dd");
-      const end = format(endOfMonth(now), "yyyy-MM-dd");
-
-      const [statsRes, leaveRes, myRes] = await Promise.all([
+      const [statsRes, leaveRes] = await Promise.all([
         apiClient.get("/dashboard/admin/stats"),
         apiClient.get("/dashboard/admin/leave"),
-        apiClient.get("/attendance/summary", { params: { start_date: start, end_date: end } }),
       ]);
 
       setStats(statsRes.data);
       setLeaveRecords(leaveRes.data || []);
-
-      // Filter my summaries from the full list
-      if (user) {
-        const mine = (myRes.data || []).filter((s: any) => s.user_id === user.id);
-        setMySummaries(mine);
-      }
     } catch (err) {
       console.error("Failed to fetch admin dashboard", err);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -89,14 +67,7 @@ export default function AdminDashboard() {
     [leaveRecords, todayPage]
   );
 
-  const historyTotalPages = Math.max(1, Math.ceil(mySummaries.length / PAGE_SIZE));
-  const paginatedHistory = useMemo(
-    () => mySummaries.slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE),
-    [mySummaries, historyPage]
-  );
-
   useEffect(() => { setTodayPage(1); }, [leaveRecords]);
-  useEffect(() => { setHistoryPage(1); }, [mySummaries]);
 
   return (
     <div className="space-y-6">
@@ -106,8 +77,6 @@ export default function AdminDashboard() {
         </h1>
         <p className="text-muted-foreground mt-1">Overview of today's attendance</p>
       </div>
-
-      <CheckInOut />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Employees" value={stats.total} icon={<Users className="w-5 h-5" />} />
@@ -157,45 +126,6 @@ export default function AdminDashboard() {
         <LiveAttendanceFeed />
         <UpcomingAnniversaries />
       </div>
-
-      <Card className="border-border/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">My Attendance History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {mySummaries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No attendance records this month</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>First In</TableHead>
-                      <TableHead>Last Out</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedHistory.map((s: any) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="font-medium">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
-                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.total_duration_minutes != null ? `${Math.floor(s.total_duration_minutes / 60)}h ${s.total_duration_minutes % 60}m` : "—"}</TableCell>
-                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              <PaginationControls page={historyPage} totalPages={historyTotalPages} onPageChange={setHistoryPage} />
-            </>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

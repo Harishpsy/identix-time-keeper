@@ -215,7 +215,7 @@ const reprocessSummaries = async (req, res) => {
 const getRecentPunches = async (req, res) => {
     const { date } = req.query;
     try {
-        const [profiles] = await pool.execute('SELECT id, full_name, email FROM profiles WHERE is_active = true');
+        const [profiles] = await pool.execute('SELECT id, full_name, email, shift_id FROM profiles WHERE is_active = true');
         const [punches] = await pool.execute(
             'SELECT * FROM attendance_raw WHERE DATE(timestamp) = ? ORDER BY timestamp ASC',
             [date]

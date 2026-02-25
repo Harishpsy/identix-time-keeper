@@ -38,9 +38,9 @@ export default function UpcomingAnniversaries() {
   };
 
   const getAnniversaryDate = (dateOfJoining: string) => {
-    const [, joinMonth, joinDay] = dateOfJoining.split("-").map(Number);
+    const d = new Date(dateOfJoining);
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return `${joinDay} ${months[joinMonth - 1]}`;
+    return `${d.getDate()} ${months[d.getMonth()]}`;
   };
 
   return (
@@ -66,8 +66,8 @@ export default function UpcomingAnniversaries() {
               <div
                 key={emp.id}
                 className={`flex items-center justify-between p-3 rounded-lg transition-colors ${emp.daysUntil === 0
-                    ? "bg-primary/10 border border-primary/20"
-                    : "bg-muted/40 hover:bg-muted/60"
+                  ? "bg-primary/10 border border-primary/20"
+                  : "bg-muted/40 hover:bg-muted/60"
                   }`}
               >
                 <div className="flex items-center gap-3">

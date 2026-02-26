@@ -175,9 +175,10 @@ export default function Attendance() {
           value={month}
           onChange={(e) => { setMonth(e.target.value); setQuickFilter(null); }}
           className="w-auto"
+          data-tour="attendance-month"
         />
         {role !== "employee" && (
-          <div className="flex gap-1">
+          <div className="flex gap-1" data-tour="attendance-filter">
             {(["today", "yesterday", "previous"] as const).map((filter) => (
               <Button
                 key={filter}
@@ -205,7 +206,7 @@ export default function Attendance() {
             />
           </div>
         )}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex gap-2" data-tour="attendance-export">
           {(role === "super_admin" || role === "admin") && (
             <ReprocessDialog onComplete={() => setRefreshKey((k) => k + 1)} />
           )}
@@ -218,7 +219,7 @@ export default function Attendance() {
         </div>
       </div>
 
-      <Card className="border-border/50">
+      <Card className="border-border/50" data-tour="attendance-table">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>

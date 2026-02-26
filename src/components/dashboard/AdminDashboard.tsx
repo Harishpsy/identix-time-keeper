@@ -92,7 +92,7 @@ export default function AdminDashboard() {
 
       {role !== "super_admin" && <CheckInOut />}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-tour="dashboard-stats">
         <StatCard title="Total Employees" value={stats.total} icon={<Users className="w-5 h-5" />} />
         <StatCard title="Present Today" value={stats.present} icon={<UserCheck className="w-5 h-5" />} variant="success" />
         <StatCard title="Late Today" value={stats.late} icon={<Clock className="w-5 h-5" />} variant="warning" />

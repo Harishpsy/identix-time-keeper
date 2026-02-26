@@ -199,12 +199,12 @@ export default function LeaveRequests() {
           </p>
         </div>
         {(role === "employee" || role === "admin" || role === "subadmin") && (
-          <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
+          <Button onClick={() => setDialogOpen(true)} data-tour="apply-leave"><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
         )}
       </div>
 
       {role === "employee" && leaveBalance && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" data-tour="leave-stats">
           {leaveTypes.filter(t => Boolean(t.enabled)).map((type) => {
             const used = leaveBalance[`${type.id}_used`] || 0;
             const total = leaveBalance[`${type.id}_total`] || 0;
@@ -234,7 +234,7 @@ export default function LeaveRequests() {
         </TabsList>
 
         <TabsContent value="requests" className="mt-4">
-          <Card className="border-border/50">
+          <Card className="border-border/50" data-tour="leave-table">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>

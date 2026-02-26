@@ -224,7 +224,7 @@ export default function CheckInOut() {
 
   return (
     <>
-      <Card className="border-border/50">
+      <Card className="border-border/50" data-tour="check-in-out">
         <CardContent className="pt-6 space-y-4">
           {/* Row 1: Clock, Date, Stats */}
           <div className="flex items-center justify-between flex-wrap gap-4">

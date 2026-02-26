@@ -472,7 +472,7 @@ export default function Payroll() {
           <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" onClick={handleGenerateAll} disabled={generating}>
+          <Button variant="outline" onClick={handleGenerateAll} disabled={generating} data-tour="payroll-generate">
             {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
             Generate All Payroll
           </Button>
@@ -494,7 +494,7 @@ export default function Payroll() {
           </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button onClick={openCreate}>
+              <Button onClick={openCreate} data-tour="payroll-add">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Payroll
               </Button>
@@ -599,10 +599,10 @@ export default function Payroll() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-44" />
+        <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-44" data-tour="payroll-month" />
       </div>
 
-      <Card className="border-border/50">
+      <Card className="border-border/50" data-tour="payroll-table">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>

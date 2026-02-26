@@ -209,7 +209,7 @@ export default function Employees() {
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-tour="add-employee">
               <Plus className="w-4 h-4 mr-2" />
               Add Employee
             </Button>
@@ -304,13 +304,13 @@ export default function Employees() {
       </div>
 
       <div className="flex gap-3">
-        <div className="relative flex-1 max-sm">
+        <div className="relative flex-1 max-sm" data-tour="employee-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
         </div>
       </div>
 
-      <Card className="border-border/50">
+      <Card className="border-border/50" data-tour="employee-table">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>

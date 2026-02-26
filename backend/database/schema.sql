@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS company_settings (
 
 -- Insert default company settings
 INSERT INTO company_settings (id, company_name, default_sick_leaves, default_casual_leaves, default_annual_leaves) 
-VALUES (UUID(), 'My Company', 12, 12, 15);
+VALUES (UUID(), identix', 12, 12, 15);
 
 -- Create loans table
 CREATE TABLE IF NOT EXISTS loans (

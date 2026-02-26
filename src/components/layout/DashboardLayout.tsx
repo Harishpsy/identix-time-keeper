@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { navItems, NavItem } from "@/lib/navigation";
-import { Fingerprint, LogOut, Moon, Sun } from "lucide-react";
+import { Fingerprint, LogOut, Moon, Sun, HelpCircle } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeContext";
+import { GuideTour } from "@/components/common/GuideTour";
 
 export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
@@ -16,6 +17,8 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const [leavesEnabled, setLeavesEnabled] = useState(true);
   const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
   const [sidebarOrder, setSidebarOrder] = useState<string[]>([]);
+  const [companyName, setCompanyName] = useState("Identix");
+  const [runTour, setRunTour] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -23,6 +26,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
         const { data } = await apiClient.get("/settings");
         if (data) {
           setLeavesEnabled(data.leaves_enabled ?? true);
+          setCompanyName("Identix");
           if (data.sidebar_order) {
             try {
               setSidebarOrder(JSON.parse(data.sidebar_order));
@@ -93,26 +97,30 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
 
   return (
     <div className="flex min-h-screen">
+      <GuideTour run={runTour} setRun={setRunTour} />
       <div className="bg-mesh" />
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground flex flex-col fixed inset-y-0 left-0 z-30 border-r border-sidebar-border/50 glass">
-        <div className="p-5 flex items-center gap-3 border-b border-sidebar-border">
+        <div className="p-5 flex items-center gap-3 border-b border-sidebar-border" data-tour="sidebar-brand">
           <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
             <Fingerprint className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-bold text-sm text-sidebar-primary-foreground">Identix</h2>
-            <p className="text-xs text-sidebar-foreground/60 capitalize">{role} Panel</p>
+            <h2 className="font-bold text-sm text-sidebar-foreground">{companyName}</h2>
+            <p className="text-xs text-sidebar-foreground/60 capitalize">
+              {role?.replace("_", " ")} Panel
+            </p>
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto" data-tour="sidebar-nav">
           {filteredNav.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link
                 key={item.href}
                 to={item.href}
+                data-tour={`nav-${item.moduleKey}`}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
                   ? "bg-sidebar-accent text-sidebar-primary"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
@@ -139,6 +147,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
             variant="ghost"
             size="sm"
             onClick={toggleTheme}
+            data-tour="theme-toggle"
             className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 mb-1"
           >
             {theme === "light" ? (
@@ -157,10 +166,23 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
+            data-tour="user-profile"
             className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Sign Out
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setRunTour(true);
+            }}
+            data-tour="guide-button"
+            className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 mt-1"
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            Start Guide
           </Button>
         </div>
       </aside>

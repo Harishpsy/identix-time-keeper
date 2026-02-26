@@ -64,13 +64,13 @@ export default function EmployeeDashboard() {
 
       <CheckInOut />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" data-tour="dashboard-stats">
         <StatCard title="Days Present" value={stats.present} icon={<CalendarCheck className="w-5 h-5" />} variant="success" />
         <StatCard title="Days Late" value={stats.late} icon={<Clock className="w-5 h-5" />} variant="warning" />
         <StatCard title="Leave Taken" value={stats.leaveTaken} icon={<CalendarDays className="w-5 h-5" />} variant="info" />
       </div>
 
-      <Card className="border-border/50">
+      <Card className="border-border/50" data-tour="attendance-history">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold">Attendance History</CardTitle>
         </CardHeader>

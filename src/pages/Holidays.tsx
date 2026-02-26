@@ -146,11 +146,13 @@ export default function Holidays() {
                         value={year}
                         onChange={(e) => setYear(parseInt(e.target.value))}
                         className="w-32 bg-background/50 backdrop-blur-sm border-primary/20"
+                        data-tour="holiday-year"
                     />
                     {isAdmin && (
                         <Button
                             onClick={handleSave}
                             disabled={saving}
+                            data-tour="holiday-save"
                             className="gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -226,6 +228,7 @@ export default function Holidays() {
                                         <Button
                                             onClick={handleDownloadPdf}
                                             variant="outline"
+                                            data-tour="holiday-download"
                                             className="w-full gap-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all"
                                         >
                                             <FileDown className="w-4 h-4" />

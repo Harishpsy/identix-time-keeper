@@ -231,4 +231,21 @@ const deleteProfile = async (req, res) => {
     }
 };
 
-module.exports = { getProfiles, getProfileById, updateProfile, deleteProfile, getDepartments, createDepartment, updateDepartment, deleteDepartment, getShifts, createShift, updateShift, deleteShift, getShiftById };
+const updateTheme = async (req, res) => {
+    const { theme } = req.body;
+    const { id } = req.user;
+
+    if (!['light', 'dark'].includes(theme)) {
+        return res.status(400).json({ error: 'Invalid theme' });
+    }
+
+    try {
+        await pool.execute('UPDATE profiles SET theme = ? WHERE id = ?', [theme, id]);
+        res.json({ success: true, theme });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+module.exports = { getProfiles, getProfileById, updateProfile, deleteProfile, getDepartments, createDepartment, updateDepartment, deleteDepartment, getShifts, createShift, updateShift, deleteShift, getShiftById, updateTheme };

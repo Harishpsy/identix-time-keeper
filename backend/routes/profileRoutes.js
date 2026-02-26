@@ -12,7 +12,8 @@ const {
     createShift,
     updateShift,
     deleteShift,
-    getShiftById
+    getShiftById,
+    updateTheme
 } = require('../controllers/profileController');
 const authMiddleware = require('../middleware/authMiddleware');
 const roleMiddleware = require('../middleware/roleMiddleware');
@@ -20,6 +21,7 @@ const roleMiddleware = require('../middleware/roleMiddleware');
 const router = express.Router();
 
 router.get('/', authMiddleware, getProfiles);
+router.patch('/update-theme', authMiddleware, updateTheme);
 router.get('/departments', authMiddleware, getDepartments);
 router.post('/departments', authMiddleware, roleMiddleware(['admin']), createDepartment);
 router.patch('/departments/:id', authMiddleware, roleMiddleware(['admin']), updateDepartment);

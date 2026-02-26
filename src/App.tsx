@@ -12,6 +12,7 @@ import Shifts from "./pages/Shifts";
 import Departments from "./pages/Departments";
 import LeaveRequests from "./pages/LeaveRequests";
 import DashboardLayout from "./components/layout/DashboardLayout";
+import { ThemeProvider } from "./components/theme/ThemeContext";
 
 import Payroll from "./pages/Payroll";
 import MyPayslips from "./pages/MyPayslips";
@@ -58,31 +59,33 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+          <ThemeProvider>
+            <Routes>
+              <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
 
-            {/* Protected Routes with Persistent Layout */}
-            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-              <Route path="/" element={<Index />} />
-              <Route path="/attendance" element={<Attendance />} />
-              <Route path="/employees" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
-              <Route path="/departments" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />
-              <Route path="/shifts" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Shifts /></ProtectedRoute>} />
-              <Route path="/leave" element={<LeaveRequests />} />
-              <Route path="/payroll" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Payroll /></ProtectedRoute>} />
-              <Route path="/loans" element={<LoanManagement />} />
-              <Route path="/my-payslips" element={<MyPayslips />} />
-              <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceReset /></ProtectedRoute>} />
-              <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceSummary /></ProtectedRoute>} />
-              <Route path="/attendance-summary/:userId/:month" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceDetails /></ProtectedRoute>} />
-              <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><CompanyBranding /></ProtectedRoute>} />
-              <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><MenuOrder /></ProtectedRoute>} />
-              <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><RolePermissions /></ProtectedRoute>} />
-              <Route path="/holidays" element={<Holidays />} />
-            </Route>
+              {/* Protected Routes with Persistent Layout */}
+              <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+                <Route path="/" element={<Index />} />
+                <Route path="/attendance" element={<Attendance />} />
+                <Route path="/employees" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
+                <Route path="/departments" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />
+                <Route path="/shifts" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Shifts /></ProtectedRoute>} />
+                <Route path="/leave" element={<LeaveRequests />} />
+                <Route path="/payroll" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Payroll /></ProtectedRoute>} />
+                <Route path="/loans" element={<LoanManagement />} />
+                <Route path="/my-payslips" element={<MyPayslips />} />
+                <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceReset /></ProtectedRoute>} />
+                <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceSummary /></ProtectedRoute>} />
+                <Route path="/attendance-summary/:userId/:month" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceDetails /></ProtectedRoute>} />
+                <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><CompanyBranding /></ProtectedRoute>} />
+                <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><MenuOrder /></ProtectedRoute>} />
+                <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><RolePermissions /></ProtectedRoute>} />
+                <Route path="/holidays" element={<Holidays />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

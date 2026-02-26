@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { navItems, NavItem } from "@/lib/navigation";
-import { Fingerprint, LogOut } from "lucide-react";
+import { Fingerprint, LogOut, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/components/theme/ThemeContext";
 
 export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [leavesEnabled, setLeavesEnabled] = useState(true);
@@ -91,8 +93,9 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
 
   return (
     <div className="flex min-h-screen">
+      <div className="bg-mesh" />
       {/* Sidebar */}
-      <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col fixed inset-y-0 left-0 z-30">
+      <aside className="w-64 bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground flex flex-col fixed inset-y-0 left-0 z-30 border-r border-sidebar-border/50 glass">
         <div className="p-5 flex items-center gap-3 border-b border-sidebar-border">
           <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
             <Fingerprint className="w-5 h-5 text-sidebar-primary-foreground" />
@@ -132,6 +135,24 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
               <p className="text-xs text-sidebar-foreground/50 truncate">{user?.email}</p>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 mb-1"
+          >
+            {theme === "light" ? (
+              <>
+                <Moon className="w-4 h-4 mr-2" />
+                Dark Mode
+              </>
+            ) : (
+              <>
+                <Sun className="w-4 h-4 mr-2" />
+                Light Mode
+              </>
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="sm"

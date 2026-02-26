@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     date_of_joining DATE,
+    theme ENUM('light', 'dark') DEFAULT 'light',
     FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id),
     FOREIGN KEY (shift_id) REFERENCES shifts(id)

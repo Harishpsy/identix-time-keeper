@@ -4,7 +4,14 @@ const roleMiddleware = (allowedRoles) => {
             return res.status(403).json({ error: 'Forbidden: No role assigned' });
         }
 
-        if (!allowedRoles.includes(req.user.role)) {
+        const userRole = req.user.role;
+
+        // Super admin always has access to everything
+        if (userRole === 'super_admin') {
+            return next();
+        }
+
+        if (!allowedRoles.includes(userRole)) {
             return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
         }
 

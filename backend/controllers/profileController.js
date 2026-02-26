@@ -7,7 +7,8 @@ const getProfiles = async (req, res) => {
             'SELECT p.*, r.role, d.name as department_name, s.name as shift_name FROM profiles p ' +
             'LEFT JOIN user_roles r ON p.id = r.user_id ' +
             'LEFT JOIN departments d ON p.department_id = d.id ' +
-            'LEFT JOIN shifts s ON p.shift_id = s.id'
+            'LEFT JOIN shifts s ON p.shift_id = s.id ' +
+            "WHERE r.role != 'super_admin' OR r.role IS NULL"
         );
         res.json(profiles);
     } catch (err) {
@@ -157,12 +158,24 @@ const updateShift = async (req, res) => {
 
 const deleteShift = async (req, res) => {
     const { id } = req.params;
+    const connection = await pool.getConnection();
     try {
-        await pool.execute('DELETE FROM shifts WHERE id = ?', [id]);
+        await connection.beginTransaction();
+
+        // 1. Unassign the shift from all profiles
+        await connection.execute('UPDATE profiles SET shift_id = NULL WHERE shift_id = ?', [id]);
+
+        // 2. Delete the shift
+        await connection.execute('DELETE FROM shifts WHERE id = ?', [id]);
+
+        await connection.commit();
         res.json({ success: true });
     } catch (err) {
+        await connection.rollback();
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        connection.release();
     }
 };
 
@@ -182,11 +195,18 @@ const deleteProfile = async (req, res) => {
     const { id } = req.params;
     const connection = await pool.getConnection();
     try {
-        // Prevent deleting admin accounts
+        // Prevent deleting super_admin accounts. Admins can only be deleted by super_admin.
         const [roles] = await connection.execute('SELECT role FROM user_roles WHERE user_id = ?', [id]);
-        if (roles.length > 0 && roles[0].role === 'admin') {
+        const targetRole = roles.length > 0 ? roles[0].role : 'employee';
+
+        if (targetRole === 'super_admin') {
             connection.release();
-            return res.status(403).json({ error: 'Cannot delete admin accounts' });
+            return res.status(403).json({ error: 'Cannot delete Super Admin accounts' });
+        }
+
+        if (targetRole === 'admin' && req.user.role !== 'super_admin') {
+            connection.release();
+            return res.status(403).json({ error: 'Only Super Admin can delete admin accounts' });
         }
 
         await connection.beginTransaction();

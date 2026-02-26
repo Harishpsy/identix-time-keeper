@@ -59,12 +59,10 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const filteredNav = sortedNav.filter((item) => {
     if (!role) return false;
 
-    // Admin always sees everything, but still check if it's the role_permissions item
-    if (role === "admin") {
-      return item.roles.includes(role);
-    }
+    // Super Admin always sees everything
+    if (role === "super_admin") return true;
 
-    // For non-admin roles, check dynamic permissions
+    // For admin and other roles, check dynamic permissions
     if (item.moduleKey) {
       const perms = rolePermissions[role];
       if (perms && perms[item.moduleKey] !== undefined) {

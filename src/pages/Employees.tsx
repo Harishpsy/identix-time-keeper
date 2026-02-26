@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +22,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function Employees() {
+  const { role: currentUserRole } = useAuth();
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [shifts, setShifts] = useState<any[]>([]);
@@ -283,7 +285,12 @@ export default function Employees() {
                   <SelectContent>
                     <SelectItem value="employee">Employee</SelectItem>
                     <SelectItem value="subadmin">Sub-Admin</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    {currentUserRole === "super_admin" && (
+                      <>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -395,6 +402,7 @@ export default function Employees() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="super_admin">Super Admin</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="subadmin">Sub-Admin</SelectItem>
                             <SelectItem value="employee">Employee</SelectItem>
@@ -437,16 +445,19 @@ export default function Employees() {
                               <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
                                 <FileText className="w-4 h-4" />
                               </Button>
-                              {emp.role !== "admin" && (
-                                <>
-                                  <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
-                                    <KeyRound className="w-4 h-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: emp.id, name: emp.full_name })} title="Delete Employee">
-                                    <Trash2 className="w-4 h-4 text-destructive" />
-                                  </Button>
-                                </>
-                              )}
+                              {(
+                                (emp.role !== "admin" && emp.role !== "super_admin") ||
+                                (currentUserRole === "super_admin" && emp.role === "admin")
+                              ) && (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
+                                      <KeyRound className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: emp.id, name: emp.full_name })} title="Delete Employee">
+                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  </>
+                                )}
                             </>
                           )}
                         </div>

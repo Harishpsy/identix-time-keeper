@@ -48,7 +48,18 @@ export default function CheckInOut() {
 
   // Fetch shift config for the user
   useEffect(() => {
-    if (!profile?.shift_id) return;
+    if (!profile?.shift_id) {
+      // Fallback for admins/super_admins who might not have a shift assigned
+      if (user?.role === "admin" || user?.role === "super_admin") {
+        setShiftConfig({
+          total_working_hours: 9,
+          max_break_minutes: 60,
+          start_time: "09:00:00",
+          grace_period_mins: 15,
+        });
+      }
+      return;
+    }
     apiClient
       .get(`/profiles/shifts/${profile.shift_id}`)
       .then(({ data }) => {
@@ -60,7 +71,7 @@ export default function CheckInOut() {
         });
       })
       .catch(err => console.error("Failed to fetch shift config", err));
-  }, [profile?.shift_id]);
+  }, [profile?.shift_id, user?.role]);
 
   const fetchTodayPunches = async () => {
     if (!user) return;

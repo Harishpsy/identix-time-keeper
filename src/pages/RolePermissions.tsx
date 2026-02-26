@@ -171,7 +171,7 @@ export default function RolePermissions() {
 
             {/* Tabs */}
             <Tabs defaultValue="employee" className="w-full">
-                <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsList className="grid w-full max-w-md grid-cols-3">
                     <TabsTrigger value="employee" className="gap-2">
                         <Users className="w-4 h-4" />
                         Employee
@@ -179,6 +179,10 @@ export default function RolePermissions() {
                     <TabsTrigger value="subadmin" className="gap-2">
                         <Shield className="w-4 h-4" />
                         Subadmin
+                    </TabsTrigger>
+                    <TabsTrigger value="admin" className="gap-2">
+                        <Shield className="w-4 h-4 text-primary" />
+                        Admin
                     </TabsTrigger>
                 </TabsList>
 
@@ -203,6 +207,18 @@ export default function RolePermissions() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>{renderModuleList("subadmin")}</CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="admin">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Admin Module Access</CardTitle>
+                            <CardDescription>
+                                Toggle modules that regular admins can see in their sidebar navigation
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>{renderModuleList("admin")}</CardContent>
                     </Card>
                 </TabsContent>
             </Tabs>

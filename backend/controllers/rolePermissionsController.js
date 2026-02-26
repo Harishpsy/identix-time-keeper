@@ -23,8 +23,8 @@ const getPermissions = async (req, res) => {
 const getPermissionsByRole = async (req, res) => {
     const { role } = req.params;
 
-    if (!['employee', 'subadmin'].includes(role)) {
-        return res.status(400).json({ error: 'Invalid role. Must be employee or subadmin.' });
+    if (!['employee', 'subadmin', 'admin'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role. Must be employee, subadmin, or admin.' });
     }
 
     try {
@@ -54,8 +54,8 @@ const updatePermission = async (req, res) => {
         return res.status(400).json({ error: 'role, module_key, and is_enabled are required' });
     }
 
-    if (!['employee', 'subadmin'].includes(role)) {
-        return res.status(400).json({ error: 'Invalid role. Must be employee or subadmin.' });
+    if (!['employee', 'subadmin', 'admin'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role. Must be employee, subadmin, or admin.' });
     }
 
     try {

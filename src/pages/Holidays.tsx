@@ -110,7 +110,7 @@ export default function Holidays() {
         }
     };
 
-    const isAdmin = role === "admin";
+    const isAdmin = role === "super_admin" || role === "admin";
     const hasDetails = details.trim().length > 0;
     const hasPdf = !!pdfUrl;
 

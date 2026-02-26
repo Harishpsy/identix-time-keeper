@@ -3,7 +3,8 @@ import apiClient from "@/lib/apiClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, isValid } from "date-fns";
+import { Loader2 } from "lucide-react";
 
 interface DailyRecord {
   date: string;
@@ -35,6 +36,7 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
   late: "secondary",
   absent: "destructive",
   half_day: "outline",
+  half_day_absent: "outline",
   on_leave: "secondary",
 };
 
@@ -62,6 +64,20 @@ function formatLateMinutes(mins: number | null) {
   return `${String(m).padStart(2, "0")}Mins`;
 }
 
+function safeFormatDate(dateStr: string) {
+  if (!dateStr) return "—";
+  try {
+    // If it's already YYYY-MM-DD, append time to ensure local interpretation
+    const parsable = dateStr.includes("T") ? dateStr : `${dateStr}T00:00:00`;
+    const d = new Date(parsable);
+    if (isNaN(d.getTime())) return dateStr;
+    return format(d, "dd MMM, EEE");
+  } catch (err) {
+    console.error("Date parsing error:", err);
+    return dateStr;
+  }
+}
+
 export default function EmployeeDailyDetails({ open, onOpenChange, userId, userName, month }: Props) {
   const [records, setRecords] = useState<DailyRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,11 +96,11 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
           params: { start_date: start, end_date: end },
         });
 
-        // Filter for the specific user
+        // Filter for the specific user and ensure unique dates
         const userRecords = (data || [])
           .filter((s: any) => s.user_id === userId)
           .map((d: any) => ({
-            date: d.date,
+            date: typeof d.date === "string" ? d.date.split("T")[0] : format(new Date(d.date), "yyyy-MM-dd"),
             status: d.status,
             first_in: d.first_in,
             last_out: d.last_out,
@@ -93,7 +109,10 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
           }))
           .sort((a: DailyRecord, b: DailyRecord) => a.date.localeCompare(b.date));
 
-        setRecords(userRecords);
+        // Deduplicate records by date (sometimes backend might send duplicates if logic overlaps)
+        const uniqueRecords = Array.from(new Map(userRecords.map((r: any) => [r.date, r])).values());
+
+        setRecords(uniqueRecords as DailyRecord[]);
       } catch (err) {
         console.error("Failed to fetch employee details", err);
       } finally {
@@ -109,49 +128,62 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{userName} — {monthLabel}</DialogTitle>
         </DialogHeader>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Check In</TableHead>
-              <TableHead>Check Out</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Late (min)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">Loading...</TableCell>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Check In</TableHead>
+                <TableHead>Check Out</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead>Late (min)</TableHead>
               </TableRow>
-            ) : records.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No records found</TableCell>
-              </TableRow>
-            ) : (
-              records.map((r) => (
-                <TableRow key={r.date}>
-                  <TableCell className="font-medium tabular-nums">{format(new Date(r.date + "T00:00:00"), "dd MMM, EEE")}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant[r.status] || "outline"}>
-                      {statusLabel[r.status] || r.status}
-                    </Badge>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading details...
+                    </div>
                   </TableCell>
-                  <TableCell className="tabular-nums">{formatTime(r.first_in)}</TableCell>
-                  <TableCell className="tabular-nums">{formatTime(r.last_out)}</TableCell>
-                  <TableCell className="tabular-nums">{formatDuration(r.total_duration_minutes)}</TableCell>
-                  <TableCell className="tabular-nums">{formatLateMinutes(r.late_minutes)}</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : records.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    No attendance records found for this period.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                records.map((r) => (
+                  <TableRow key={r.date} className="hover:bg-muted/30">
+                    <TableCell className="font-medium tabular-nums whitespace-nowrap">
+                      {safeFormatDate(r.date)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[r.status] || "outline"} className="capitalize">
+                        {(statusLabel[r.status] || r.status).replace("_", " ")}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="tabular-nums">{formatTime(r.first_in)}</TableCell>
+                    <TableCell className="tabular-nums">{formatTime(r.last_out)}</TableCell>
+                    <TableCell className="tabular-nums">{formatDuration(r.total_duration_minutes)}</TableCell>
+                    <TableCell className="tabular-nums text-destructive">
+                      {r.late_minutes && r.late_minutes > 0 ? formatLateMinutes(r.late_minutes) : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -4,17 +4,23 @@ const getAdminStats = async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
 
-        // Total active employees
-        const [totalRes] = await pool.execute('SELECT COUNT(*) as count FROM profiles WHERE is_active = true');
+        // Total active employees (excluding super_admin)
+        const [totalRes] = await pool.execute(
+            'SELECT COUNT(*) as count FROM profiles p ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
+            "WHERE p.is_active = true AND r.role != 'super_admin'"
+        );
         const total = totalRes[0].count;
 
-        // Today's summary stats
+        // Today's summary stats (excluding super_admin)
         const [summaryRes] = await pool.execute(
             'SELECT ' +
-            "COUNT(CASE WHEN status IN ('present', 'late') THEN 1 END) as present, " +
-            "COUNT(CASE WHEN status = 'late' THEN 1 END) as late, " +
-            "COUNT(CASE WHEN status IN ('absent', 'on_leave') THEN 1 END) as absent " +
-            'FROM daily_summaries WHERE date = ?',
+            "COUNT(CASE WHEN s.status IN ('present', 'late') THEN 1 END) as present, " +
+            "COUNT(CASE WHEN s.status = 'late' THEN 1 END) as late, " +
+            "COUNT(CASE WHEN s.status IN ('absent', 'on_leave') THEN 1 END) as absent " +
+            'FROM daily_summaries s ' +
+            'JOIN user_roles r ON s.user_id = r.user_id ' +
+            "WHERE s.date = ? AND r.role != 'super_admin'",
             [today]
         );
 
@@ -36,34 +42,40 @@ const getTodayLeave = async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
 
-        // Get employees who are explicitly marked absent/on_leave/half_day in daily_summaries
+        // Get employees who are explicitly marked absent/on_leave/half_day (excluding super_admin)
         const [explicitLeave] = await pool.execute(
             'SELECT s.*, p.full_name, p.email FROM daily_summaries s ' +
             'JOIN profiles p ON s.user_id = p.id ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
             "WHERE s.date = ? AND s.status IN ('absent', 'on_leave', 'half_day') " +
+            "AND r.role != 'super_admin' " +
             'ORDER BY p.full_name ASC',
             [today]
         );
 
-        // Get active employees who have NO attendance record today (absent by default)
+        // Get active employees who have NO attendance record today (excluding super_admin)
         const [noRecord] = await pool.execute(
             "SELECT p.id as user_id, p.full_name, p.email, ? as date, 'absent' as status, " +
             'NULL as first_in, NULL as last_out, NULL as total_duration_minutes, 0 as late_minutes ' +
             'FROM profiles p ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
             'WHERE p.is_active = true ' +
+            "AND r.role != 'super_admin' " +
             'AND p.id NOT IN (SELECT user_id FROM daily_summaries WHERE date = ?) ' +
             'AND p.id NOT IN (SELECT DISTINCT user_id FROM attendance_raw WHERE DATE(timestamp) = ?) ' +
             'ORDER BY p.full_name ASC',
             [today, today, today]
         );
 
-        // Get employees with approved leave requests for today
+        // Get employees with approved leave requests (excluding super_admin)
         const [leaveRequests] = await pool.execute(
             "SELECT lr.user_id, p.full_name, p.email, ? as date, 'on_leave' as status, " +
             'NULL as first_in, NULL as last_out, NULL as total_duration_minutes, 0 as late_minutes ' +
             'FROM leave_requests lr ' +
             'JOIN profiles p ON lr.user_id = p.id ' +
+            'JOIN user_roles ur ON p.id = ur.user_id ' +
             "WHERE lr.status = 'approved' AND ? BETWEEN lr.date AND lr.to_date " +
+            "AND ur.role != 'super_admin' " +
             'AND lr.user_id NOT IN (SELECT user_id FROM daily_summaries WHERE date = ?) ' +
             'ORDER BY p.full_name ASC',
             [today, today, today]
@@ -89,7 +101,9 @@ const getTodayLeave = async (req, res) => {
 const getAnniversaries = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT id, full_name, date_of_joining FROM profiles WHERE is_active = true AND date_of_joining IS NOT NULL'
+            'SELECT p.id, p.full_name, p.date_of_joining FROM profiles p ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
+            "WHERE p.is_active = true AND p.date_of_joining IS NOT NULL AND r.role != 'super_admin'"
         );
 
         const today = new Date();

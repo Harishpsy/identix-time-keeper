@@ -293,30 +293,32 @@ export default function Payroll() {
     setForm((prev) => ({ ...prev, user_id: userId }));
     if (editingId) return; // Don't carry forward when editing
 
+    const s = (v: any) => (v ?? 0).toString();
+
     try {
       const { data } = await apiClient.get("/payroll", { params: { user_id: userId, limit: 1 } });
       if (data && data.length > 0) {
         const prev = data[0] as unknown as PayrollRecord;
         setForm({
           user_id: userId,
-          basic_salary: prev.basic_salary.toString(),
-          hra: prev.hra.toString(),
-          dearness_allowance: prev.dearness_allowance.toString(),
-          conveyance_allowance: prev.conveyance_allowance.toString(),
-          medical_allowance: prev.medical_allowance.toString(),
-          special_allowance: prev.special_allowance.toString(),
-          overtime: "0",
-          bonus: "0",
-          other_earnings: "0",
-          epf_employee: prev.epf_employee.toString(),
-          esi_employee: prev.esi_employee.toString(),
-          professional_tax: prev.professional_tax.toString(),
-          tds: prev.tds.toString(),
-          loan_recovery: prev.loan_recovery.toString(),
-          other_deductions: prev.other_deductions.toString(),
-          epf_employer: prev.epf_employer.toString(),
-          esi_employer: prev.esi_employer.toString(),
-          paid_days: prev.paid_days.toString(),
+          basic_salary: s(prev.basic_salary),
+          hra: s(prev.hra),
+          dearness_allowance: s(prev.dearness_allowance),
+          conveyance_allowance: s(prev.conveyance_allowance),
+          medical_allowance: s(prev.medical_allowance),
+          special_allowance: s(prev.special_allowance),
+          overtime: s(prev.overtime),
+          bonus: s(prev.bonus),
+          other_earnings: s(prev.other_earnings),
+          epf_employee: s(prev.epf_employee),
+          esi_employee: s(prev.esi_employee),
+          professional_tax: s(prev.professional_tax),
+          tds: s(prev.tds),
+          loan_recovery: s(prev.loan_recovery),
+          other_deductions: s(prev.other_deductions),
+          epf_employer: s(prev.epf_employer),
+          esi_employer: s(prev.esi_employer),
+          paid_days: s(prev.paid_days),
           lop_days: "0",
           notes: "",
         });
@@ -328,28 +330,29 @@ export default function Payroll() {
   };
 
   const openEdit = (rec: PayrollRecord) => {
+    const s = (v: any) => (v ?? 0).toString();
     setEditingId(rec.id);
     setForm({
       user_id: rec.user_id,
-      basic_salary: rec.basic_salary.toString(),
-      hra: rec.hra.toString(),
-      dearness_allowance: rec.dearness_allowance.toString(),
-      conveyance_allowance: rec.conveyance_allowance.toString(),
-      medical_allowance: rec.medical_allowance.toString(),
-      special_allowance: rec.special_allowance.toString(),
-      overtime: rec.overtime.toString(),
-      bonus: rec.bonus.toString(),
-      other_earnings: rec.other_earnings.toString(),
-      epf_employee: rec.epf_employee.toString(),
-      esi_employee: rec.esi_employee.toString(),
-      professional_tax: rec.professional_tax.toString(),
-      tds: rec.tds.toString(),
-      loan_recovery: rec.loan_recovery.toString(),
-      other_deductions: rec.other_deductions.toString(),
-      epf_employer: rec.epf_employer.toString(),
-      esi_employer: rec.esi_employer.toString(),
-      paid_days: rec.paid_days.toString(),
-      lop_days: rec.lop_days.toString(),
+      basic_salary: s(rec.basic_salary),
+      hra: s(rec.hra),
+      dearness_allowance: s(rec.dearness_allowance),
+      conveyance_allowance: s(rec.conveyance_allowance),
+      medical_allowance: s(rec.medical_allowance),
+      special_allowance: s(rec.special_allowance),
+      overtime: s(rec.overtime),
+      bonus: s(rec.bonus),
+      other_earnings: s(rec.other_earnings),
+      epf_employee: s(rec.epf_employee),
+      esi_employee: s(rec.esi_employee),
+      professional_tax: s(rec.professional_tax),
+      tds: s(rec.tds),
+      loan_recovery: s(rec.loan_recovery),
+      other_deductions: s(rec.other_deductions),
+      epf_employer: s(rec.epf_employer),
+      esi_employer: s(rec.esi_employer),
+      paid_days: s(rec.paid_days),
+      lop_days: s(rec.lop_days),
       notes: rec.notes || "",
     });
     setDialogOpen(true);
@@ -398,6 +401,9 @@ export default function Payroll() {
       other_deductions: n(form.other_deductions),
       epf_employer: n(form.epf_employer),
       esi_employer: n(form.esi_employer),
+      gross_earnings: grossPreview,
+      total_deductions: deductionsPreview,
+      net_salary: netPreview,
       paid_days: parseInt(form.paid_days) || 30,
       lop_days: parseInt(form.lop_days) || 0,
       notes: form.notes.trim() || null,

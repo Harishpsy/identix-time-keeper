@@ -70,7 +70,7 @@ export default function LeaveRequests() {
   };
 
   const fetchAllBalances = async () => {
-    if (role === "admin" || role === "subadmin") {
+    if (role === "super_admin" || role === "admin" || role === "subadmin") {
       setLoadingBalances(true);
       try {
         const response = await apiClient.get("/leaves/balances/all");
@@ -198,7 +198,7 @@ export default function LeaveRequests() {
             {role === "employee" ? "Apply for leave and track your requests" : "Manage leave requests, balances and settings"}
           </p>
         </div>
-        {role === "employee" && (
+        {(role === "employee" || role === "admin" || role === "subadmin") && (
           <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
         )}
       </div>
@@ -225,10 +225,10 @@ export default function LeaveRequests() {
       <Tabs defaultValue="requests" className="w-full">
         <TabsList>
           <TabsTrigger value="requests">Requests</TabsTrigger>
-          {(role === "admin" || role === "subadmin") && (
+          {(role === "super_admin" || role === "admin" || role === "subadmin") && (
             <TabsTrigger value="balances">Employee Balances</TabsTrigger>
           )}
-          {role === "admin" && (
+          {(role === "super_admin" || role === "admin") && (
             <TabsTrigger value="settings">Settings</TabsTrigger>
           )}
         </TabsList>
@@ -246,7 +246,7 @@ export default function LeaveRequests() {
                       <TableHead>Time (If Permission)</TableHead>
                       <TableHead>Reason</TableHead>
                       <TableHead>Status</TableHead>
-                      {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
+                      {(role === "super_admin" || role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -272,12 +272,21 @@ export default function LeaveRequests() {
                             {r.status}
                           </span>
                         </TableCell>
-                        {(role === "admin" || role === "subadmin") && r.status === "pending" && (
+                        {(role === "super_admin" || role === "admin" || role === "subadmin") && r.status === "pending" && (
                           <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "approved")}><Check className="w-4 h-4 text-success" /></Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "rejected")}><X className="w-4 h-4 text-destructive" /></Button>
-                            </div>
+                            {(() => {
+                              const roleHierarchy: Record<string, number> = { super_admin: 4, admin: 3, subadmin: 2, employee: 1 };
+                              const canApprove = roleHierarchy[role || ""] > roleHierarchy[r.requester_role || "employee"] && r.user_id !== user?.id;
+
+                              if (!canApprove) return "-";
+
+                              return (
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "approved")}><Check className="w-4 h-4 text-success" /></Button>
+                                  <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "rejected")}><X className="w-4 h-4 text-destructive" /></Button>
+                                </div>
+                              );
+                            })()}
                           </TableCell>
                         )}
                       </TableRow>
@@ -345,7 +354,7 @@ export default function LeaveRequests() {
           </TabsContent>
         )}
 
-        {role === "admin" && (
+        {(role === "super_admin" || role === "admin") && (
           <TabsContent value="settings" className="mt-4">
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="border-border/50">

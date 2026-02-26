@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import apiClient from "@/lib/apiClient";
 
-type AppRole = "admin" | "subadmin" | "employee";
+type AppRole = "super_admin" | "admin" | "subadmin" | "employee";
 
 interface User {
   id: string;

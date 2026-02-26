@@ -206,7 +206,7 @@ export default function Attendance() {
           </div>
         )}
         <div className="ml-auto flex gap-2">
-          {role === "admin" && (
+          {(role === "super_admin" || role === "admin") && (
             <ReprocessDialog onComplete={() => setRefreshKey((k) => k + 1)} />
           )}
           <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>

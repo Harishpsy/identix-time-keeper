@@ -14,31 +14,58 @@ const processDailySummary = async (userId, date) => {
     const firstIn = punches[0].timestamp;
     const lastOut = punches.length > 1 ? punches[punches.length - 1].timestamp : null;
 
-    // Calculate duration in minutes
+    // Calculate total break duration in minutes
+    let totalBreakMinutes = 0;
+    const breakStarts = punches.filter(p => p.punch_type === 'break_start');
+    const breakEnds = punches.filter(p => p.punch_type === 'break_end');
+
+    for (let i = 0; i < breakStarts.length; i++) {
+        const start = new Date(breakStarts[i].timestamp);
+        const end = breakEnds[i] ? new Date(breakEnds[i].timestamp) : null;
+        if (end) {
+            totalBreakMinutes += Math.floor((end - start) / 60000);
+        }
+    }
+
+    // Calculate duration in minutes (Total time - Break time)
     let totalDurationMinutes = null;
     if (firstIn && lastOut) {
         const diffMs = new Date(lastOut) - new Date(firstIn);
-        totalDurationMinutes = Math.floor(diffMs / 60000);
+        totalDurationMinutes = Math.floor(diffMs / 60000) - totalBreakMinutes;
+        if (totalDurationMinutes < 0) totalDurationMinutes = 0;
     }
 
     // Get user's shift to calculate late minutes
     let lateMinutes = 0;
     let status = 'present';
     const [profiles] = await pool.execute('SELECT shift_id FROM profiles WHERE id = ?', [userId]);
+    const [userRoles] = await pool.execute('SELECT role FROM user_roles WHERE user_id = ?', [userId]);
+    const userRole = userRoles.length > 0 ? userRoles[0].role : 'employee';
+
+    let shift = null;
     if (profiles.length > 0 && profiles[0].shift_id) {
         const [shifts] = await pool.execute('SELECT * FROM shifts WHERE id = ?', [profiles[0].shift_id]);
         if (shifts.length > 0) {
-            const shift = shifts[0];
-            // Compare first_in time with shift start_time + grace_period
-            const firstInDate = new Date(firstIn);
-            const [shiftHour, shiftMin] = shift.start_time.split(':').map(Number);
-            const shiftStart = new Date(firstInDate);
-            shiftStart.setHours(shiftHour, shiftMin + (shift.grace_period_mins || 0), 0, 0);
+            shift = shifts[0];
+        }
+    } else if (userRole === 'admin' || userRole === 'super_admin') {
+        // Fallback for admins
+        shift = {
+            start_time: '09:00:00',
+            grace_period_mins: 15
+        };
+    }
 
-            if (firstInDate > shiftStart) {
-                lateMinutes = Math.floor((firstInDate - shiftStart) / 60000);
-                status = 'late';
-            }
+    if (shift) {
+        // Compare first_in time with shift start_time + grace_period
+        const firstInDate = new Date(firstIn);
+        const [shiftHour, shiftMin] = shift.start_time.split(':').map(Number);
+        const shiftStart = new Date(firstInDate);
+        shiftStart.setHours(shiftHour, shiftMin + (shift.grace_period_mins || 0), 0, 0);
+
+        if (firstInDate > shiftStart) {
+            lateMinutes = Math.floor((firstInDate - shiftStart) / 60000);
+            status = 'late';
         }
     }
 
@@ -76,6 +103,13 @@ const processDailySummary = async (userId, date) => {
 const logPunch = async (req, res) => {
     const { punch_type } = req.body;
     const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Do not save punches for super_admin
+    if (userRole === 'super_admin') {
+        return res.json({ success: true, message: 'Super Admin punches are not recorded' });
+    }
+
     const timestamp = new Date(); // Current server time
     const today = timestamp.toISOString().split('T')[0]; // yyyy-MM-dd
 
@@ -103,7 +137,9 @@ const getSummary = async (req, res) => {
 
     try {
         let query = 'SELECT s.*, p.full_name, p.email FROM daily_summaries s ' +
-            'JOIN profiles p ON s.user_id = p.id WHERE 1=1';
+            'JOIN profiles p ON s.user_id = p.id ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
+            "WHERE r.role != 'super_admin'";
         let params = [];
 
         if (role === 'employee') {
@@ -122,7 +158,9 @@ const getSummary = async (req, res) => {
         // For admin/subadmin: also include active employees who have NO daily_summaries record
         if (role !== 'employee' && start_date && end_date) {
             const [activeProfiles] = await pool.execute(
-                'SELECT id, full_name, email, date_of_joining, created_at FROM profiles WHERE is_active = true'
+                'SELECT p.id, p.full_name, p.email, p.date_of_joining, p.created_at FROM profiles p ' +
+                'JOIN user_roles r ON p.id = r.user_id ' +
+                "WHERE p.is_active = true AND r.role != 'super_admin'"
             );
 
             // Helper: format Date to YYYY-MM-DD using local time (not UTC)
@@ -215,7 +253,11 @@ const reprocessSummaries = async (req, res) => {
 const getRecentPunches = async (req, res) => {
     const { date } = req.query;
     try {
-        const [profiles] = await pool.execute('SELECT id, full_name, email, shift_id FROM profiles WHERE is_active = true');
+        const [profiles] = await pool.execute(
+            'SELECT p.id, p.full_name, p.email, p.shift_id FROM profiles p ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
+            "WHERE p.is_active = true AND r.role != 'super_admin'"
+        );
         const [punches] = await pool.execute(
             'SELECT * FROM attendance_raw WHERE DATE(timestamp) = ? ORDER BY timestamp ASC',
             [date]

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import apiClient from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,7 +10,6 @@ import { format, startOfMonth, endOfMonth } from "date-fns";
 import { Search, Download, FileText, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import EmployeeDailyDetails from "@/components/attendance/EmployeeDailyDetails";
 
 interface EmployeeSummary {
   userId: string;
@@ -25,11 +25,11 @@ interface EmployeeSummary {
 }
 
 export default function AttendanceSummary() {
+  const navigate = useNavigate();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [search, setSearch] = useState("");
   const [summaries, setSummaries] = useState<EmployeeSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeSummary | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -194,7 +194,7 @@ export default function AttendanceSummary() {
                     </TableRow>
                   ) : (
                     filtered.map((s) => (
-                      <TableRow key={s.userId} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedEmployee(s)}>
+                      <TableRow key={s.userId} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/attendance-summary/${s.userId}/${month}`)}>
                         <TableCell>
                           <div>
                             <p className="font-medium text-foreground">{s.name}</p>
@@ -227,14 +227,6 @@ export default function AttendanceSummary() {
           </CardContent>
         </Card>
       </div>
-
-      <EmployeeDailyDetails
-        open={!!selectedEmployee}
-        onOpenChange={(open) => { if (!open) setSelectedEmployee(null); }}
-        userId={selectedEmployee?.userId || ""}
-        userName={selectedEmployee?.name || ""}
-        month={month}
-      />
     </>
   );
 }

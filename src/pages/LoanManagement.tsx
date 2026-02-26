@@ -75,7 +75,7 @@ const Loans = () => {
 
     useEffect(() => {
         fetchLoans();
-        if (role === 'admin') {
+        if (role === 'admin' || role === 'super_admin') {
             fetchProfiles();
         }
     }, [role]);
@@ -89,7 +89,7 @@ const Loans = () => {
                 purpose,
             };
 
-            if (role === 'admin' && targetUserId) {
+            if (role === 'admin' || role === 'super_admin' && targetUserId) {
                 body.targetUserId = targetUserId;
             }
 
@@ -103,7 +103,7 @@ const Loans = () => {
             });
 
             if (response.ok) {
-                toast({ title: "Success", description: role === 'admin' ? "Loan added" : "Loan request submitted" });
+                toast({ title: "Success", description: role === 'admin' || role === 'super_admin' ? "Loan added" : "Loan request submitted" });
                 setIsRequestModalOpen(false);
                 fetchLoans();
                 setAmount("");
@@ -163,7 +163,7 @@ const Loans = () => {
                 <Button
                     className="flex items-center gap-2"
                     onClick={() => {
-                        if (role !== 'admin' && profile?.date_of_joining) {
+                        if (role !== 'admin' && role !== 'super_admin' && profile?.date_of_joining) {
                             // Check eligibility (1 year)
                             const joiningDate = new Date(profile.date_of_joining);
                             const oneYearAgo = new Date();
@@ -177,16 +177,16 @@ const Loans = () => {
                         setIsRequestModalOpen(true);
                     }}
                 >
-                    <Plus className="w-4 h-4" /> {role === 'admin' ? 'Add Loan' : 'Request Loan'}
+                    <Plus className="w-4 h-4" /> {role === 'admin' || role === 'super_admin' ? 'Add Loan' : 'Request Loan'}
                 </Button>
 
                 <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{role === 'admin' ? 'Add Loan for Employee' : 'Loan Request'}</DialogTitle>
+                            <DialogTitle>{role === 'admin' || role === 'super_admin' ? 'Add Loan for Employee' : 'Loan Request'}</DialogTitle>
                         </DialogHeader>
                         <form onSubmit={handleRequestLoan} className="space-y-4">
-                            {role === 'admin' && (
+                            {role === 'admin' || role === 'super_admin' && (
                                 <div className="space-y-2">
                                     <Label htmlFor="employee">Select Employee</Label>
                                     <select
@@ -217,7 +217,7 @@ const Loans = () => {
                             </div>
                             <DialogFooter>
                                 <Button type="submit">
-                                    {role === 'admin' ? 'Add Loan' : 'Submit Request'}
+                                    {role === 'admin' || role === 'super_admin' ? 'Add Loan' : 'Submit Request'}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -225,10 +225,10 @@ const Loans = () => {
                 </Dialog>
             </div>
 
-            <Tabs defaultValue={role === 'admin' ? "requests" : "my"}>
+            <Tabs defaultValue={role === 'admin' || role === 'super_admin' ? "requests" : "my"}>
                 <TabsList>
-                    {role !== 'admin' && <TabsTrigger value="my">My Loans</TabsTrigger>}
-                    {role === 'admin' && (
+                    {role !== 'admin' && role !== 'super_admin' && <TabsTrigger value="my">My Loans</TabsTrigger>}
+                    {role === 'admin' || role === 'super_admin' && (
                         <>
                             <TabsTrigger value="requests">Loan Requests</TabsTrigger>
                             <TabsTrigger value="completed">Loan Completed</TabsTrigger>
@@ -236,7 +236,7 @@ const Loans = () => {
                     )}
                 </TabsList>
 
-                {role !== 'admin' && (
+                {role !== 'admin' && role !== 'super_admin' && (
                     <TabsContent value="my">
                         <Card>
                             <CardHeader>
@@ -275,7 +275,7 @@ const Loans = () => {
                     </TabsContent>
                 )}
 
-                {role === 'admin' && (
+                {role === 'admin' || role === 'super_admin' && (
                     <>
                         <TabsContent value="requests">
                             <Card>

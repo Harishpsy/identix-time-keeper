@@ -10,6 +10,14 @@ const register = async (req, res) => {
         return res.status(400).json({ error: 'Email, password, and full name are required' });
     }
 
+    // Role restriction: Admin can only create employee or subadmin
+    const requesterRole = req.user.role;
+    const targetRole = role || 'employee';
+
+    if (requesterRole === 'admin' && (targetRole === 'admin' || targetRole === 'super_admin')) {
+        return res.status(403).json({ error: 'Admins can only create Employee or Sub-Admin accounts' });
+    }
+
     try {
         const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
         if (existing.length > 0) {
@@ -149,10 +157,10 @@ const resetPassword = async (req, res) => {
     }
 
     try {
-        // Check if the target user is an admin – admin passwords can only be changed from the database
+        // Check if the target user is a super admin – super admin passwords can only be changed from the database
         const [roles] = await pool.execute('SELECT role FROM user_roles WHERE user_id = ?', [userId]);
-        if (roles.length > 0 && roles[0].role === 'admin') {
-            return res.status(403).json({ error: 'Admin password can only be changed directly from the database' });
+        if (roles.length > 0 && roles[0].role === 'super_admin') {
+            return res.status(403).json({ error: 'Super Admin password can only be changed directly from the database' });
         }
 
         const passwordHash = await bcrypt.hash(newPassword, 10);

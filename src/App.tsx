@@ -22,6 +22,7 @@ import RolePermissions from "./pages/RolePermissions";
 import MenuOrder from "./pages/MenuOrder";
 import LoanManagement from "./pages/LoanManagement";
 import Holidays from "./pages/Holidays";
+import AttendanceDetails from "./pages/AttendanceDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,18 +65,19 @@ const App = () => (
             <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
               <Route path="/attendance" element={<Attendance />} />
-              <Route path="/employees" element={<ProtectedRoute allowedRoles={["admin"]}><Employees /></ProtectedRoute>} />
-              <Route path="/departments" element={<ProtectedRoute allowedRoles={["admin"]}><Departments /></ProtectedRoute>} />
-              <Route path="/shifts" element={<ProtectedRoute allowedRoles={["admin"]}><Shifts /></ProtectedRoute>} />
+              <Route path="/employees" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
+              <Route path="/departments" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />
+              <Route path="/shifts" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Shifts /></ProtectedRoute>} />
               <Route path="/leave" element={<LeaveRequests />} />
-              <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
+              <Route path="/payroll" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Payroll /></ProtectedRoute>} />
               <Route path="/loans" element={<LoanManagement />} />
               <Route path="/my-payslips" element={<MyPayslips />} />
-              <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />
-              <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceSummary /></ProtectedRoute>} />
-              <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["admin"]}><CompanyBranding /></ProtectedRoute>} />
-              <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["admin"]}><MenuOrder /></ProtectedRoute>} />
-              <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["admin"]}><RolePermissions /></ProtectedRoute>} />
+              <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceReset /></ProtectedRoute>} />
+              <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceSummary /></ProtectedRoute>} />
+              <Route path="/attendance-summary/:userId/:month" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceDetails /></ProtectedRoute>} />
+              <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><CompanyBranding /></ProtectedRoute>} />
+              <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><MenuOrder /></ProtectedRoute>} />
+              <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><RolePermissions /></ProtectedRoute>} />
               <Route path="/holidays" element={<Holidays />} />
             </Route>
 

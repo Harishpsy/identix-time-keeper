@@ -6,7 +6,12 @@ const getLeaveRequests = async (req, res) => {
     const role = req.user.role;
 
     try {
-        let query = 'SELECT lr.*, p.full_name FROM leave_requests lr JOIN profiles p ON lr.user_id = p.id';
+        let query = `
+            SELECT lr.*, p.full_name, r.role as requester_role 
+            FROM leave_requests lr 
+            JOIN profiles p ON lr.user_id = p.id
+            JOIN user_roles r ON lr.user_id = r.user_id
+        `;
         let params = [];
 
         if (role === 'employee') {
@@ -58,13 +63,40 @@ const updateLeaveStatus = async (req, res) => {
         try {
             await connection.beginTransaction();
 
-            const [requests] = await connection.execute('SELECT * FROM leave_requests WHERE id = ?', [id]);
+            // Fetch request and requester role
+            const [requests] = await connection.execute(
+                `SELECT lr.*, r.role as requester_role 
+                 FROM leave_requests lr 
+                 JOIN user_roles r ON lr.user_id = r.user_id 
+                 WHERE lr.id = ?`,
+                [id]
+            );
+
             if (requests.length === 0) {
                 connection.release();
                 return res.status(404).json({ error: 'Leave request not found' });
             }
 
             const request = requests[0];
+
+            // 1. Prevent self-approval
+            if (request.user_id === adminId) {
+                await connection.rollback();
+                connection.release();
+                return res.status(403).json({ error: 'You cannot approve your own leave requests' });
+            }
+
+            // 2. Hierarchy validation
+            const approverRole = req.user.role;
+            const requesterRole = request.requester_role;
+
+            const roleHierarchy = { 'super_admin': 4, 'admin': 3, 'subadmin': 2, 'employee': 1 };
+            if (roleHierarchy[approverRole] <= roleHierarchy[requesterRole]) {
+                await connection.rollback();
+                connection.release();
+                return res.status(403).json({ error: 'Insufficient permissions to approve this request based on hierarchy' });
+            }
+
             const oldStatus = request.status;
 
             await connection.execute(

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import UpcomingAnniversaries from "./UpcomingAnniversaries";
+import CheckInOut from "./CheckInOut";
 
 
 
@@ -40,6 +41,10 @@ export default function AdminDashboard() {
   const [leaveRecords, setLeaveRecords] = useState<any[]>([]);
   const [todayPage, setTodayPage] = useState(1);
 
+  // New states for personal attendance
+  const [personalSummaries, setPersonalSummaries] = useState<any[]>([]);
+  const [personalStats, setPersonalStats] = useState({ present: 0, late: 0, leaveTaken: 0 });
+
   const fetchData = useCallback(async () => {
     try {
       const [statsRes, leaveRes] = await Promise.all([
@@ -49,6 +54,13 @@ export default function AdminDashboard() {
 
       setStats(statsRes.data);
       setLeaveRecords(leaveRes.data || []);
+
+      // Fetch personal attendance data only if not super_admin
+      if (role !== "super_admin") {
+        const { data: personalData } = await apiClient.get("/dashboard/employee");
+        setPersonalSummaries(personalData.summaries || []);
+        setPersonalStats(personalData.stats || { present: 0, late: 0, leaveTaken: 0 });
+      }
     } catch (err) {
       console.error("Failed to fetch admin dashboard", err);
     }
@@ -73,10 +85,12 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">
-          {role === "admin" ? "Admin" : "Sub-Admin"} Dashboard
+          {role === "super_admin" ? "Super Admin" : role === "admin" ? "Admin" : "Sub-Admin"} Dashboard
         </h1>
         <p className="text-muted-foreground mt-1">Overview of today's attendance</p>
       </div>
+
+      {role !== "super_admin" && <CheckInOut />}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Employees" value={stats.total} icon={<Users className="w-5 h-5" />} />
@@ -126,6 +140,67 @@ export default function AdminDashboard() {
         <LiveAttendanceFeed />
         <UpcomingAnniversaries />
       </div>
+
+      {role !== "super_admin" && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-3 px-6 pt-6">
+            <CardTitle className="text-lg font-semibold">My Personal Attendance History</CardTitle>
+            <p className="text-sm text-muted-foreground">Detailed logs for your attendance this month</p>
+          </CardHeader>
+          <CardContent className="px-6 pb-6">
+            {personalSummaries.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">No personal attendance records this month</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>First In</TableHead>
+                      <TableHead>Last Out</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Late (HH.MM)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {personalSummaries.slice(0, 5).map((s: any) => (
+                      <TableRow key={s.id}>
+                        <TableCell className="font-medium whitespace-nowrap">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                        <TableCell>{(() => {
+                          const mins = s.total_duration_minutes;
+                          if (!mins && mins !== 0) return "—";
+                          const h = Math.floor(mins / 60);
+                          const m = mins % 60;
+                          return `${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m`;
+                        })()}</TableCell>
+                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                        <TableCell className="tabular-nums font-mono text-sm">{(() => {
+                          const mins = s.late_minutes;
+                          if (!mins || mins <= 0) return "—";
+                          const h = Math.floor(mins / 60);
+                          const m = mins % 60;
+                          if (h > 0) return `${String(h).padStart(2, "0")}Hrs.${String(m).padStart(2, "0")}Mins`;
+                          return `${String(m).padStart(2, "0")}Mins`;
+                        })()}</TableCell>
+                      </TableRow>
+                    ))}
+                    {personalSummaries.length > 5 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-2 text-xs text-muted-foreground">
+                          Showing last 5 records. View Attendance page for full history.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

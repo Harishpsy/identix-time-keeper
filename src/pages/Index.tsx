@@ -10,7 +10,7 @@ const Index = () => {
   return (
     <>
       <AnniversaryCelebration />
-      {role === "admin" || role === "subadmin" ? <AdminDashboard /> : <EmployeeDashboard />}
+      {role === "super_admin" || role === "admin" || role === "subadmin" ? <AdminDashboard /> : <EmployeeDashboard />}
     </>
   );
 };

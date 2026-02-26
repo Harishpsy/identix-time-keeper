@@ -1,4 +1,29 @@
 const pool = require('../config/db');
+const { v4: uuidv4 } = require('uuid');
+
+const calculatePayrollTotals = (data) => {
+    const gross_earnings = (
+        Number(data.basic_salary || 0) +
+        Number(data.hra || 0) +
+        Number(data.dearness_allowance || 0) +
+        Number(data.conveyance_allowance || 0) +
+        Number(data.medical_allowance || 0) +
+        Number(data.special_allowance || 0) +
+        Number(data.overtime || 0) +
+        Number(data.bonus || 0) +
+        Number(data.other_earnings || 0)
+    );
+    const total_deductions = (
+        Number(data.epf_employee || 0) +
+        Number(data.esi_employee || 0) +
+        Number(data.professional_tax || 0) +
+        Number(data.tds || 0) +
+        Number(data.loan_recovery || 0) +
+        Number(data.other_deductions || 0)
+    );
+    const net_salary = gross_earnings - total_deductions;
+    return { gross_earnings, total_deductions, net_salary };
+};
 
 const getPayroll = async (req, res) => {
     const userId = req.user.id;
@@ -28,8 +53,6 @@ const getPayroll = async (req, res) => {
     }
 };
 
-const uuid = require('uuid');
-
 const generatePayroll = async (req, res) => {
     const { month } = req.body;
     try {
@@ -51,7 +74,7 @@ const generatePayroll = async (req, res) => {
 
             if (prev.length > 0) {
                 const record = prev[0];
-                const id = uuid.v4();
+                const id = uuidv4();
 
                 // Fetch active approved loans
                 const [activeLoans] = await pool.execute(
@@ -82,6 +105,14 @@ const generatePayroll = async (req, res) => {
                     }
                 }
 
+                // Prepare data for calculation
+                // Carry forward all components from previous month
+                const dataToCalc = {
+                    ...record,
+                    loan_recovery: total_loan_recovery
+                };
+                const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(dataToCalc);
+
                 await pool.execute(`
                     INSERT INTO payroll (
                         id, user_id, month, basic_salary, hra, dearness_allowance, 
@@ -94,18 +125,16 @@ const generatePayroll = async (req, res) => {
                 `, [
                     id, emp.user_id, month, record.basic_salary, record.hra, record.dearness_allowance,
                     record.conveyance_allowance, record.medical_allowance, record.special_allowance,
-                    0, 0, 0, record.epf_employee, record.esi_employee,
+                    record.overtime, record.bonus, record.other_earnings, record.epf_employee, record.esi_employee,
                     record.professional_tax, record.tds, total_loan_recovery, record.other_deductions,
-                    record.gross_earnings, record.total_deductions + (total_loan_recovery - record.loan_recovery),
-                    record.net_salary - (total_loan_recovery - record.loan_recovery),
-                    record.paid_days, 0, 'Auto-generated'
+                    gross_earnings, total_deductions, net_salary, record.paid_days, 0, 'Auto-generated'
                 ]);
 
                 // Record repayments and update loan status if complete
                 for (const rep of loanRepaymentsToInsert) {
                     await pool.execute(
                         'INSERT INTO loan_repayments (id, loan_id, payroll_id, amount, payment_date, method) VALUES (?, ?, ?, ?, CURDATE(), "payroll_deduction")',
-                        [uuid.v4(), rep.loan_id, id, rep.amount]
+                        [uuidv4(), rep.loan_id, id, rep.amount]
                     );
 
                     if (rep.isComplete) {
@@ -127,10 +156,19 @@ const generatePayroll = async (req, res) => {
 
 const createPayroll = async (req, res) => {
     const data = req.body;
-    const id = uuid.v4();
-    const fields = ['id', ...Object.keys(data)];
+    const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(data);
+
+    const fullData = {
+        ...data,
+        gross_earnings,
+        total_deductions,
+        net_salary
+    };
+
+    const id = uuidv4();
+    const fields = ['id', ...Object.keys(fullData)];
     const placeholders = fields.map(() => '?').join(', ');
-    const params = [id, ...Object.values(data)];
+    const params = [id, ...Object.values(fullData)];
 
     try {
         await pool.execute(`INSERT INTO payroll (${fields.join(', ')}) VALUES (${placeholders})`, params);
@@ -146,9 +184,31 @@ const updatePayroll = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
     delete updates.id;
-    const fields = Object.keys(updates);
+
+    // Recalculate totals if any money field is present
+    const moneyFields = [
+        'basic_salary', 'hra', 'dearness_allowance', 'conveyance_allowance',
+        'medical_allowance', 'special_allowance', 'overtime', 'bonus',
+        'other_earnings', 'epf_employee', 'esi_employee', 'professional_tax',
+        'tds', 'loan_recovery', 'other_deductions'
+    ];
+
+    const hasMoneyUpdate = Object.keys(updates).some(k => moneyFields.includes(k));
+
+    let finalUpdates = { ...updates };
+    if (hasMoneyUpdate) {
+        // We might not have all fields in 'updates' if it's a partial update
+        // But the frontend current sends all fields. Just in case, we'd need to fetch current record.
+        // For simplicity and since our frontend sends full payload for edits, we'll assume fields are there or 0.
+        const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(updates);
+        finalUpdates.gross_earnings = gross_earnings;
+        finalUpdates.total_deductions = total_deductions;
+        finalUpdates.net_salary = net_salary;
+    }
+
+    const fields = Object.keys(finalUpdates);
     const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const params = [...Object.values(updates), id];
+    const params = [...Object.values(finalUpdates), id];
 
     try {
         await pool.execute(`UPDATE payroll SET ${setClause} WHERE id = ?`, params);

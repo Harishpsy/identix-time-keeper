@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,119 +154,202 @@ const Loans = () => {
     };
 
     return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
-                        <p className="text-muted-foreground">Manage and track employee loans</p>
-                    </div>
-                    <Button
-                        className="flex items-center gap-2"
-                        onClick={() => {
-                            if (role !== 'admin' && profile?.date_of_joining) {
-                                // Check eligibility (1 year)
-                                const joiningDate = new Date(profile.date_of_joining);
-                                const oneYearAgo = new Date();
-                                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-
-                                if (joiningDate > oneYearAgo) {
-                                    setIsEligibleModalOpen(true);
-                                    return;
-                                }
-                            }
-                            setIsRequestModalOpen(true);
-                        }}
-                    >
-                        <Plus className="w-4 h-4" /> {role === 'admin' ? 'Add Loan' : 'Request Loan'}
-                    </Button>
-
-                    <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>{role === 'admin' ? 'Add Loan for Employee' : 'Loan Request'}</DialogTitle>
-                            </DialogHeader>
-                            <form onSubmit={handleRequestLoan} className="space-y-4">
-                                {role === 'admin' && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="employee">Select Employee</Label>
-                                        <select
-                                            id="employee"
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            value={targetUserId}
-                                            onChange={(e) => setTargetUserId(e.target.value)}
-                                            required
-                                        >
-                                            <option value="">Select an employee</option>
-                                            {profiles.map(p => (
-                                                <option key={p.id} value={p.id}>{p.full_name} ({p.role})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-                                <div className="space-y-2">
-                                    <Label htmlFor="amount">Loan Amount</Label>
-                                    <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="terms">Term (Months)</Label>
-                                    <Input id="terms" type="number" value={termMonths} onChange={(e) => setTermMonths(e.target.value)} required />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="purpose">Purpose</Label>
-                                    <Input id="purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} required />
-                                </div>
-                                <DialogFooter>
-                                    <Button type="submit">
-                                        {role === 'admin' ? 'Add Loan' : 'Submit Request'}
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Loans</h1>
+                    <p className="text-muted-foreground">Manage and track employee loans</p>
                 </div>
+                <Button
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                        if (role !== 'admin' && profile?.date_of_joining) {
+                            // Check eligibility (1 year)
+                            const joiningDate = new Date(profile.date_of_joining);
+                            const oneYearAgo = new Date();
+                            oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-                <Tabs defaultValue={role === 'admin' ? "requests" : "my"}>
-                    <TabsList>
-                        {role !== 'admin' && <TabsTrigger value="my">My Loans</TabsTrigger>}
-                        {role === 'admin' && (
-                            <>
-                                <TabsTrigger value="requests">Loan Requests</TabsTrigger>
-                                <TabsTrigger value="completed">Loan Completed</TabsTrigger>
-                            </>
-                        )}
-                    </TabsList>
+                            if (joiningDate > oneYearAgo) {
+                                setIsEligibleModalOpen(true);
+                                return;
+                            }
+                        }
+                        setIsRequestModalOpen(true);
+                    }}
+                >
+                    <Plus className="w-4 h-4" /> {role === 'admin' ? 'Add Loan' : 'Request Loan'}
+                </Button>
 
-                    {role !== 'admin' && (
-                        <TabsContent value="my">
+                <Dialog open={isRequestModalOpen} onOpenChange={setIsRequestModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>{role === 'admin' ? 'Add Loan for Employee' : 'Loan Request'}</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleRequestLoan} className="space-y-4">
+                            {role === 'admin' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="employee">Select Employee</Label>
+                                    <select
+                                        id="employee"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={targetUserId}
+                                        onChange={(e) => setTargetUserId(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">Select an employee</option>
+                                        {profiles.map(p => (
+                                            <option key={p.id} value={p.id}>{p.full_name} ({p.role})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">Loan Amount</Label>
+                                <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="terms">Term (Months)</Label>
+                                <Input id="terms" type="number" value={termMonths} onChange={(e) => setTermMonths(e.target.value)} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="purpose">Purpose</Label>
+                                <Input id="purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} required />
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit">
+                                    {role === 'admin' ? 'Add Loan' : 'Submit Request'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            <Tabs defaultValue={role === 'admin' ? "requests" : "my"}>
+                <TabsList>
+                    {role !== 'admin' && <TabsTrigger value="my">My Loans</TabsTrigger>}
+                    {role === 'admin' && (
+                        <>
+                            <TabsTrigger value="requests">Loan Requests</TabsTrigger>
+                            <TabsTrigger value="completed">Loan Completed</TabsTrigger>
+                        </>
+                    )}
+                </TabsList>
+
+                {role !== 'admin' && (
+                    <TabsContent value="my">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>My Loan History</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead>Amount</TableHead>
+                                            <TableHead>Terms</TableHead>
+                                            <TableHead>EMI</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loans.map((loan) => (
+                                            <TableRow key={loan.id}>
+                                                <TableCell>{format(new Date(loan.created_at), "dd MMM yyyy")}</TableCell>
+                                                <TableCell>₹{loan.amount}</TableCell>
+                                                <TableCell>{loan.term_months} Months</TableCell>
+                                                <TableCell>₹{parseFloat(loan.monthly_installment.toString()).toFixed(2)}</TableCell>
+                                                <TableCell>{getStatusBadge(loan.status)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {loans.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No loans found</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                )}
+
+                {role === 'admin' && (
+                    <>
+                        <TabsContent value="requests">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>My Loan History</CardTitle>
+                                    <CardTitle>Active & Pending Loan Requests</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Date</TableHead>
+                                                <TableHead>Employee</TableHead>
                                                 <TableHead>Amount</TableHead>
-                                                <TableHead>Terms</TableHead>
-                                                <TableHead>EMI</TableHead>
+                                                <TableHead>Purpose</TableHead>
                                                 <TableHead>Status</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {loans.map((loan) => (
+                                            {loans.filter(l => l.status !== 'completed').map((loan) => (
                                                 <TableRow key={loan.id}>
-                                                    <TableCell>{format(new Date(loan.created_at), "dd MMM yyyy")}</TableCell>
+                                                    <TableCell className="font-medium">{loan.employee_name}</TableCell>
                                                     <TableCell>₹{loan.amount}</TableCell>
-                                                    <TableCell>{loan.term_months} Months</TableCell>
-                                                    <TableCell>₹{parseFloat(loan.monthly_installment.toString()).toFixed(2)}</TableCell>
+                                                    <TableCell>{loan.purpose}</TableCell>
                                                     <TableCell>{getStatusBadge(loan.status)}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        {loan.status === 'pending' && (
+                                                            <div className="flex justify-end gap-2">
+                                                                <Button size="sm" variant="outline" onClick={() => {
+                                                                    setSelectedLoan(loan);
+                                                                    setIsApproveModalOpen(true);
+                                                                }} className="text-green-600 border-green-200 hover:bg-green-50">
+                                                                    <Check className="w-4 h-4" />
+                                                                </Button>
+                                                                <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(loan.id, 'rejected')} className="text-red-600 border-red-200 hover:bg-red-50">
+                                                                    <X className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </TableCell>
                                                 </TableRow>
                                             ))}
-                                            {loans.length === 0 && (
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </TabsContent>
+
+                        <TabsContent value="completed">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Completed Loans</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Employee</TableHead>
+                                                <TableHead>Amount</TableHead>
+                                                <TableHead>Total Paid</TableHead>
+                                                <TableHead>Completion Date</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loans.filter(l => l.status === 'completed').map((loan) => (
+                                                <TableRow key={loan.id}>
+                                                    <TableCell className="font-medium">{loan.employee_name}</TableCell>
+                                                    <TableCell>₹{loan.amount}</TableCell>
+                                                    <TableCell>₹{loan.total_repayable}</TableCell>
+                                                    <TableCell>{loan.updated_at ? format(new Date(loan.updated_at), "dd MMM yyyy") : 'N/A'}</TableCell>
+                                                </TableRow>
+                                            ))}
+                                            {loans.filter(l => l.status === 'completed').length === 0 && (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No loans found</TableCell>
+                                                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No completed loans found</TableCell>
                                                 </TableRow>
                                             )}
                                         </TableBody>
@@ -275,152 +357,67 @@ const Loans = () => {
                                 </CardContent>
                             </Card>
                         </TabsContent>
-                    )}
+                    </>
+                )}
+            </Tabs>
 
-                    {role === 'admin' && (
-                        <>
-                            <TabsContent value="requests">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Active & Pending Loan Requests</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Employee</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Purpose</TableHead>
-                                                    <TableHead>Status</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {loans.filter(l => l.status !== 'completed').map((loan) => (
-                                                    <TableRow key={loan.id}>
-                                                        <TableCell className="font-medium">{loan.employee_name}</TableCell>
-                                                        <TableCell>₹{loan.amount}</TableCell>
-                                                        <TableCell>{loan.purpose}</TableCell>
-                                                        <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            {loan.status === 'pending' && (
-                                                                <div className="flex justify-end gap-2">
-                                                                    <Button size="sm" variant="outline" onClick={() => {
-                                                                        setSelectedLoan(loan);
-                                                                        setIsApproveModalOpen(true);
-                                                                    }} className="text-green-600 border-green-200 hover:bg-green-50">
-                                                                        <Check className="w-4 h-4" />
-                                                                    </Button>
-                                                                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus(loan.id, 'rejected')} className="text-red-600 border-red-200 hover:bg-red-50">
-                                                                        <X className="w-4 h-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
+            {/* Approval Modal */}
+            <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Approve Loan Request</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Interest Rate (%)</Label>
+                            <Input type="number" value={adminInterest} onChange={(e) => setAdminInterest(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Repayment Start Date</Label>
+                            <Input type="date" value={adminStartDate} onChange={(e) => setAdminStartDate(e.target.value)} />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            Employee: {selectedLoan?.employee_name}<br />
+                            Amount: ₹{selectedLoan?.amount}<br />
+                            Terms: {selectedLoan?.term_months} Months
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsApproveModalOpen(false)}>Cancel</Button>
+                        <Button onClick={() => selectedLoan && handleUpdateStatus(selectedLoan.id, 'approved')}>Confirm Approval</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
-                            <TabsContent value="completed">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle>Completed Loans</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Employee</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Total Paid</TableHead>
-                                                    <TableHead>Completion Date</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {loans.filter(l => l.status === 'completed').map((loan) => (
-                                                    <TableRow key={loan.id}>
-                                                        <TableCell className="font-medium">{loan.employee_name}</TableCell>
-                                                        <TableCell>₹{loan.amount}</TableCell>
-                                                        <TableCell>₹{loan.total_repayable}</TableCell>
-                                                        <TableCell>{loan.updated_at ? format(new Date(loan.updated_at), "dd MMM yyyy") : 'N/A'}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                                {loans.filter(l => l.status === 'completed').length === 0 && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No completed loans found</TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                        </>
-                    )}
-                </Tabs>
-
-                {/* Approval Modal */}
-                <Dialog open={isApproveModalOpen} onOpenChange={setIsApproveModalOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Approve Loan Request</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <Label>Interest Rate (%)</Label>
-                                <Input type="number" value={adminInterest} onChange={(e) => setAdminInterest(e.target.value)} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Repayment Start Date</Label>
-                                <Input type="date" value={adminStartDate} onChange={(e) => setAdminStartDate(e.target.value)} />
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                                Employee: {selectedLoan?.employee_name}<br />
-                                Amount: ₹{selectedLoan?.amount}<br />
-                                Terms: {selectedLoan?.term_months} Months
+            {/* Eligibility Modal */}
+            <Dialog open={isEligibleModalOpen} onOpenChange={setIsEligibleModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <Landmark className="w-5 h-5" />
+                            Loan Eligibility
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4 text-center">
+                        <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                            <Landmark className="w-6 h-6" />
+                        </div>
+                        <div className="space-y-2">
+                            <p className="font-semibold text-lg">Not Yet Eligible</p>
+                            <p className="text-muted-foreground">
+                                You need at least <span className="font-bold text-foreground">1 year of service</span> to apply for a loan.
+                            </p>
+                            <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                                Please contact <span className="font-semibold">Hr or Admin</span> for more information or if you have an emergency.
                             </p>
                         </div>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsApproveModalOpen(false)}>Cancel</Button>
-                            <Button onClick={() => selectedLoan && handleUpdateStatus(selectedLoan.id, 'approved')}>Confirm Approval</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Eligibility Modal */}
-                <Dialog open={isEligibleModalOpen} onOpenChange={setIsEligibleModalOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 text-red-600">
-                                <Landmark className="w-5 h-5" />
-                                Loan Eligibility
-                            </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4 text-center">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                                <Landmark className="w-6 h-6" />
-                            </div>
-                            <div className="space-y-2">
-                                <p className="font-semibold text-lg">Not Yet Eligible</p>
-                                <p className="text-muted-foreground">
-                                    You need at least <span className="font-bold text-foreground">1 year of service</span> to apply for a loan.
-                                </p>
-                                <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
-                                    Please contact <span className="font-semibold">Hr or Admin</span> for more information or if you have an emergency.
-                                </p>
-                            </div>
-                        </div>
-                        <DialogFooter>
-                            <Button onClick={() => setIsEligibleModalOpen(false)}>Close</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </div>
-        </DashboardLayout >
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setIsEligibleModalOpen(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
     );
 };
 

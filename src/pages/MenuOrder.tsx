@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, GripVertical } from "lucide-react";
@@ -137,70 +136,66 @@ export default function MenuOrder() {
 
     if (loading) {
         return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-            </DashboardLayout>
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
         );
     }
 
     return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-foreground">Menu Order</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Drag and drop rotation modules to customize sidebar navigation for all users
-                    </p>
-                </div>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <GripVertical className="w-4 h-4" /> Sidebar Menu Items
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={handleDragEnd}
-                        >
-                            <SortableContext
-                                items={orderedModules}
-                                strategy={verticalListSortingStrategy}
-                            >
-                                <div className="grid gap-2">
-                                    {orderedModules.map((moduleKey) => {
-                                        const item = navItems.find((n) => n.moduleKey === moduleKey);
-                                        if (!item) return null;
-                                        return (
-                                            <SortableItem
-                                                key={moduleKey}
-                                                moduleKey={moduleKey}
-                                                item={item}
-                                            />
-                                        );
-                                    })}
-                                </div>
-                            </SortableContext>
-                        </DndContext>
-
-                        <p className="text-xs text-muted-foreground italic">
-                            Drag the handles <GripVertical className="inline w-3 h-3" /> to reorder items. Changes will be applied for all users based on their role permissions.
-                        </p>
-                        <Button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className="w-full"
-                        >
-                            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            Save Menu Order
-                        </Button>
-                    </CardContent>
-                </Card>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold text-foreground">Menu Order</h1>
+                <p className="text-muted-foreground mt-1">
+                    Drag and drop rotation modules to customize sidebar navigation for all users
+                </p>
             </div>
-        </DashboardLayout>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                        <GripVertical className="w-4 h-4" /> Sidebar Menu Items
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={orderedModules}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            <div className="grid gap-2">
+                                {orderedModules.map((moduleKey) => {
+                                    const item = navItems.find((n) => n.moduleKey === moduleKey);
+                                    if (!item) return null;
+                                    return (
+                                        <SortableItem
+                                            key={moduleKey}
+                                            moduleKey={moduleKey}
+                                            item={item}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </SortableContext>
+                    </DndContext>
+
+                    <p className="text-xs text-muted-foreground italic">
+                        Drag the handles <GripVertical className="inline w-3 h-3" /> to reorder items. Changes will be applied for all users based on their role permissions.
+                    </p>
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="w-full"
+                    >
+                        {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Save Menu Order
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
     );
 }

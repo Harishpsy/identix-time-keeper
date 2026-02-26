@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -191,95 +190,149 @@ export default function LeaveRequests() {
   ];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Leave Management</h1>
-            <p className="text-muted-foreground mt-1">
-              {role === "employee" ? "Apply for leave and track your requests" : "Manage leave requests, balances and settings"}
-            </p>
-          </div>
-          {role === "employee" && (
-            <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
-          )}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Leave Management</h1>
+          <p className="text-muted-foreground mt-1">
+            {role === "employee" ? "Apply for leave and track your requests" : "Manage leave requests, balances and settings"}
+          </p>
         </div>
-
-        {role === "employee" && leaveBalance && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {leaveTypes.filter(t => Boolean(t.enabled)).map((type) => {
-              const used = leaveBalance[`${type.id}_used`] || 0;
-              const total = leaveBalance[`${type.id}_total`] || 0;
-              return (
-                <Card key={type.id}>
-                  <CardContent className="p-4">
-                    <p className="capitalize text-sm text-muted-foreground">{type.label} Leave</p>
-                    <p className="text-2xl font-bold">
-                      {total - used} / {total} {type.id === "permission" ? "HRS" : "Days"}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+        {role === "employee" && (
+          <Button onClick={() => setDialogOpen(true)}><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
         )}
+      </div>
 
-        <Tabs defaultValue="requests" className="w-full">
-          <TabsList>
-            <TabsTrigger value="requests">Requests</TabsTrigger>
-            {(role === "admin" || role === "subadmin") && (
-              <TabsTrigger value="balances">Employee Balances</TabsTrigger>
-            )}
-            {role === "admin" && (
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-            )}
-          </TabsList>
+      {role === "employee" && leaveBalance && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          {leaveTypes.filter(t => Boolean(t.enabled)).map((type) => {
+            const used = leaveBalance[`${type.id}_used`] || 0;
+            const total = leaveBalance[`${type.id}_total`] || 0;
+            return (
+              <Card key={type.id}>
+                <CardContent className="p-4">
+                  <p className="capitalize text-sm text-muted-foreground">{type.label} Leave</p>
+                  <p className="text-2xl font-bold">
+                    {total - used} / {total} {type.id === "permission" ? "HRS" : "Days"}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
-          <TabsContent value="requests" className="mt-4">
+      <Tabs defaultValue="requests" className="w-full">
+        <TabsList>
+          <TabsTrigger value="requests">Requests</TabsTrigger>
+          {(role === "admin" || role === "subadmin") && (
+            <TabsTrigger value="balances">Employee Balances</TabsTrigger>
+          )}
+          {role === "admin" && (
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="requests" className="mt-4">
+          <Card className="border-border/50">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {role !== "employee" && <TableHead>Employee</TableHead>}
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Time (If Permission)</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Status</TableHead>
+                      {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                    ) : requests.length === 0 ? (
+                      <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No leave requests found</TableCell></TableRow>
+                    ) : requests.map((r) => (
+                      <TableRow key={r.id}>
+                        {role !== "employee" && <TableCell>{r.full_name}</TableCell>}
+                        <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell className="capitalize">{r.type}</TableCell>
+                        <TableCell>
+                          {r.type === "permission" && r.start_time && r.end_time ? (
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                              {r.start_time.substring(0, 5)} - {r.end_time.substring(0, 5)}
+                            </span>
+                          ) : "-"}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">{r.reason}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
+                            {r.status}
+                          </span>
+                        </TableCell>
+                        {(role === "admin" || role === "subadmin") && r.status === "pending" && (
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "approved")}><Check className="w-4 h-4 text-success" /></Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "rejected")}><X className="w-4 h-4 text-destructive" /></Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {(role === "admin" || role === "subadmin") && (
+          <TabsContent value="balances" className="mt-4">
             <Card className="border-border/50">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {role !== "employee" && <TableHead>Employee</TableHead>}
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Time (If Permission)</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead>Status</TableHead>
-                        {(role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
+                        <TableHead>Employee</TableHead>
+                        <TableHead>Year</TableHead>
+                        {Boolean(sickEnabled) && <TableHead>Sick</TableHead>}
+                        {Boolean(casualEnabled) && <TableHead>Casual</TableHead>}
+                        {Boolean(annualEnabled) && <TableHead>Annual</TableHead>}
+                        {Boolean(permissionEnabled) && <TableHead>Permission</TableHead>}
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {loading ? (
-                        <TableRow><TableCell colSpan={6} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                      ) : requests.length === 0 ? (
-                        <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No leave requests found</TableCell></TableRow>
-                      ) : requests.map((r) => (
-                        <TableRow key={r.id}>
-                          {role !== "employee" && <TableCell>{r.full_name}</TableCell>}
-                          <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
-                          <TableCell className="capitalize">{r.type}</TableCell>
-                          <TableCell>
-                            {r.type === "permission" && r.start_time && r.end_time ? (
-                              <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-                                {r.start_time.substring(0, 5)} - {r.end_time.substring(0, 5)}
-                              </span>
-                            ) : "-"}
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate">{r.reason}</TableCell>
-                          <TableCell>
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[r.status]}`}>
-                              {r.status}
-                            </span>
-                          </TableCell>
-                          {(role === "admin" || role === "subadmin") && r.status === "pending" && (
+                      {loadingBalances ? (
+                        <TableRow><TableCell colSpan={3 + [sickEnabled, casualEnabled, annualEnabled, permissionEnabled].filter(Boolean).length} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                      ) : allBalances.length === 0 ? (
+                        <TableRow><TableCell colSpan={3 + [sickEnabled, casualEnabled, annualEnabled, permissionEnabled].filter(Boolean).length} className="text-center py-8 text-muted-foreground">No balances found</TableCell></TableRow>
+                      ) : allBalances.map((b) => (
+                        <TableRow key={b.id}>
+                          <TableCell className="font-medium">{b.full_name}</TableCell>
+                          <TableCell>{b.year}</TableCell>
+                          {Boolean(sickEnabled) && (
                             <TableCell>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "approved")}><Check className="w-4 h-4 text-success" /></Button>
-                                <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "rejected")}><X className="w-4 h-4 text-destructive" /></Button>
-                              </div>
+                              {`${b.sick_total - b.sick_used} / ${b.sick_total} Days`}
+                            </TableCell>
+                          )}
+                          {Boolean(casualEnabled) && (
+                            <TableCell>
+                              {`${b.casual_total - b.casual_used} / ${b.casual_total} Days`}
+                            </TableCell>
+                          )}
+                          {Boolean(annualEnabled) && (
+                            <TableCell>
+                              {`${b.annual_total - b.annual_used} / ${b.annual_total} Days`}
+                            </TableCell>
+                          )}
+                          {Boolean(permissionEnabled) && (
+                            <TableCell>
+                              {`${b.permission_total - b.permission_used} / ${b.permission_total} HRS`}
                             </TableCell>
                           )}
                         </TableRow>
@@ -290,228 +343,172 @@ export default function LeaveRequests() {
               </CardContent>
             </Card>
           </TabsContent>
+        )}
 
-          {(role === "admin" || role === "subadmin") && (
-            <TabsContent value="balances" className="mt-4">
+        {role === "admin" && (
+          <TabsContent value="settings" className="mt-4">
+            <div className="grid gap-6 md:grid-cols-2">
               <Card className="border-border/50">
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Employee</TableHead>
-                          <TableHead>Year</TableHead>
-                          {Boolean(sickEnabled) && <TableHead>Sick</TableHead>}
-                          {Boolean(casualEnabled) && <TableHead>Casual</TableHead>}
-                          {Boolean(annualEnabled) && <TableHead>Annual</TableHead>}
-                          {Boolean(permissionEnabled) && <TableHead>Permission</TableHead>}
-
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {loadingBalances ? (
-                          <TableRow><TableCell colSpan={3 + [sickEnabled, casualEnabled, annualEnabled, permissionEnabled].filter(Boolean).length} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                        ) : allBalances.length === 0 ? (
-                          <TableRow><TableCell colSpan={3 + [sickEnabled, casualEnabled, annualEnabled, permissionEnabled].filter(Boolean).length} className="text-center py-8 text-muted-foreground">No balances found</TableCell></TableRow>
-                        ) : allBalances.map((b) => (
-                          <TableRow key={b.id}>
-                            <TableCell className="font-medium">{b.full_name}</TableCell>
-                            <TableCell>{b.year}</TableCell>
-                            {Boolean(sickEnabled) && (
-                              <TableCell>
-                                {`${b.sick_total - b.sick_used} / ${b.sick_total} Days`}
-                              </TableCell>
-                            )}
-                            {Boolean(casualEnabled) && (
-                              <TableCell>
-                                {`${b.casual_total - b.casual_used} / ${b.casual_total} Days`}
-                              </TableCell>
-                            )}
-                            {Boolean(annualEnabled) && (
-                              <TableCell>
-                                {`${b.annual_total - b.annual_used} / ${b.annual_total} Days`}
-                              </TableCell>
-                            )}
-                            {Boolean(permissionEnabled) && (
-                              <TableCell>
-                                {`${b.permission_total - b.permission_used} / ${b.permission_total} HRS`}
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> Visibility Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between space-x-2">
+                    <div className="space-y-0.5">
+                      <Label>Global Leave Module</Label>
+                      <p className="text-xs text-muted-foreground">Toggle visibility of the whole module</p>
+                    </div>
+                    <Switch checked={leavesEnabled} onCheckedChange={setLeavesEnabled} />
                   </div>
+                  <div className="pt-2 border-t space-y-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                      <Info className="w-3 h-3" /> Individual Leave Type Visibility
+                    </p>
+                    <div className="flex items-center justify-between space-x-2">
+                      <Label className="text-sm">Sick Leave</Label>
+                      <Switch checked={sickEnabled} onCheckedChange={setSickEnabled} />
+                    </div>
+                    <div className="flex items-center justify-between space-x-2">
+                      <Label className="text-sm">Casual Leave</Label>
+                      <Switch checked={casualEnabled} onCheckedChange={setCasualEnabled} />
+                    </div>
+                    <div className="flex items-center justify-between space-x-2">
+                      <Label className="text-sm">Annual Leave</Label>
+                      <Switch checked={annualEnabled} onCheckedChange={setAnnualEnabled} />
+                    </div>
+                    <div className="flex items-center justify-between space-x-2">
+                      <Label className="text-sm">Permission Leave</Label>
+                      <Switch checked={permissionEnabled} onCheckedChange={setPermissionEnabled} />
+                    </div>
+                  </div>
+                  <Button
+                    className="w-full"
+                    onClick={handleSaveSettings}
+                    disabled={savingSettings}
+                  >
+                    {savingSettings && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Save General Settings
+                  </Button>
                 </CardContent>
               </Card>
-            </TabsContent>
-          )}
 
-          {role === "admin" && (
-            <TabsContent value="settings" className="mt-4">
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card className="border-border/50">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Settings className="w-4 h-4" /> Visibility Settings
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between space-x-2">
-                      <div className="space-y-0.5">
-                        <Label>Global Leave Module</Label>
-                        <p className="text-xs text-muted-foreground">Toggle visibility of the whole module</p>
-                      </div>
-                      <Switch checked={leavesEnabled} onCheckedChange={setLeavesEnabled} />
+              <Card className="border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4" /> Default Leave Allocations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Sick</Label>
+                      <Input
+                        type="number"
+                        value={defaultSick}
+                        onChange={(e) => setDefaultSick(parseInt(e.target.value) || 0)}
+                      />
                     </div>
-                    <div className="pt-2 border-t space-y-4">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Info className="w-3 h-3" /> Individual Leave Type Visibility
-                      </p>
-                      <div className="flex items-center justify-between space-x-2">
-                        <Label className="text-sm">Sick Leave</Label>
-                        <Switch checked={sickEnabled} onCheckedChange={setSickEnabled} />
-                      </div>
-                      <div className="flex items-center justify-between space-x-2">
-                        <Label className="text-sm">Casual Leave</Label>
-                        <Switch checked={casualEnabled} onCheckedChange={setCasualEnabled} />
-                      </div>
-                      <div className="flex items-center justify-between space-x-2">
-                        <Label className="text-sm">Annual Leave</Label>
-                        <Switch checked={annualEnabled} onCheckedChange={setAnnualEnabled} />
-                      </div>
-                      <div className="flex items-center justify-between space-x-2">
-                        <Label className="text-sm">Permission Leave</Label>
-                        <Switch checked={permissionEnabled} onCheckedChange={setPermissionEnabled} />
-                      </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Casual</Label>
+                      <Input
+                        type="number"
+                        value={defaultCasual}
+                        onChange={(e) => setDefaultCasual(parseInt(e.target.value) || 0)}
+                      />
                     </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Annual</Label>
+                      <Input
+                        type="number"
+                        value={defaultAnnual}
+                        onChange={(e) => setDefaultAnnual(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Permission</Label>
+                      <Input
+                        type="number"
+                        value={defaultPermission}
+                        onChange={(e) => setDefaultPermission(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2 pt-4 border-t">
                     <Button
                       className="w-full"
+                      variant="outline"
                       onClick={handleSaveSettings}
                       disabled={savingSettings}
                     >
                       {savingSettings && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      Save General Settings
+                      Update Default Allocations
                     </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/50">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <CalendarDays className="w-4 h-4" /> Default Leave Allocations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Sick</Label>
-                        <Input
-                          type="number"
-                          value={defaultSick}
-                          onChange={(e) => setDefaultSick(parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Casual</Label>
-                        <Input
-                          type="number"
-                          value={defaultCasual}
-                          onChange={(e) => setDefaultCasual(parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Annual</Label>
-                        <Input
-                          type="number"
-                          value={defaultAnnual}
-                          onChange={(e) => setDefaultAnnual(parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Permission</Label>
-                        <Input
-                          type="number"
-                          value={defaultPermission}
-                          onChange={(e) => setDefaultPermission(parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2 pt-4 border-t">
-                      <Button
-                        className="w-full"
-                        variant="outline"
-                        onClick={handleSaveSettings}
-                        disabled={savingSettings}
-                      >
-                        {savingSettings && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Update Default Allocations
-                      </Button>
-                      <Button
-                        className="w-full"
-                        variant="secondary"
-                        onClick={handleSyncBalances}
-                        disabled={syncing}
-                      >
-                        {syncing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        Apply Defaults to All Employees
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          )}
-        </Tabs>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Apply Leave</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    {leaveTypes.filter(t => t.enabled).map(t => (
-                      <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Date</Label>
-                <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </div>
-              {form.type === "permission" && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Start Time</Label>
-                    <TimePicker
-                      value={form.start_time}
-                      onChange={(v) => setForm({ ...form, start_time: v })}
-                      placeholder="Pick start time"
-                    />
+                    <Button
+                      className="w-full"
+                      variant="secondary"
+                      onClick={handleSyncBalances}
+                      disabled={syncing}
+                    >
+                      {syncing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Apply Defaults to All Employees
+                    </Button>
                   </div>
-                  <div className="space-y-2">
-                    <Label>End Time</Label>
-                    <TimePicker
-                      value={form.end_time}
-                      onChange={(v) => setForm({ ...form, end_time: v })}
-                      placeholder="Pick end time"
-                    />
-                  </div>
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>Reason</Label>
-                <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
-              </div>
-              <Button className="w-full" onClick={handleSubmit}>Submit</Button>
+                </CardContent>
+              </Card>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </DashboardLayout>
+          </TabsContent>
+        )}
+      </Tabs>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Apply Leave</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Type</Label>
+              <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  {leaveTypes.filter(t => t.enabled).map(t => (
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Date</Label>
+              <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+            </div>
+            {form.type === "permission" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Time</Label>
+                  <TimePicker
+                    value={form.start_time}
+                    onChange={(v) => setForm({ ...form, start_time: v })}
+                    placeholder="Pick start time"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <TimePicker
+                    value={form.end_time}
+                    onChange={(v) => setForm({ ...form, end_time: v })}
+                    placeholder="Pick end time"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+            </div>
+            <Button className="w-full" onClick={handleSubmit}>Submit</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

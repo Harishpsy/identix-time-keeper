@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import apiClient, { API_BASE_URL } from "@/lib/apiClient";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -460,246 +459,244 @@ export default function Payroll() {
   );
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
-            <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
+          <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleGenerateAll} disabled={generating}>
+            {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
+            Generate All Payroll
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const monthDate = `${selectedMonth}-01`;
+              try {
+                await apiClient.post("/payroll/release-all", { month: monthDate });
+                toast.success("All payslips released for " + format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy"));
+                fetchData();
+              } catch (err) {
+                toast.error("Failed to release payslips");
+              }
+            }}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Release All
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Payroll
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{editingId ? "Edit Payroll" : "New Payroll Entry"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5 pt-2">
+                {/* Employee & Days */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Employee *</Label>
+                    <Select value={form.user_id} onValueChange={handleEmployeeSelect} disabled={!!editingId}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select employee" /></SelectTrigger>
+                      <SelectContent>
+                        {(editingId ? employees : availableEmployees).map((e) => (
+                          <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {renderNumField("Paid Days", "paid_days")}
+                  {renderNumField("LOP Days", "lop_days")}
+                </div>
+
+                <Separator />
+
+                {/* Earnings */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Earnings</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {renderNumField("Basic Salary *", "basic_salary")}
+                    {renderNumField("HRA", "hra")}
+                    {renderNumField("Dearness Allowance (DA)", "dearness_allowance")}
+                    {renderNumField("Conveyance Allowance", "conveyance_allowance")}
+                    {renderNumField("Medical Allowance", "medical_allowance")}
+                    {renderNumField("Special Allowance", "special_allowance")}
+                    {renderNumField("Overtime", "overtime")}
+                    {renderNumField("Bonus", "bonus")}
+                    {renderNumField("Other Earnings", "other_earnings")}
+                  </div>
+                  <div className="mt-2 text-right text-sm font-medium text-foreground">
+                    Gross Earnings: <span className="font-bold">₹{grossPreview.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Deductions */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Deductions</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {renderNumField("EPF (Employee)", "epf_employee")}
+                    {renderNumField("ESI (Employee)", "esi_employee")}
+                    {renderNumField("Professional Tax", "professional_tax")}
+                    {renderNumField("TDS / Income Tax", "tds")}
+                    {renderNumField("Loan Recovery", "loan_recovery")}
+                    {renderNumField("Other Deductions", "other_deductions")}
+                  </div>
+                  <div className="mt-2 text-right text-sm font-medium text-foreground">
+                    Total Deductions: <span className="font-bold">₹{deductionsPreview.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Employer Contributions */}
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Employer Contributions</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {renderNumField("EPF (Employer)", "epf_employer")}
+                    {renderNumField("ESI (Employer)", "esi_employer")}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Net Salary */}
+                <div className="rounded-lg bg-primary/10 p-4 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Net Salary (Take Home)</p>
+                  <p className="text-2xl font-bold text-primary">₹{netPreview.toFixed(2)}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Notes</Label>
+                  <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." rows={2} className="text-sm" />
+                </div>
+
+                <Button className="w-full" onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingId ? "Update" : "Create"} Payroll Entry
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-44" />
+      </div>
+
+      <Card className="border-border/50">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Emp ID</TableHead>
+                  <TableHead>DOJ</TableHead>
+                  <TableHead className="text-right">Basic</TableHead>
+                  <TableHead className="text-right">Gross</TableHead>
+                  <TableHead className="text-right">Deductions</TableHead>
+                  <TableHead className="text-right">Net Salary</TableHead>
+                  <TableHead className="text-center">Days</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      No payroll records for {format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy")}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((rec) => (
+                    <TableRow key={rec.id}>
+                      <TableCell className="font-medium">{getEmployeeName(rec.user_id)}</TableCell>
+                      <TableCell className="font-mono text-sm">{getEmployeeId(rec.user_id)}</TableCell>
+                      <TableCell className="text-sm">{getEmployeeDOJ(rec.user_id)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm font-semibold">₹{Number(rec.net_salary).toFixed(2)}</TableCell>
+                      <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant={rec.released ? "default" : "outline"}
+                            size="sm"
+                            onClick={async () => {
+                              const newVal = !rec.released;
+                              try {
+                                await apiClient.patch(`/payroll/${rec.id}`, { released: newVal });
+                                toast.success(newVal ? "Payslip released to employee" : "Payslip release revoked");
+                                fetchData();
+                              } catch (err) {
+                                toast.error("Failed to update release status");
+                              }
+                            }}
+                            title={rec.released ? "Revoke early release" : "Release to employee now"}
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => downloadPayslip(rec)} title="Download Payslip">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(rec)} title="Edit">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: rec.id, name: getEmployeeName(rec.user_id) })} title="Delete">
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleGenerateAll} disabled={generating}>
-              {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Users className="w-4 h-4 mr-2" />}
-              Generate All Payroll
-            </Button>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                const monthDate = `${selectedMonth}-01`;
-                try {
-                  await apiClient.post("/payroll/release-all", { month: monthDate });
-                  toast.success("All payslips released for " + format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy"));
-                  fetchData();
-                } catch (err) {
-                  toast.error("Failed to release payslips");
+        </CardContent>
+      </Card>
+
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payroll Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the payroll entry for <span className="font-medium text-foreground">{deleteTarget?.name}</span>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteTarget) {
+                  handleDelete(deleteTarget.id);
+                  setDeleteTarget(null);
                 }
               }}
             >
-              <Send className="w-4 h-4 mr-2" />
-              Release All
-            </Button>
-            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button onClick={openCreate}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Payroll
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingId ? "Edit Payroll" : "New Payroll Entry"}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-5 pt-2">
-                  {/* Employee & Days */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Employee *</Label>
-                      <Select value={form.user_id} onValueChange={handleEmployeeSelect} disabled={!!editingId}>
-                        <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Select employee" /></SelectTrigger>
-                        <SelectContent>
-                          {(editingId ? employees : availableEmployees).map((e) => (
-                            <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {renderNumField("Paid Days", "paid_days")}
-                    {renderNumField("LOP Days", "lop_days")}
-                  </div>
-
-                  <Separator />
-
-                  {/* Earnings */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Earnings</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      {renderNumField("Basic Salary *", "basic_salary")}
-                      {renderNumField("HRA", "hra")}
-                      {renderNumField("Dearness Allowance (DA)", "dearness_allowance")}
-                      {renderNumField("Conveyance Allowance", "conveyance_allowance")}
-                      {renderNumField("Medical Allowance", "medical_allowance")}
-                      {renderNumField("Special Allowance", "special_allowance")}
-                      {renderNumField("Overtime", "overtime")}
-                      {renderNumField("Bonus", "bonus")}
-                      {renderNumField("Other Earnings", "other_earnings")}
-                    </div>
-                    <div className="mt-2 text-right text-sm font-medium text-foreground">
-                      Gross Earnings: <span className="font-bold">₹{grossPreview.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Deductions */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Deductions</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      {renderNumField("EPF (Employee)", "epf_employee")}
-                      {renderNumField("ESI (Employee)", "esi_employee")}
-                      {renderNumField("Professional Tax", "professional_tax")}
-                      {renderNumField("TDS / Income Tax", "tds")}
-                      {renderNumField("Loan Recovery", "loan_recovery")}
-                      {renderNumField("Other Deductions", "other_deductions")}
-                    </div>
-                    <div className="mt-2 text-right text-sm font-medium text-foreground">
-                      Total Deductions: <span className="font-bold">₹{deductionsPreview.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Employer Contributions */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground mb-3">Employer Contributions</h3>
-                    <div className="grid grid-cols-3 gap-3">
-                      {renderNumField("EPF (Employer)", "epf_employer")}
-                      {renderNumField("ESI (Employer)", "esi_employer")}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Net Salary */}
-                  <div className="rounded-lg bg-primary/10 p-4 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Net Salary (Take Home)</p>
-                    <p className="text-2xl font-bold text-primary">₹{netPreview.toFixed(2)}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Notes</Label>
-                    <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." rows={2} className="text-sm" />
-                  </div>
-
-                  <Button className="w-full" onClick={handleSave} disabled={saving}>
-                    {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {editingId ? "Update" : "Create"} Payroll Entry
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-          </div>
-          <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-44" />
-        </div>
-
-        <Card className="border-border/50">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead>Emp ID</TableHead>
-                    <TableHead>DOJ</TableHead>
-                    <TableHead className="text-right">Basic</TableHead>
-                    <TableHead className="text-right">Gross</TableHead>
-                    <TableHead className="text-right">Deductions</TableHead>
-                    <TableHead className="text-right">Net Salary</TableHead>
-                    <TableHead className="text-center">Days</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                  ) : filtered.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        No payroll records for {format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy")}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filtered.map((rec) => (
-                      <TableRow key={rec.id}>
-                        <TableCell className="font-medium">{getEmployeeName(rec.user_id)}</TableCell>
-                        <TableCell className="font-mono text-sm">{getEmployeeId(rec.user_id)}</TableCell>
-                        <TableCell className="text-sm">{getEmployeeDOJ(rec.user_id)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm font-semibold">₹{Number(rec.net_salary).toFixed(2)}</TableCell>
-                        <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant={rec.released ? "default" : "outline"}
-                              size="sm"
-                              onClick={async () => {
-                                const newVal = !rec.released;
-                                try {
-                                  await apiClient.patch(`/payroll/${rec.id}`, { released: newVal });
-                                  toast.success(newVal ? "Payslip released to employee" : "Payslip release revoked");
-                                  fetchData();
-                                } catch (err) {
-                                  toast.error("Failed to update release status");
-                                }
-                              }}
-                              title={rec.released ? "Revoke early release" : "Release to employee now"}
-                            >
-                              <Send className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => downloadPayslip(rec)} title="Download Payslip">
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => openEdit(rec)} title="Edit">
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: rec.id, name: getEmployeeName(rec.user_id) })} title="Delete">
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-
-        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Payroll Entry</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete the payroll entry for <span className="font-medium text-foreground">{deleteTarget?.name}</span>? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={() => {
-                  if (deleteTarget) {
-                    handleDelete(deleteTarget.id);
-                    setDeleteTarget(null);
-                  }
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </DashboardLayout>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

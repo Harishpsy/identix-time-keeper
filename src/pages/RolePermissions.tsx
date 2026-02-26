@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -149,68 +148,64 @@ export default function RolePermissions() {
 
     if (loading) {
         return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-            </DashboardLayout>
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
         );
     }
 
     return (
-        <DashboardLayout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">Role Permissions</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Control which modules are visible to Employee and Subadmin roles
-                        </p>
-                    </div>
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-primary" />
                 </div>
-
-                {/* Tabs */}
-                <Tabs defaultValue="employee" className="w-full">
-                    <TabsList className="grid w-full max-w-md grid-cols-2">
-                        <TabsTrigger value="employee" className="gap-2">
-                            <Users className="w-4 h-4" />
-                            Employee
-                        </TabsTrigger>
-                        <TabsTrigger value="subadmin" className="gap-2">
-                            <Shield className="w-4 h-4" />
-                            Subadmin
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="employee">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Employee Module Access</CardTitle>
-                                <CardDescription>
-                                    Toggle modules that employees can see in their sidebar navigation
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>{renderModuleList("employee")}</CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="subadmin">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Subadmin Module Access</CardTitle>
-                                <CardDescription>
-                                    Toggle modules that subadmins can see in their sidebar navigation
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>{renderModuleList("subadmin")}</CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Role Permissions</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Control which modules are visible to Employee and Subadmin roles
+                    </p>
+                </div>
             </div>
-        </DashboardLayout>
+
+            {/* Tabs */}
+            <Tabs defaultValue="employee" className="w-full">
+                <TabsList className="grid w-full max-w-md grid-cols-2">
+                    <TabsTrigger value="employee" className="gap-2">
+                        <Users className="w-4 h-4" />
+                        Employee
+                    </TabsTrigger>
+                    <TabsTrigger value="subadmin" className="gap-2">
+                        <Shield className="w-4 h-4" />
+                        Subadmin
+                    </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="employee">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Employee Module Access</CardTitle>
+                            <CardDescription>
+                                Toggle modules that employees can see in their sidebar navigation
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>{renderModuleList("employee")}</CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="subadmin">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Subadmin Module Access</CardTitle>
+                            <CardDescription>
+                                Toggle modules that subadmins can see in their sidebar navigation
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>{renderModuleList("subadmin")}</CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+        </div>
     );
 }

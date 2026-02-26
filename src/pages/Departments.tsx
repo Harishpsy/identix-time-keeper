@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -89,81 +88,79 @@ export default function Departments() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Department Management</h1>
-            <p className="text-muted-foreground mt-1">Create and manage departments</p>
-          </div>
-          <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add Department</Button>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Department Management</h1>
+          <p className="text-muted-foreground mt-1">Create and manage departments</p>
         </div>
-
-        <Card className="border-border/50">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Department Name</TableHead>
-                  <TableHead className="w-40">Employees</TableHead>
-                  <TableHead className="w-32">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                ) : departments.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No departments configured</TableCell></TableRow>
-                ) : departments.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-medium">{d.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="gap-1">
-                        <Users className="w-3 h-3" />
-                        {empCounts[d.id] || 0}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editing ? "Edit Department" : "Add Department"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Department Name</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" />
-              </div>
-              <Button className="w-full" onClick={handleSave}>{editing ? "Update" : "Create"} Department</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Department</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add Department</Button>
       </div>
-    </DashboardLayout>
+
+      <Card className="border-border/50">
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Department Name</TableHead>
+                <TableHead className="w-40">Employees</TableHead>
+                <TableHead className="w-32">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={3} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
+              ) : departments.length === 0 ? (
+                <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-8">No departments configured</TableCell></TableRow>
+              ) : departments.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell className="font-medium">{d.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="gap-1">
+                      <Users className="w-3 h-3" />
+                      {empCounts[d.id] || 0}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(d)}><Pencil className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(d)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit Department" : "Add Department"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Department Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" />
+            </div>
+            <Button className="w-full" onClick={handleSave}>{editing ? "Update" : "Create"} Department</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Department</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <span className="font-semibold">{deleteTarget?.name}</span>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

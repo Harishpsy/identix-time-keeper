@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient, { API_BASE_URL } from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -218,71 +217,69 @@ export default function MyPayslips() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">My Payslips</h1>
-          <p className="text-muted-foreground mt-1">View and download your salary payslips</p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">My Payslips</h1>
+        <p className="text-muted-foreground mt-1">View and download your salary payslips</p>
+      </div>
 
-        <Card className="border-border/50">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead className="text-right">Basic</TableHead>
-                    <TableHead className="text-right">Gross</TableHead>
-                    <TableHead className="text-right">Deductions</TableHead>
-                    <TableHead className="text-right">Net Salary</TableHead>
-                    <TableHead className="text-center">Days</TableHead>
-                    <TableHead>Download</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(() => {
-                    const now = new Date();
-                    const visibleRecords = records.filter((rec) => {
-                      if (rec.released) return true;
-                      const payrollMonth = parse(rec.month, "yyyy-MM-dd", new Date());
-                      const availableFrom = setDate(addMonths(payrollMonth, 1), 10);
-                      return !isBefore(now, availableFrom);
-                    });
-                    if (visibleRecords.length === 0) {
-                      return (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No payslips available yet. Payslips are released on the 10th of each month.
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-                    return visibleRecords.map((rec) => (
-                      <TableRow key={rec.id}>
-                        <TableCell className="font-medium">
-                          {format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy")}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-sm font-semibold">₹{Number(rec.net_salary).toFixed(2)}</TableCell>
-                        <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="sm" onClick={() => downloadPayslip(rec)} title="Download Payslip">
-                            <Download className="w-4 h-4 mr-1" />
-                            PDF
-                          </Button>
+      <Card className="border-border/50">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Month</TableHead>
+                  <TableHead className="text-right">Basic</TableHead>
+                  <TableHead className="text-right">Gross</TableHead>
+                  <TableHead className="text-right">Deductions</TableHead>
+                  <TableHead className="text-right">Net Salary</TableHead>
+                  <TableHead className="text-center">Days</TableHead>
+                  <TableHead>Download</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(() => {
+                  const now = new Date();
+                  const visibleRecords = records.filter((rec) => {
+                    if (rec.released) return true;
+                    const payrollMonth = parse(rec.month, "yyyy-MM-dd", new Date());
+                    const availableFrom = setDate(addMonths(payrollMonth, 1), 10);
+                    return !isBefore(now, availableFrom);
+                  });
+                  if (visibleRecords.length === 0) {
+                    return (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          No payslips available yet. Payslips are released on the 10th of each month.
                         </TableCell>
                       </TableRow>
-                    ));
-                  })()}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </DashboardLayout>
+                    );
+                  }
+                  return visibleRecords.map((rec) => (
+                    <TableRow key={rec.id}>
+                      <TableCell className="font-medium">
+                        {format(parse(rec.month, "yyyy-MM-dd", new Date()), "MMMM yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">₹{Number(rec.basic_salary).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm">₹{Number(rec.gross_earnings).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm text-destructive">₹{Number(rec.total_deductions).toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-sm font-semibold">₹{Number(rec.net_salary).toFixed(2)}</TableCell>
+                      <TableCell className="text-center text-sm">{rec.paid_days - rec.lop_days}/{rec.paid_days}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="sm" onClick={() => downloadPayslip(rec)} title="Download Payslip">
+                          <Download className="w-4 h-4 mr-1" />
+                          PDF
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ));
+                })()}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

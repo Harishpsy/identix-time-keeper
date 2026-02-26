@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -140,7 +139,7 @@ export default function AttendanceSummary() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Attendance Summary</h1>
@@ -236,6 +235,6 @@ export default function AttendanceSummary() {
         userName={selectedEmployee?.name || ""}
         month={month}
       />
-    </DashboardLayout>
+    </>
   );
 }

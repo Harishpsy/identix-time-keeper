@@ -1,13 +1,13 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { navItems, NavItem } from "@/lib/navigation";
 import { Fingerprint, LogOut } from "lucide-react";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -149,7 +149,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       {/* Main content */}
       <main className="flex-1 ml-64">
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
-          {children}
+          {children || <Outlet />}
         </div>
       </main>
     </div>

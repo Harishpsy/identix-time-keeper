@@ -8,10 +8,10 @@ const Index = () => {
   const { role } = useAuth();
 
   return (
-    <DashboardLayout>
+    <>
       <AnniversaryCelebration />
       {role === "admin" || role === "subadmin" ? <AdminDashboard /> : <EmployeeDashboard />}
-    </DashboardLayout>
+    </>
   );
 };
 

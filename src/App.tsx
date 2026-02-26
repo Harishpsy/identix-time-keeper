@@ -11,6 +11,7 @@ import Employees from "./pages/Employees";
 import Shifts from "./pages/Shifts";
 import Departments from "./pages/Departments";
 import LeaveRequests from "./pages/LeaveRequests";
+import DashboardLayout from "./components/layout/DashboardLayout";
 
 import Payroll from "./pages/Payroll";
 import MyPayslips from "./pages/MyPayslips";
@@ -58,22 +59,26 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
-            <Route path="/employees" element={<ProtectedRoute allowedRoles={["admin"]}><Employees /></ProtectedRoute>} />
-            <Route path="/departments" element={<ProtectedRoute allowedRoles={["admin"]}><Departments /></ProtectedRoute>} />
-            <Route path="/shifts" element={<ProtectedRoute allowedRoles={["admin"]}><Shifts /></ProtectedRoute>} />
-            <Route path="/leave" element={<ProtectedRoute><LeaveRequests /></ProtectedRoute>} />
 
-            <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
-            <Route path="/loans" element={<ProtectedRoute><LoanManagement /></ProtectedRoute>} />
-            <Route path="/my-payslips" element={<ProtectedRoute><MyPayslips /></ProtectedRoute>} />
-            <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />
-            <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceSummary /></ProtectedRoute>} />
-            <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["admin"]}><CompanyBranding /></ProtectedRoute>} />
-            <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["admin"]}><MenuOrder /></ProtectedRoute>} />
-            <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["admin"]}><RolePermissions /></ProtectedRoute>} />
-            <Route path="/holidays" element={<ProtectedRoute><Holidays /></ProtectedRoute>} />
+            {/* Protected Routes with Persistent Layout */}
+            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
+              <Route path="/" element={<Index />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/employees" element={<ProtectedRoute allowedRoles={["admin"]}><Employees /></ProtectedRoute>} />
+              <Route path="/departments" element={<ProtectedRoute allowedRoles={["admin"]}><Departments /></ProtectedRoute>} />
+              <Route path="/shifts" element={<ProtectedRoute allowedRoles={["admin"]}><Shifts /></ProtectedRoute>} />
+              <Route path="/leave" element={<LeaveRequests />} />
+              <Route path="/payroll" element={<ProtectedRoute allowedRoles={["admin"]}><Payroll /></ProtectedRoute>} />
+              <Route path="/loans" element={<LoanManagement />} />
+              <Route path="/my-payslips" element={<MyPayslips />} />
+              <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceReset /></ProtectedRoute>} />
+              <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["admin"]}><AttendanceSummary /></ProtectedRoute>} />
+              <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["admin"]}><CompanyBranding /></ProtectedRoute>} />
+              <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["admin"]}><MenuOrder /></ProtectedRoute>} />
+              <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["admin"]}><RolePermissions /></ProtectedRoute>} />
+              <Route path="/holidays" element={<Holidays />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

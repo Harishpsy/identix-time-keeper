@@ -163,124 +163,122 @@ export default function Attendance() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Attendance Records</h1>
-          <p className="text-muted-foreground mt-1">View attendance details</p>
-        </div>
-
-        <div className="flex flex-wrap gap-3 items-center">
-          <Input
-            type="month"
-            value={month}
-            onChange={(e) => { setMonth(e.target.value); setQuickFilter(null); }}
-            className="w-auto"
-          />
-          {role !== "employee" && (
-            <div className="flex gap-1">
-              {(["today", "yesterday", "previous"] as const).map((filter) => (
-                <Button
-                  key={filter}
-                  variant={quickFilter === filter ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    const targetDate = filter === "today" ? new Date() : filter === "yesterday" ? subDays(new Date(), 1) : subDays(new Date(), 2);
-                    setMonth(format(targetDate, "yyyy-MM"));
-                    setQuickFilter(quickFilter === filter ? null : filter);
-                  }}
-                >
-                  {filter === "today" ? "Today" : filter === "yesterday" ? "Yesterday" : "Previous Day"}
-                </Button>
-              ))}
-            </div>
-          )}
-          {role !== "employee" && (
-            <div className="relative flex-1 max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search employee..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          )}
-          <div className="ml-auto flex gap-2">
-            {role === "admin" && (
-              <ReprocessDialog onComplete={() => setRefreshKey((k) => k + 1)} />
-            )}
-            <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>
-              <FileText className="w-4 h-4 mr-1" /> PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filtered.length === 0}>
-              <Download className="w-4 h-4 mr-1" /> CSV
-            </Button>
-          </div>
-        </div>
-
-        <Card className="border-border/50">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {role !== "employee" && <TableHead>Employee</TableHead>}
-                    <TableHead>Date</TableHead>
-                    <TableHead>First In</TableHead>
-                    <TableHead>Last Out</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Late (HH.MM)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center py-8">
-                        <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-                      </TableCell>
-                    </TableRow>
-                  ) : paginated.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center text-muted-foreground py-8">
-                        No records found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    paginated.map((s) => (
-                      <TableRow key={s.id}>
-                        {role !== "employee" && <TableCell className="font-medium">{s.profiles?.full_name || "—"}</TableCell>}
-                        <TableCell>{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
-                        <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
-                        <TableCell>{formatDurationMins(s.total_duration_minutes)}</TableCell>
-                        <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
-                        <TableCell>{formatLateMinutes(s.late_minutes)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 px-4 pb-4">
-                <p className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                    <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-                  </Button>
-                  <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
-                    Next <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Attendance Records</h1>
+        <p className="text-muted-foreground mt-1">View attendance details</p>
       </div>
-    </DashboardLayout>
+
+      <div className="flex flex-wrap gap-3 items-center">
+        <Input
+          type="month"
+          value={month}
+          onChange={(e) => { setMonth(e.target.value); setQuickFilter(null); }}
+          className="w-auto"
+        />
+        {role !== "employee" && (
+          <div className="flex gap-1">
+            {(["today", "yesterday", "previous"] as const).map((filter) => (
+              <Button
+                key={filter}
+                variant={quickFilter === filter ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  const targetDate = filter === "today" ? new Date() : filter === "yesterday" ? subDays(new Date(), 1) : subDays(new Date(), 2);
+                  setMonth(format(targetDate, "yyyy-MM"));
+                  setQuickFilter(quickFilter === filter ? null : filter);
+                }}
+              >
+                {filter === "today" ? "Today" : filter === "yesterday" ? "Yesterday" : "Previous Day"}
+              </Button>
+            ))}
+          </div>
+        )}
+        {role !== "employee" && (
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search employee..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        )}
+        <div className="ml-auto flex gap-2">
+          {role === "admin" && (
+            <ReprocessDialog onComplete={() => setRefreshKey((k) => k + 1)} />
+          )}
+          <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>
+            <FileText className="w-4 h-4 mr-1" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadCSV} disabled={filtered.length === 0}>
+            <Download className="w-4 h-4 mr-1" /> CSV
+          </Button>
+        </div>
+      </div>
+
+      <Card className="border-border/50">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {role !== "employee" && <TableHead>Employee</TableHead>}
+                  <TableHead>Date</TableHead>
+                  <TableHead>First In</TableHead>
+                  <TableHead>Last Out</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Late (HH.MM)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center py-8">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+                    </TableCell>
+                  </TableRow>
+                ) : paginated.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center text-muted-foreground py-8">
+                      No records found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginated.map((s) => (
+                    <TableRow key={s.id}>
+                      {role !== "employee" && <TableCell className="font-medium">{s.profiles?.full_name || "—"}</TableCell>}
+                      <TableCell>{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
+                      <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                      <TableCell>{formatDurationMins(s.total_duration_minutes)}</TableCell>
+                      <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
+                      <TableCell>{formatLateMinutes(s.late_minutes)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 px-4 pb-4">
+              <p className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                </Button>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
+                  Next <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -12,35 +12,35 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
+    --background: 220 33% 98%;
+    --foreground: 220 40% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 220 40% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover-foreground: 220 40% 10%;
 
-    --primary: 220 72% 50%;
+    --primary: 220 85% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 25% 20%;
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 220 40% 20%;
 
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 220 20% 98%;
+    --muted-foreground: 220 15% 45%;
 
-    --accent: 160 60% 45%;
+    --accent: 160 55% 45%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 220 72% 50%;
+    --border: 220 20% 92%;
+    --input: 220 20% 92%;
+    --ring: 220 85% 55%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
     --success: 160 60% 45%;
     --success-foreground: 0 0% 100%;
@@ -51,14 +51,14 @@
     --late: 25 95% 53%;
     --late-foreground: 0 0% 100%;
 
-    --sidebar-background: 220 25% 12%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 220 72% 55%;
+    --sidebar-background: 220 33% 99%;
+    --sidebar-foreground: 220 40% 15%;
+    --sidebar-primary: 220 85% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 18%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 20% 20%;
-    --sidebar-ring: 220 72% 55%;
+    --sidebar-accent: 220 20% 94%;
+    --sidebar-accent-foreground: 220 40% 10%;
+    --sidebar-border: 220 20% 92%;
+    --sidebar-ring: 220 85% 55%;
 
     --chart-1: 220 72% 50%;
     --chart-2: 160 60% 45%;
@@ -143,6 +143,32 @@
     background-color: hsl(var(--background));
   }
 
+  /* Light Mode Mesh */
+  :root .bg-mesh::before,
+  :root .bg-mesh::after {
+    content: "";
+    position: absolute;
+    width: 1000px;
+    height: 1000px;
+    border-radius: 50%;
+    filter: blur(150px);
+    opacity: 0.05;
+    pointer-events: none;
+    background: radial-gradient(circle, hsl(var(--primary)) 0%, transparent 70%);
+  }
+
+  :root .bg-mesh::before {
+    top: -300px;
+    right: -200px;
+  }
+
+  :root .bg-mesh::after {
+    bottom: -300px;
+    left: -200px;
+    background: radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%);
+  }
+
+  /* Dark Mode Mesh */
   .dark .bg-mesh::before,
   .dark .bg-mesh::after {
     content: "";

@@ -12,6 +12,7 @@ import Shifts from "./pages/Shifts";
 import Departments from "./pages/Departments";
 import LeaveRequests from "./pages/LeaveRequests";
 import DashboardLayout from "./components/layout/DashboardLayout";
+import RegisterOrganization from "./pages/RegisterOrganization";
 import { ThemeProvider } from "./components/theme/ThemeContext";
 
 import Payroll from "./pages/Payroll";
@@ -62,6 +63,7 @@ const App = () => (
           <ThemeProvider>
             <Routes>
               <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
+              <Route path="/register-organization" element={<AuthRoute><RegisterOrganization /></AuthRoute>} />
 
               {/* Protected Routes with Persistent Layout */}
               <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>

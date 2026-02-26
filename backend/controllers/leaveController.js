@@ -1,5 +1,4 @@
 const { v4: uuidv4 } = require('uuid');
-const pool = require('../config/db');
 
 const getLeaveRequests = async (req, res) => {
     const userId = req.user.id;
@@ -20,7 +19,7 @@ const getLeaveRequests = async (req, res) => {
         }
 
         query += ' ORDER BY lr.created_at DESC';
-        const [requests] = await pool.execute(query, params);
+        const [requests] = await req.tenantPool.execute(query, params);
         res.json(requests);
     } catch (err) {
         console.error(err);
@@ -38,7 +37,7 @@ const applyLeave = async (req, res) => {
 
     try {
         const id = uuidv4();
-        await pool.execute(
+        await req.tenantPool.execute(
             'INSERT INTO leave_requests (id, user_id, date, type, reason, status, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [id, userId, date, type, reason || '', 'pending', start_time || null, end_time || null]
         );
@@ -59,7 +58,7 @@ const updateLeaveStatus = async (req, res) => {
     }
 
     try {
-        const connection = await pool.getConnection();
+        const connection = await req.tenantPool.getConnection();
         try {
             await connection.beginTransaction();
 
@@ -175,7 +174,7 @@ const getLeaveBalances = async (req, res) => {
     const year = new Date().getFullYear();
 
     try {
-        const [balances] = await pool.execute(
+        const [balances] = await req.tenantPool.execute(
             'SELECT * FROM leave_balances WHERE user_id = ? AND year = ?',
             [userId, year]
         );
@@ -185,7 +184,7 @@ const getLeaveBalances = async (req, res) => {
         }
 
         // Fallback to company settings if no balance record exists
-        const [settings] = await pool.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
+        const [settings] = await req.tenantPool.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
         const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 0 };
 
         res.json({
@@ -209,7 +208,7 @@ const getLeaveBalances = async (req, res) => {
 const getAllLeaveBalances = async (req, res) => {
     try {
         const year = new Date().getFullYear();
-        const [balances] = await pool.execute(
+        const [balances] = await req.tenantPool.execute(
             `SELECT DISTINCT lb.*, p.full_name 
              FROM leave_balances lb 
              JOIN profiles p ON lb.user_id = p.id 
@@ -232,7 +231,7 @@ const updateEmployeeBalance = async (req, res) => {
     }
 
     try {
-        await pool.execute(
+        await req.tenantPool.execute(
             `INSERT INTO leave_balances (id, user_id, year, sick_total, casual_total, annual_total, permission_total) 
              VALUES (?, ?, ?, ?, ?, ?, ?) 
              ON DUPLICATE KEY UPDATE 
@@ -251,7 +250,7 @@ const updateEmployeeBalance = async (req, res) => {
 
 const syncAllBalances = async (req, res) => {
     const year = new Date().getFullYear();
-    const connection = await pool.getConnection();
+    const connection = await req.tenantPool.getConnection();
 
     try {
         await connection.beginTransaction();

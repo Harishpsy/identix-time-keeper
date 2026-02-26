@@ -4,16 +4,23 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Fingerprint, Loader2, Eye, EyeOff, Shield, Clock, Users } from "lucide-react";
+import { Fingerprint, Loader2, Eye, EyeOff, Shield, Clock, Users, Globe, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [workspace, setWorkspace] = useState(localStorage.getItem("tenant_slug") || "");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+
+  const handleWorkspaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    setWorkspace(val);
+    localStorage.setItem("tenant_slug", val);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,61 +107,91 @@ const Auth = () => {
             </div>
           </div>
 
-          <div className="animate-fade-in" style={{ animationDelay: "100ms", animationFillMode: "both" }}>
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
-              <p className="text-muted-foreground mt-1">Sign in to your account to continue</p>
-            </div>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
+            <p className="text-muted-foreground mt-1">Sign in to your organization workspace</p>
+          </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="workspace" className="text-sm font-medium flex items-center justify-between">
+                Workspace ID
+                <span className="text-[10px] text-muted-foreground font-normal">Your custom organization slug</span>
+              </Label>
+              <div className="relative group">
+                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                 <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
-                  required
-                  className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                  id="workspace"
+                  type="text"
+                  value={workspace}
+                  onChange={handleWorkspaceChange}
+                  placeholder="my-company"
+                  className="h-11 pl-10 pr-24 transition-all duration-200 focus:ring-2 focus:ring-primary/20 font-medium"
                 />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    minLength={6}
-                    className="h-11 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-primary/50 pointer-events-none">
+                  .identix.com
                 </div>
               </div>
-              <Button
-                type="submit"
-                className="w-full h-11 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-                disabled={loading}
-              >
-                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Sign In
-              </Button>
-            </form>
+            </div>
 
-            <p className="text-center text-xs text-muted-foreground mt-8">
-              Contact your administrator if you need access
-            </p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                required
+                className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={6}
+                  className="h-11 pr-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              disabled={loading}
+            >
+              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Sign In
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground mt-8">
+            Want to use Identix for your company?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/register-organization")}
+              className="text-primary font-medium hover:underline transition-all"
+            >
+              Create an organization
+            </button>
+          </p>
+
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Contact your administrator if you need access
+          </p>
         </div>
       </div>
     </div>

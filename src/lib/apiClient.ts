@@ -16,6 +16,13 @@ apiClient.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Add tenant slug header
+        const tenantSlug = localStorage.getItem('tenant_slug');
+        if (tenantSlug) {
+            config.headers['X-Tenant-Slug'] = tenantSlug;
+        }
+
         return config;
     },
     (error) => {

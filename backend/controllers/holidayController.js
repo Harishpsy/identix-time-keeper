@@ -1,10 +1,10 @@
-const pool = require('../config/db');
+// Removed global pool import
 const { v4: uuidv4 } = require('uuid');
 
 const getHolidays = async (req, res) => {
     const year = req.query.year || new Date().getFullYear();
     try {
-        const [holidays] = await pool.execute(
+        const [holidays] = await req.tenantPool.execute(
             'SELECT id, year, details, pdf_name, (pdf_content IS NOT NULL) as has_pdf FROM holidays WHERE year = ?',
             [year]
         );
@@ -28,7 +28,7 @@ const updateHolidays = async (req, res) => {
 
     try {
         // Check if record exists for the year
-        const [existing] = await pool.execute('SELECT id FROM holidays WHERE year = ?', [year]);
+        const [existing] = await req.tenantPool.execute('SELECT id FROM holidays WHERE year = ?', [year]);
 
         if (existing.length > 0) {
             let query = 'UPDATE holidays SET details = ?';
@@ -41,10 +41,10 @@ const updateHolidays = async (req, res) => {
             query += ' WHERE year = ?';
             params.push(year);
 
-            await pool.execute(query, params);
+            await req.tenantPool.execute(query, params);
         } else {
             const id = uuidv4();
-            await pool.execute(
+            await req.tenantPool.execute(
                 'INSERT INTO holidays (id, year, details) VALUES (?, ?, ?)',
                 [id, year, details]
             );
@@ -69,16 +69,16 @@ const uploadPdf = async (req, res) => {
     const { buffer, originalname, mimetype } = req.file;
 
     try {
-        const [existing] = await pool.execute('SELECT id FROM holidays WHERE year = ?', [year]);
+        const [existing] = await req.tenantPool.execute('SELECT id FROM holidays WHERE year = ?', [year]);
 
         if (existing.length > 0) {
-            await pool.execute(
+            await req.tenantPool.execute(
                 'UPDATE holidays SET pdf_content = ?, pdf_name = ?, pdf_mime = ? WHERE year = ?',
                 [buffer, originalname, mimetype, year]
             );
         } else {
             const id = uuidv4();
-            await pool.execute(
+            await req.tenantPool.execute(
                 'INSERT INTO holidays (id, year, pdf_content, pdf_name, pdf_mime) VALUES (?, ?, ?, ?, ?)',
                 [id, year, buffer, originalname, mimetype]
             );
@@ -93,7 +93,7 @@ const uploadPdf = async (req, res) => {
 const downloadPdf = async (req, res) => {
     const { year } = req.params;
     try {
-        const [rows] = await pool.execute(
+        const [rows] = await req.tenantPool.execute(
             'SELECT pdf_content, pdf_name, pdf_mime FROM holidays WHERE year = ?',
             [year]
         );

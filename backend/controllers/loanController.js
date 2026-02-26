@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+// Removed global pool import
 const { v4: uuidv4 } = require('uuid');
 
 const getLoans = async (req, res) => {
@@ -21,7 +21,7 @@ const getLoans = async (req, res) => {
         }
 
         query += ' ORDER BY l.created_at DESC';
-        const [loans] = await pool.execute(query, params);
+        const [loans] = await req.tenantPool.execute(query, params);
         res.json(loans);
     } catch (err) {
         console.error(err);
@@ -46,7 +46,7 @@ const createLoan = async (req, res) => {
     try {
         // Eligibility check for employees
         if (role !== 'admin') {
-            const [profile] = await pool.execute('SELECT date_of_joining FROM profiles WHERE id = ?', [userId]);
+            const [profile] = await req.tenantPool.execute('SELECT date_of_joining FROM profiles WHERE id = ?', [userId]);
             if (!profile[0] || !profile[0].date_of_joining) {
                 return res.status(403).json({ error: 'Employment details not found. Please contact Admin.' });
             }
@@ -60,7 +60,7 @@ const createLoan = async (req, res) => {
             }
         }
 
-        await pool.execute(`
+        await req.tenantPool.execute(`
             INSERT INTO loans (
                 id, user_id, amount, interest_rate, term_months, 
                 monthly_installment, total_repayable, purpose, status
@@ -82,7 +82,7 @@ const updateLoanStatus = async (req, res) => {
     try {
         if (status === 'approved') {
             // Recalculate if interest rate is provided
-            const [loanRecord] = await pool.execute('SELECT amount, term_months FROM loans WHERE id = ?', [id]);
+            const [loanRecord] = await req.tenantPool.execute('SELECT amount, term_months FROM loans WHERE id = ?', [id]);
             if (loanRecord.length === 0) return res.status(404).json({ error: 'Loan not found' });
 
             const amount = parseFloat(loanRecord[0].amount);
@@ -92,7 +92,7 @@ const updateLoanStatus = async (req, res) => {
             const total_repayable = amount + (amount * (rate / 100));
             const monthly_installment = total_repayable / term_months;
 
-            await pool.execute(`
+            await req.tenantPool.execute(`
                 UPDATE loans 
                 SET status = ?, interest_rate = ?, total_repayable = ?, 
                     monthly_installment = ?, repayment_start_date = ?, 
@@ -100,7 +100,7 @@ const updateLoanStatus = async (req, res) => {
                 WHERE id = ?
             `, [status, rate, total_repayable, monthly_installment, repayment_start_date, adminId, id]);
         } else {
-            await pool.execute(`
+            await req.tenantPool.execute(`
                 UPDATE loans 
                 SET status = ?, approved_by = ?, approved_at = NOW()
                 WHERE id = ?

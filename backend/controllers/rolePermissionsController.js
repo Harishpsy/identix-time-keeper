@@ -1,10 +1,10 @@
-const pool = require('../config/db');
+// Removed global pool import
 const { v4: uuidv4 } = require('uuid');
 
 // GET /api/role-permissions — returns all permissions grouped by role
 const getPermissions = async (req, res) => {
     try {
-        const [rows] = await pool.execute('SELECT role, module_key, is_enabled FROM role_permissions ORDER BY role, module_key');
+        const [rows] = await req.tenantPool.execute('SELECT role, module_key, is_enabled FROM role_permissions ORDER BY role, module_key');
 
         const grouped = {};
         for (const row of rows) {
@@ -28,7 +28,7 @@ const getPermissionsByRole = async (req, res) => {
     }
 
     try {
-        const [rows] = await pool.execute(
+        const [rows] = await req.tenantPool.execute(
             'SELECT module_key, is_enabled FROM role_permissions WHERE role = ? ORDER BY module_key',
             [role]
         );
@@ -59,20 +59,20 @@ const updatePermission = async (req, res) => {
     }
 
     try {
-        const [existing] = await pool.execute(
+        const [existing] = await req.tenantPool.execute(
             'SELECT id FROM role_permissions WHERE role = ? AND module_key = ?',
             [role, module_key]
         );
 
         if (existing.length === 0) {
             // Insert new permission row
-            await pool.execute(
+            await req.tenantPool.execute(
                 'INSERT INTO role_permissions (id, role, module_key, is_enabled) VALUES (?, ?, ?, ?)',
                 [uuidv4(), role, module_key, is_enabled]
             );
         } else {
             // Update existing
-            await pool.execute(
+            await req.tenantPool.execute(
                 'UPDATE role_permissions SET is_enabled = ? WHERE role = ? AND module_key = ?',
                 [is_enabled, role, module_key]
             );

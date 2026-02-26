@@ -1,5 +1,5 @@
-const pool = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
+// Removed global pool import
 
 const calculatePayrollTotals = (data) => {
     const gross_earnings = (
@@ -45,7 +45,7 @@ const getPayroll = async (req, res) => {
         }
 
         query += ' ORDER BY month DESC';
-        const [records] = await pool.execute(query, params);
+        const [records] = await req.tenantPool.execute(query, params);
         res.json(records);
     } catch (err) {
         console.error(err);
@@ -57,7 +57,7 @@ const generatePayroll = async (req, res) => {
     const { month } = req.body;
     try {
         // Find employees who don't have payroll for this month
-        const [missing] = await pool.execute(`
+        const [missing] = await req.tenantPool.execute(`
             SELECT p.id as user_id FROM profiles p 
             WHERE p.is_active = true 
             AND p.id NOT IN (SELECT user_id FROM payroll WHERE month = ?)
@@ -67,7 +67,7 @@ const generatePayroll = async (req, res) => {
         let skippedCount = 0;
 
         for (const emp of missing) {
-            const [prev] = await pool.execute(
+            const [prev] = await req.tenantPool.execute(
                 'SELECT * FROM payroll WHERE user_id = ? ORDER BY month DESC LIMIT 1',
                 [emp.user_id]
             );
@@ -77,7 +77,7 @@ const generatePayroll = async (req, res) => {
                 const id = uuidv4();
 
                 // Fetch active approved loans
-                const [activeLoans] = await pool.execute(
+                const [activeLoans] = await req.tenantPool.execute(
                     'SELECT id, monthly_installment, total_repayable FROM loans WHERE user_id = ? AND status = "approved" AND repayment_start_date <= CURDATE()',
                     [emp.user_id]
                 );
@@ -87,7 +87,7 @@ const generatePayroll = async (req, res) => {
 
                 for (const loan of activeLoans) {
                     // Check how much is already paid
-                    const [payments] = await pool.execute(
+                    const [payments] = await req.tenantPool.execute(
                         'SELECT SUM(amount) as total_paid FROM loan_repayments WHERE loan_id = ?',
                         [loan.id]
                     );
@@ -113,7 +113,7 @@ const generatePayroll = async (req, res) => {
                 };
                 const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(dataToCalc);
 
-                await pool.execute(`
+                await req.tenantPool.execute(`
                     INSERT INTO payroll (
                         id, user_id, month, basic_salary, hra, dearness_allowance, 
                         conveyance_allowance, medical_allowance, special_allowance, 
@@ -132,13 +132,13 @@ const generatePayroll = async (req, res) => {
 
                 // Record repayments and update loan status if complete
                 for (const rep of loanRepaymentsToInsert) {
-                    await pool.execute(
-                        'INSERT INTO loan_repayments (id, loan_id, payroll_id, amount, payment_date, method) VALUES (?, ?, ?, ?, CURDATE(), "payroll_deduction")',
+                    await req.tenantPool.execute(
+                        'INSERT INTO loan_repayments (id, loan_id, payroll_id, amount, payment_date, method) VALUES (?, ?, ?, ?, CURDATE(), "payrreq.tenantPool.getConnection")',
                         [uuidv4(), rep.loan_id, id, rep.amount]
                     );
 
                     if (rep.isComplete) {
-                        await pool.execute('UPDATE loans SET status = "completed" WHERE id = ?', [rep.loan_id]);
+                        await req.tenantPool.execute('UPDATE loans SET status = "completed" WHERE id = ?', [rep.loan_id]);
                     }
                 }
 
@@ -171,7 +171,7 @@ const createPayroll = async (req, res) => {
     const params = [id, ...Object.values(fullData)];
 
     try {
-        await pool.execute(`INSERT INTO payroll (${fields.join(', ')}) VALUES (${placeholders})`, params);
+        await req.tenantPool.execute(`INSERT INTO payroll (${fields.join(', ')}) VALUES (${placeholders})`, params);
         res.status(201).json({ id });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') return res.status(400).json({ error: 'Entry already exists' });
@@ -211,7 +211,7 @@ const updatePayroll = async (req, res) => {
     const params = [...Object.values(finalUpdates), id];
 
     try {
-        await pool.execute(`UPDATE payroll SET ${setClause} WHERE id = ?`, params);
+        await req.tenantPool.execute(`UPDATE payroll SET ${setClause} WHERE id = ?`, params);
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -222,7 +222,7 @@ const updatePayroll = async (req, res) => {
 const deletePayroll = async (req, res) => {
     const { id } = req.params;
     try {
-        await pool.execute('DELETE FROM payroll WHERE id = ?', [id]);
+        await req.tenantPool.execute('DELETE FROM payroll WHERE id = ?', [id]);
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -233,7 +233,7 @@ const deletePayroll = async (req, res) => {
 const releaseAllPayroll = async (req, res) => {
     const { month } = req.body;
     try {
-        await pool.execute('UPDATE payroll SET released = true WHERE month = ? AND released = false', [month]);
+        await req.tenantPool.execute('UPDATE payroll SET released = true WHERE month = ? AND released = false', [month]);
         res.json({ success: true });
     } catch (err) {
         console.error(err);

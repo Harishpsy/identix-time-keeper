@@ -1,8 +1,8 @@
-const pool = require('../config/db');
+// Removed global pool import
 
 const getSettings = async (req, res) => {
     try {
-        const [settings] = await pool.execute('SELECT * FROM company_settings LIMIT 1');
+        const [settings] = await req.tenantPool.execute('SELECT * FROM company_settings LIMIT 1');
         res.json(settings[0] || {});
     } catch (err) {
         console.error(err);
@@ -21,14 +21,14 @@ const updateSettings = async (req, res) => {
     const params = Object.values(updates);
 
     try {
-        const [settings] = await pool.execute('SELECT id FROM company_settings LIMIT 1');
+        const [settings] = await req.tenantPool.execute('SELECT id FROM company_settings LIMIT 1');
         if (settings.length === 0) {
             // Should not happen as we insert default, but handle anyway
             return res.status(404).json({ error: 'Settings not found' });
         }
 
         params.push(settings[0].id);
-        await pool.execute(`UPDATE company_settings SET ${setClause} WHERE id = ?`, params);
+        await req.tenantPool.execute(`UPDATE company_settings SET ${setClause} WHERE id = ?`, params);
         res.json({ success: true });
     } catch (err) {
         console.error(err);

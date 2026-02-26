@@ -1,8 +1,8 @@
 const { v4: uuidv4 } = require('uuid');
-const pool = require('../config/db');
+// Removed global pool import
 
 // Helper: process daily summary for a user on a given date
-const processDailySummary = async (userId, date) => {
+const processDailySummary = async (pool, userId, date) => {
     // Get all punches for this user on this date
     const [punches] = await pool.execute(
         'SELECT * FROM attendance_raw WHERE user_id = ? AND DATE(timestamp) = ? ORDER BY timestamp ASC',
@@ -115,13 +115,13 @@ const logPunch = async (req, res) => {
 
     try {
         const id = uuidv4();
-        await pool.execute(
+        await req.tenantPool.execute(
             'INSERT INTO attendance_raw (id, user_id, timestamp, punch_type) VALUES (?, ?, ?, ?)',
             [id, userId, timestamp, punch_type || 'manual']
         );
 
         // Auto-process daily summary after each punch
-        await processDailySummary(userId, today);
+        await processDailySummary(req.tenantPool, userId, today);
 
         res.status(201).json({ success: true, timestamp });
     } catch (err) {
@@ -153,11 +153,11 @@ const getSummary = async (req, res) => {
         }
 
         query += ' ORDER BY s.date DESC';
-        const [summaries] = await pool.execute(query, params);
+        const [summaries] = await req.tenantPool.execute(query, params);
 
         // For admin/subadmin: also include active employees who have NO daily_summaries record
         if (role !== 'employee' && start_date && end_date) {
-            const [activeProfiles] = await pool.execute(
+            const [activeProfiles] = await req.tenantPool.execute(
                 'SELECT p.id, p.full_name, p.email, p.date_of_joining, p.created_at FROM profiles p ' +
                 'JOIN user_roles r ON p.id = r.user_id ' +
                 "WHERE p.is_active = true AND r.role != 'super_admin'"
@@ -234,13 +234,13 @@ const reprocessSummaries = async (req, res) => {
     const { date } = req.body;
     try {
         // Get all users who have punches on the given date
-        const [users] = await pool.execute(
+        const [users] = await req.tenantPool.execute(
             'SELECT DISTINCT user_id FROM attendance_raw WHERE DATE(timestamp) = ?',
             [date]
         );
 
         for (const row of users) {
-            await processDailySummary(row.user_id, date);
+            await processDailySummary(req.tenantPool, row.user_id, date);
         }
 
         res.json({ message: 'Reprocessing completed', date, processed: users.length });
@@ -253,12 +253,12 @@ const reprocessSummaries = async (req, res) => {
 const getRecentPunches = async (req, res) => {
     const { date } = req.query;
     try {
-        const [profiles] = await pool.execute(
+        const [profiles] = await req.tenantPool.execute(
             'SELECT p.id, p.full_name, p.email, p.shift_id FROM profiles p ' +
             'JOIN user_roles r ON p.id = r.user_id ' +
             "WHERE p.is_active = true AND r.role != 'super_admin'"
         );
-        const [punches] = await pool.execute(
+        const [punches] = await req.tenantPool.execute(
             'SELECT * FROM attendance_raw WHERE DATE(timestamp) = ? ORDER BY timestamp ASC',
             [date]
         );
@@ -276,7 +276,7 @@ const deletePunches = async (req, res) => {
     }
     try {
         const placeholders = ids.map(() => '?').join(',');
-        await pool.execute(`DELETE FROM attendance_raw WHERE id IN (${placeholders})`, ids);
+        await req.tenantPool.execute(`DELETE FROM attendance_raw WHERE id IN (${placeholders})`, ids);
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -288,7 +288,7 @@ const getMyPunches = async (req, res) => {
     const userId = req.user.id;
     const { date } = req.query; // format: YYYY-MM-DD
     try {
-        const [punches] = await pool.execute(
+        const [punches] = await req.tenantPool.execute(
             'SELECT * FROM attendance_raw WHERE user_id = ? AND DATE(timestamp) = ? ORDER BY timestamp ASC',
             [userId, date]
         );

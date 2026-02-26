@@ -1,11 +1,11 @@
-const pool = require('../config/db');
+// Removed global pool import
 
 const getAdminStats = async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
 
         // Total active employees (excluding super_admin)
-        const [totalRes] = await pool.execute(
+        const [totalRes] = await req.tenantPool.execute(
             'SELECT COUNT(*) as count FROM profiles p ' +
             'JOIN user_roles r ON p.id = r.user_id ' +
             "WHERE p.is_active = true AND r.role != 'super_admin'"
@@ -13,7 +13,7 @@ const getAdminStats = async (req, res) => {
         const total = totalRes[0].count;
 
         // Today's summary stats (excluding super_admin)
-        const [summaryRes] = await pool.execute(
+        const [summaryRes] = await req.tenantPool.execute(
             'SELECT ' +
             "COUNT(CASE WHEN s.status IN ('present', 'late') THEN 1 END) as present, " +
             "COUNT(CASE WHEN s.status = 'late' THEN 1 END) as late, " +
@@ -43,7 +43,7 @@ const getTodayLeave = async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
 
         // Get employees who are explicitly marked absent/on_leave/half_day (excluding super_admin)
-        const [explicitLeave] = await pool.execute(
+        const [explicitLeave] = await req.tenantPool.execute(
             'SELECT s.*, p.full_name, p.email FROM daily_summaries s ' +
             'JOIN profiles p ON s.user_id = p.id ' +
             'JOIN user_roles r ON p.id = r.user_id ' +
@@ -54,7 +54,7 @@ const getTodayLeave = async (req, res) => {
         );
 
         // Get active employees who have NO attendance record today (excluding super_admin)
-        const [noRecord] = await pool.execute(
+        const [noRecord] = await req.tenantPool.execute(
             "SELECT p.id as user_id, p.full_name, p.email, ? as date, 'absent' as status, " +
             'NULL as first_in, NULL as last_out, NULL as total_duration_minutes, 0 as late_minutes ' +
             'FROM profiles p ' +
@@ -68,7 +68,7 @@ const getTodayLeave = async (req, res) => {
         );
 
         // Get employees with approved leave requests (excluding super_admin)
-        const [leaveRequests] = await pool.execute(
+        const [leaveRequests] = await req.tenantPool.execute(
             "SELECT lr.user_id, p.full_name, p.email, ? as date, 'on_leave' as status, " +
             'NULL as first_in, NULL as last_out, NULL as total_duration_minutes, 0 as late_minutes ' +
             'FROM leave_requests lr ' +
@@ -100,7 +100,7 @@ const getTodayLeave = async (req, res) => {
 
 const getAnniversaries = async (req, res) => {
     try {
-        const [profiles] = await pool.execute(
+        const [profiles] = await req.tenantPool.execute(
             'SELECT p.id, p.full_name, p.date_of_joining FROM profiles p ' +
             'JOIN user_roles r ON p.id = r.user_id ' +
             "WHERE p.is_active = true AND p.date_of_joining IS NOT NULL AND r.role != 'super_admin'"
@@ -152,7 +152,7 @@ const getEmployeeDashboard = async (req, res) => {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const monthPrefix = `${year}-${month}%`;
 
-        const [summaries] = await pool.execute(
+        const [summaries] = await req.tenantPool.execute(
             'SELECT * FROM daily_summaries WHERE user_id = ? AND date LIKE ? ORDER BY date DESC',
             [userId, monthPrefix]
         );

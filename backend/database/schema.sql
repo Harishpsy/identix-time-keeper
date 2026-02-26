@@ -1,15 +1,3 @@
--- Create Database
-CREATE DATABASE IF NOT EXISTS identix;
-USE identix;
-
--- Create users table (Replaces auth.users)
-CREATE TABLE IF NOT EXISTS users (
-    id CHAR(36) PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Create departments table
 CREATE TABLE IF NOT EXISTS departments (
     id CHAR(36) PRIMARY KEY,
@@ -24,6 +12,14 @@ CREATE TABLE IF NOT EXISTS shifts (
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     grace_period_mins INT NOT NULL DEFAULT 15,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    id CHAR(36) PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -49,9 +45,18 @@ CREATE TABLE IF NOT EXISTS profiles (
 CREATE TABLE IF NOT EXISTS user_roles (
     id CHAR(36) PRIMARY KEY,
     user_id CHAR(36) NOT NULL,
-    role ENUM('admin', 'subadmin', 'employee') NOT NULL,
+    role ENUM('super_admin', 'admin', 'subadmin', 'employee') NOT NULL,
     UNIQUE (user_id, role),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create role_permissions table
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    role ENUM('super_admin', 'admin', 'subadmin', 'employee') NOT NULL,
+    module_key VARCHAR(50) NOT NULL,
+    is_enabled BOOLEAN DEFAULT true,
+    UNIQUE (role, module_key)
 );
 
 -- Create attendance_raw table
@@ -72,7 +77,7 @@ CREATE TABLE IF NOT EXISTS daily_summaries (
     date DATE NOT NULL,
     first_in DATETIME,
     last_out DATETIME,
-    total_duration TIME,
+    total_duration_minutes INT DEFAULT NULL,
     late_minutes INT DEFAULT 0,
     status ENUM('present', 'late', 'absent', 'half_day', 'on_leave') NOT NULL DEFAULT 'absent',
     is_manual_override BOOLEAN DEFAULT false,
@@ -86,7 +91,8 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     id CHAR(36) PRIMARY KEY,
     user_id CHAR(36) NOT NULL,
     date DATE NOT NULL,
-    type ENUM('sick', 'casual', 'annual', 'permission', 'other') NOT NULL DEFAULT 'casual',
+    to_date DATE,
+    type ENUM('sick', 'casual', 'annual', 'permission', 'other', 'half_day') NOT NULL DEFAULT 'casual',
     reason TEXT,
     status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
     approved_by CHAR(36),
@@ -107,6 +113,8 @@ CREATE TABLE IF NOT EXISTS leave_balances (
     casual_used INT NOT NULL DEFAULT 0,
     annual_total INT NOT NULL DEFAULT 15,
     annual_used INT NOT NULL DEFAULT 0,
+    permission_total INT NOT NULL DEFAULT 2,
+    permission_used INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE (user_id, year),
@@ -127,9 +135,16 @@ CREATE TABLE IF NOT EXISTS company_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Insert default company settings
-INSERT INTO company_settings (id, company_name, default_sick_leaves, default_casual_leaves, default_annual_leaves) 
-VALUES (UUID(), identix', 12, 12, 15);
+-- Create holidays table
+CREATE TABLE IF NOT EXISTS holidays (
+    id CHAR(36) PRIMARY KEY,
+    year INT NOT NULL,
+    details TEXT,
+    pdf_content LONGBLOB,
+    pdf_name VARCHAR(255),
+    pdf_mime VARCHAR(100),
+    UNIQUE (year)
+);
 
 -- Create loans table
 CREATE TABLE IF NOT EXISTS loans (
@@ -161,4 +176,36 @@ CREATE TABLE IF NOT EXISTS loan_repayments (
     method ENUM('payroll_deduction', 'manual') DEFAULT 'payroll_deduction',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
+);
+
+-- Create payroll table
+CREATE TABLE IF NOT EXISTS payroll (
+    id CHAR(36) PRIMARY KEY,
+    user_id CHAR(36) NOT NULL,
+    month VARCHAR(7) NOT NULL, -- YYYY-MM
+    basic_salary DECIMAL(10, 2) DEFAULT 0,
+    hra DECIMAL(10, 2) DEFAULT 0,
+    dearness_allowance DECIMAL(10, 2) DEFAULT 0,
+    conveyance_allowance DECIMAL(10, 2) DEFAULT 0,
+    medical_allowance DECIMAL(10, 2) DEFAULT 0,
+    special_allowance DECIMAL(10, 2) DEFAULT 0,
+    overtime DECIMAL(10, 2) DEFAULT 0,
+    bonus DECIMAL(10, 2) DEFAULT 0,
+    other_earnings DECIMAL(10, 2) DEFAULT 0,
+    epf_employee DECIMAL(10, 2) DEFAULT 0,
+    esi_employee DECIMAL(10, 2) DEFAULT 0,
+    professional_tax DECIMAL(10, 2) DEFAULT 0,
+    tds DECIMAL(10, 2) DEFAULT 0,
+    loan_recovery DECIMAL(10, 2) DEFAULT 0,
+    other_deductions DECIMAL(10, 2) DEFAULT 0,
+    gross_earnings DECIMAL(10, 2) DEFAULT 0,
+    total_deductions DECIMAL(10, 2) DEFAULT 0,
+    net_salary DECIMAL(10, 2) DEFAULT 0,
+    paid_days INT DEFAULT 0,
+    lop_days INT DEFAULT 0,
+    released BOOLEAN DEFAULT false,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, month),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

@@ -11,6 +11,8 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const authRoutes = require('./routes/authRoutes');
+const onboardingController = require('./controllers/onboardingController');
+const tenantMiddleware = require('./middleware/tenantMiddleware');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const leaveRoutes = require('./routes/leaveRoutes');
 const payrollRoutes = require('./routes/payrollRoutes');
@@ -24,9 +26,19 @@ const holidayRoutes = require('./routes/holidayRoutes');
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Slug'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
 app.use(express.json());
 app.use('/uploads', express.static(uploadsDir));
+
+// Onboarding route (Public, does not need tenant resolution yet)
+app.post('/api/onboard', onboardingController.onboardTenant);
+
+// Apply Tenant Middleware to all subsequent API routes
+app.use('/api', tenantMiddleware);
 
 // Routes
 app.use('/api/auth', authRoutes);

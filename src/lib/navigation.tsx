@@ -13,6 +13,8 @@ import {
     Shield,
     Settings,
     GripVertical,
+    UserPlus,
+    UserCircle,
 } from "lucide-react";
 
 export interface NavItem {
@@ -25,6 +27,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
     { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "dashboard" },
+    { label: "Onboarding ", href: "/onboarding", icon: <UserPlus className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "onboarding" },
     { label: "Attendance", href: "/attendance", icon: <Clock className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "attendance" },
     { label: "Employees", href: "/employees", icon: <Users className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "employees" },
     { label: "Departments", href: "/departments", icon: <ClipboardList className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "departments" },
@@ -39,4 +42,5 @@ export const navItems: NavItem[] = [
     { label: "Holidays", href: "/holidays", icon: <CalendarDays className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "holidays" },
     { label: "Menu Order", href: "/menu-order", icon: <GripVertical className="w-5 h-5" />, roles: ["super_admin", "admin"], moduleKey: "menu_order" },
     { label: "Role Permissions", href: "/role-permissions", icon: <Shield className="w-5 h-5" />, roles: ["super_admin", "admin"], moduleKey: "role_permissions" },
+    { label: "My Profile", href: "/my-profile", icon: <UserCircle className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "my_profile" },
 ];

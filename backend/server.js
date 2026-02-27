@@ -20,6 +20,7 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const rolePermissionsRoutes = require('./routes/rolePermissionsRoutes');
 const loanRoutes = require('./routes/loanRoutes');
 const holidayRoutes = require('./routes/holidayRoutes');
+const onboardingRoutes = require('./routes/onboardingRoutes');
 
 const app = express();
 app.set('trust proxy', true);
@@ -40,6 +41,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/role-permissions', rolePermissionsRoutes);
 app.use('/api/loans', loanRoutes);
 app.use('/api/holidays', holidayRoutes);
+app.use('/api/onboarding', onboardingRoutes);
 
 app.get('/', (req, res) => {
     res.send('Identix Time Keeper API is running');

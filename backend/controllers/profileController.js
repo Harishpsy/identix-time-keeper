@@ -213,18 +213,35 @@ const deleteProfile = async (req, res) => {
 
         await connection.beginTransaction();
 
-        // Delete related data in order (foreign key dependencies)
+        // Temporarily disable FK checks so we can delete in any order
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+
+        // 1. Unassign from transitive RESTRICT relations to not orphan other rows
+        await connection.execute('UPDATE profiles SET manager_id = NULL WHERE manager_id = ?', [id]);
+        await connection.execute('UPDATE leave_requests SET approved_by = NULL, processed_by = NULL WHERE approved_by = ? OR processed_by = ?', [id, id]);
+        await connection.execute('UPDATE loans SET approved_by = NULL WHERE approved_by = ?', [id]);
+        await connection.execute('UPDATE onboarding_audit_logs SET performed_by = NULL WHERE performed_by = ?', [id]);
+
+        // 2. Delete all user-specific data (order does not matter with FK checks off)
+        await connection.execute('DELETE FROM payroll WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM attendance_raw WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM daily_summaries WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM leave_requests WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM leave_balances WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM onboarding_documents WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM onboarding_audit_logs WHERE user_id = ?', [id]);
+        await connection.execute('DELETE FROM loans WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM user_roles WHERE user_id = ?', [id]);
         await connection.execute('DELETE FROM profiles WHERE id = ?', [id]);
         await connection.execute('DELETE FROM users WHERE id = ?', [id]);
 
+        // Re-enable FK checks before committing
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+
         await connection.commit();
         res.json({ success: true });
     } catch (err) {
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1').catch(() => { });
         await connection.rollback();
         console.error(err);
         res.status(500).json({ error: 'Internal server error' });

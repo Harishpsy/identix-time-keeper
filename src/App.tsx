@@ -24,6 +24,8 @@ import MenuOrder from "./pages/MenuOrder";
 import LoanManagement from "./pages/LoanManagement";
 import Holidays from "./pages/Holidays";
 import AttendanceDetails from "./pages/AttendanceDetails";
+import OnboardingDashboard from "./pages/OnboardingDashboard";
+import MyProfile from "./pages/MyProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +82,8 @@ const App = () => (
                 <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><CompanyBranding /></ProtectedRoute>} />
                 <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><MenuOrder /></ProtectedRoute>} />
                 <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><RolePermissions /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<ProtectedRoute allowedRoles={["super_admin", "admin", "subadmin", "employee"]}><OnboardingDashboard /></ProtectedRoute>} />
+                <Route path="/my-profile" element={<MyProfile />} />
                 <Route path="/holidays" element={<Holidays />} />
               </Route>
 

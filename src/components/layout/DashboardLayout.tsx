@@ -8,7 +8,8 @@ import { navItems, NavItem } from "@/lib/navigation";
 import { Fingerprint, LogOut, Moon, Sun, HelpCircle } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeContext";
 import { GuideTour } from "@/components/common/GuideTour";
-
+import { OnboardingModal } from "@/components/common/OnboardingModal";
+import { WelcomeModal } from "@/components/common/WelcomeModal";
 export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -19,6 +20,18 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const [sidebarOrder, setSidebarOrder] = useState<string[]>([]);
   const [companyName, setCompanyName] = useState("Identix");
   const [runTour, setRunTour] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Show welcome modal once when user is newly onboarded (Active)
+  useEffect(() => {
+    if (user?.id && profile?.onboarding_status === 'Active') {
+      const key = `welcome_seen_${user.id}`;
+      if (!localStorage.getItem(key)) {
+        setShowWelcome(true);
+        localStorage.setItem(key, '1');
+      }
+    }
+  }, [user?.id, profile?.onboarding_status]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -193,6 +206,14 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
           {children || <Outlet />}
         </div>
       </main>
+
+      {/* Welcome modal for newly onboarded users */}
+      {showWelcome && (
+        <WelcomeModal
+          userName={profile?.full_name?.split(' ')[0] || 'there'}
+          onClose={() => setShowWelcome(false)}
+        />
+      )}
     </div>
   );
 }

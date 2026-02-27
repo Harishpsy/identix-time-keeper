@@ -32,6 +32,28 @@ router.patch('/shifts/:id', authMiddleware, roleMiddleware(['admin']), updateShi
 router.delete('/shifts/:id', authMiddleware, roleMiddleware(['admin']), deleteShift);
 router.get('/shifts/:id', authMiddleware, getShiftById);
 router.get('/:id', authMiddleware, getProfileById);
+// Self-update: any authenticated user can update their own personal details
+router.patch('/me', authMiddleware, async (req, res) => {
+    const userId = req.user.id;
+    const { phone_number, date_of_birth, gender, address } = req.body;
+    const pool = require('../config/db');
+    try {
+        await pool.execute(
+            'UPDATE profiles SET phone_number = ?, date_of_birth = ?, gender = ?, address = ? WHERE id = ?',
+            [
+                phone_number || null,
+                date_of_birth || null,
+                gender || null,
+                address || null,
+                userId
+            ]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
 router.patch('/:id', authMiddleware, roleMiddleware(['admin']), updateProfile);
 router.delete('/:id', authMiddleware, roleMiddleware(['admin']), deleteProfile);
 

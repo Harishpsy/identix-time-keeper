@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const pool = require('../config/db');
 
 const register = async (req, res) => {
-    const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining, manager_id } = req.body;
+    const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining, manager_id, designation, employee_id } = req.body;
 
     if (!email || !password || !full_name) {
         return res.status(400).json({ error: 'Email, password, and full name are required' });
@@ -37,7 +37,7 @@ const register = async (req, res) => {
             );
 
             await connection.execute(
-                'INSERT INTO profiles (id, full_name, email, biometric_id, department_id, shift_id, date_of_joining, manager_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO profiles (id, full_name, email, biometric_id, department_id, shift_id, date_of_joining, manager_id, designation, employee_id, onboarding_status, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     userId,
                     full_name,
@@ -46,7 +46,11 @@ const register = async (req, res) => {
                     department_id || null,
                     shift_id || null,
                     date_of_joining || null,
-                    manager_id || null
+                    manager_id || null,
+                    designation || null,
+                    employee_id || null,
+                    'Draft',
+                    false // Deactivated until onboarding completion/approval
                 ]
             );
 
@@ -135,7 +139,12 @@ const login = async (req, res) => {
 const getMe = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT p.*, r.role FROM profiles p JOIN user_roles r ON p.id = r.user_id WHERE p.id = ?',
+            `SELECT p.*, r.role, d.name as department_name, m.full_name as manager_name 
+             FROM profiles p 
+             JOIN user_roles r ON p.id = r.user_id 
+             LEFT JOIN departments d ON p.department_id = d.id
+             LEFT JOIN profiles m ON p.manager_id = m.id
+             WHERE p.id = ?`,
             [req.user.id]
         );
 

@@ -1,4 +1,4 @@
-# Identix Time Keeper
+# IdentixHR Time Keeper
 
 A full-stack employee time tracking and attendance management system built with **React + Vite** (frontend) and **Express + MySQL** (backend).
 

@@ -1,6 +1,6 @@
 # Build & Deployment Guide
 
-This guide explains how to generate a production build for the **Identix Time Keeper** application.
+This guide explains how to generate a production build for the **IdentixHR Time Keeper** application.
 
 ## Prerequisites
 

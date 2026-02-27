@@ -44,7 +44,7 @@ app.use('/api/holidays', holidayRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 
 app.get('/', (req, res) => {
-    res.send('Identix Time Keeper API is running');
+    res.send('IdentixHR Time Keeper API is running');
 });
 
 const PORT = process.env.PORT || 5000;

@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const [leavesEnabled, setLeavesEnabled] = useState(true);
   const [rolePermissions, setRolePermissions] = useState<Record<string, Record<string, boolean>>>({});
   const [sidebarOrder, setSidebarOrder] = useState<string[]>([]);
-  const [companyName, setCompanyName] = useState("Identix");
+  const [companyName, setCompanyName] = useState("IdentixHR");
   const [runTour, setRunTour] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -45,7 +45,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
         const { data } = await apiClient.get("/settings");
         if (data) {
           setLeavesEnabled(data.leaves_enabled ?? true);
-          setCompanyName("Identix");
+          setCompanyName("IdentixHR");
           if (data.sidebar_order) {
             try {
               setSidebarOrder(JSON.parse(data.sidebar_order));

@@ -11,7 +11,7 @@ const steps: Step[] = [
         target: '[data-tour="sidebar-brand"]',
         content: (
             <div className="text-left">
-                <h3 className="font-bold text-lg mb-1">Welcome to Identix!</h3>
+                <h3 className="font-bold text-lg mb-1">Welcome to IdentixHR!</h3>
                 <p className="text-sm opacity-90">This is your main dashboard logo and brand identification. Let's take a quick tour of the platform.</p>
             </div>
         ),

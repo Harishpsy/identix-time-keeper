@@ -4,7 +4,7 @@
  * Usage:  node database/seed-admin.js
  * 
  * Admin credentials after running:
- *   Email:    admin@identix.com
+ *   Email:    admin@identixhr.com
  *   Password: Admin@123
  */
 
@@ -14,7 +14,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../config/db');
 
-const ADMIN_EMAIL = 'admin@identix.com';
+const ADMIN_EMAIL = 'admin@identixhr.com';
 const ADMIN_PASSWORD = 'Admin@123';
 const ADMIN_NAME = 'Admin';
 

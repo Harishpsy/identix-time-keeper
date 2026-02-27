@@ -49,7 +49,7 @@ const Auth = () => {
                 <Fingerprint className="w-9 h-9" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold tracking-tight">Identix</h1>
+                <h1 className="text-4xl font-bold tracking-tight">IdentixHR</h1>
                 <p className="text-primary-foreground/70 text-lg">Attendance Tracking</p>
               </div>
             </div>
@@ -95,7 +95,7 @@ const Auth = () => {
               <Fingerprint className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Identix</h1>
+              <h1 className="text-2xl font-bold text-foreground">IdentixHR</h1>
               <p className="text-sm text-muted-foreground">Attendance Tracking</p>
             </div>
           </div>

@@ -10,17 +10,17 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir);
 }
 
-const authRoutes = require('./routes/authRoutes');
-const attendanceRoutes = require('./routes/attendanceRoutes');
-const leaveRoutes = require('./routes/leaveRoutes');
-const payrollRoutes = require('./routes/payrollRoutes');
-const profileRoutes = require('./routes/profileRoutes');
-const settingsRoutes = require('./routes/settingsRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes');
-const rolePermissionsRoutes = require('./routes/rolePermissionsRoutes');
-const loanRoutes = require('./routes/loanRoutes');
-const holidayRoutes = require('./routes/holidayRoutes');
-const onboardingRoutes = require('./routes/onboardingRoutes');
+const authRoutes = require('./routes/auth/authRoutes');
+const attendanceRoutes = require('./routes/attendance/attendanceRoutes');
+const leaveRoutes = require('./routes/management/leaveRoutes');
+const payrollRoutes = require('./routes/payroll/payrollRoutes');
+const profileRoutes = require('./routes/management/profileRoutes');
+const settingsRoutes = require('./routes/admin/settingsRoutes');
+const dashboardRoutes = require('./routes/dashboard/dashboardRoutes');
+const rolePermissionsRoutes = require('./routes/admin/rolePermissionsRoutes');
+const loanRoutes = require('./routes/payroll/loanRoutes');
+const holidayRoutes = require('./routes/management/holidayRoutes');
+const onboardingRoutes = require('./routes/admin/onboardingRoutes');
 
 const app = express();
 app.set('trust proxy', true);

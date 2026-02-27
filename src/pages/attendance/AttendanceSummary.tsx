@@ -38,22 +38,27 @@ export default function AttendanceSummary() {
     const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
 
     try {
-      const [summariesRes, profilesRes, departmentsRes] = await Promise.all([
+      const [summariesRes] = await Promise.all([
         apiClient.get("/attendance/summary", { params: { start_date: start, end_date: end } }),
-        apiClient.get("/profiles"),
-        apiClient.get("/profiles/departments"),
       ]);
 
       const dailyData = summariesRes.data;
-      const profiles = profilesRes.data;
-      const departments = departmentsRes.data;
-
-      const deptMap: Record<string, string> = {};
-      departments.forEach((d: any) => { deptMap[d.id] = d.name; });
 
       const counts: Record<string, any> = {};
       dailyData.forEach((r: any) => {
-        if (!counts[r.user_id]) counts[r.user_id] = { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, total: 0 };
+        if (!counts[r.user_id]) {
+          counts[r.user_id] = {
+            present: 0,
+            late: 0,
+            absent: 0,
+            halfDay: 0,
+            onLeave: 0,
+            total: 0,
+            name: r.full_name,
+            email: r.email,
+            department: r.department_name || "—"
+          };
+        }
         counts[r.user_id].total++;
         if (r.status === "present") counts[r.user_id].present++;
         else if (r.status === "late") counts[r.user_id].late++;
@@ -62,17 +67,17 @@ export default function AttendanceSummary() {
         else if (r.status === "on_leave") counts[r.user_id].onLeave++;
       });
 
-      const result: EmployeeSummary[] = profiles.map((p: any) => ({
-        userId: p.id,
-        name: p.full_name,
-        email: p.email,
-        department: deptMap[p.department_id || ""] || "—",
-        present: counts[p.id]?.present || 0,
-        late: counts[p.id]?.late || 0,
-        absent: counts[p.id]?.absent || 0,
-        halfDay: counts[p.id]?.halfDay || 0,
-        onLeave: counts[p.id]?.onLeave || 0,
-        total: counts[p.id]?.total || 0,
+      const result: EmployeeSummary[] = Object.keys(counts).map((uid) => ({
+        userId: uid,
+        name: counts[uid].name,
+        email: counts[uid].email,
+        department: counts[uid].department,
+        present: counts[uid].present,
+        late: counts[uid].late,
+        absent: counts[uid].absent,
+        halfDay: counts[uid].halfDay,
+        onLeave: counts[uid].onLeave,
+        total: counts[uid].total,
       }));
 
       setSummaries(result);

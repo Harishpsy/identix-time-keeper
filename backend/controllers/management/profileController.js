@@ -4,7 +4,8 @@ const { v4: uuidv4 } = require('uuid');
 const getProfiles = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT p.*, r.role, d.name as department_name, s.name as shift_name, pm.full_name as manager_name ' +
+            'SELECT p.id, p.full_name, p.email, p.employee_id, p.designation, p.is_active, p.department_id, p.shift_id, ' +
+            'r.role, d.name as department_name, s.name as shift_name, pm.full_name as manager_name ' +
             'FROM profiles p ' +
             'LEFT JOIN user_roles r ON p.id = r.user_id ' +
             'LEFT JOIN departments d ON p.department_id = d.id ' +

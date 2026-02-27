@@ -53,10 +53,7 @@ export default function Attendance() {
         params: { start_date: start, end_date: end }
       });
 
-      return response.data.map((s: any) => ({
-        ...s,
-        profiles: { full_name: s.full_name, email: s.email }
-      }));
+      return response.data;
     },
   });
 
@@ -72,8 +69,8 @@ export default function Attendance() {
 
   const filtered = summaries.filter((s) => {
     const matchesSearch = search
-      ? s.profiles?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-      s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
+      ? s.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      s.email?.toLowerCase().includes(search.toLowerCase())
       : true;
     const matchesQuickFilter = quickFilter
       ? format(new Date(s.date), "yyyy-MM-dd") === getQuickFilterDate(quickFilter)
@@ -104,7 +101,7 @@ export default function Attendance() {
         s.status,
         formatLateMinutes(s.late_minutes),
       ];
-      if (!isEmp) row.unshift(s.profiles?.full_name || "");
+      if (!isEmp) row.unshift(s.full_name || "");
       return row;
     });
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
@@ -139,7 +136,7 @@ export default function Attendance() {
         s.status,
         formatLateMinutes(s.late_minutes),
       ];
-      if (!isEmp) row.unshift(s.profiles?.full_name || "—");
+      if (!isEmp) row.unshift(s.full_name || "—");
       return row;
     });
 
@@ -243,7 +240,7 @@ export default function Attendance() {
                 ) : (
                   paginated.map((s) => (
                     <TableRow key={s.id}>
-                      {role !== "employee" && <TableCell className="font-medium">{s.profiles?.full_name || "—"}</TableCell>}
+                      {role !== "employee" && <TableCell className="font-medium">{s.full_name || "—"}</TableCell>}
                       <TableCell>{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>

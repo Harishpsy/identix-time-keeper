@@ -151,9 +151,10 @@ const getSummary = async (req, res) => {
     const { start_date, end_date } = req.query;
 
     try {
-        let query = 'SELECT s.*, p.full_name, p.email FROM daily_summaries s ' +
+        let query = 'SELECT s.*, p.full_name, p.email, d.name as department_name FROM daily_summaries s ' +
             'JOIN profiles p ON s.user_id = p.id ' +
             'JOIN user_roles r ON p.id = r.user_id ' +
+            'LEFT JOIN departments d ON p.department_id = d.id ' +
             "WHERE r.role != 'super_admin'";
         let params = [];
 
@@ -173,8 +174,9 @@ const getSummary = async (req, res) => {
         // For admin/subadmin: also include active employees who have NO daily_summaries record
         if (role !== 'employee' && start_date && end_date) {
             const [activeProfiles] = await pool.execute(
-                'SELECT p.id, p.full_name, p.email, p.date_of_joining, p.created_at FROM profiles p ' +
+                'SELECT p.id, p.full_name, p.email, p.date_of_joining, p.created_at, d.name as department_name FROM profiles p ' +
                 'JOIN user_roles r ON p.id = r.user_id ' +
+                'LEFT JOIN departments d ON p.department_id = d.id ' +
                 "WHERE p.is_active = true AND r.role != 'super_admin'"
             );
 
@@ -224,7 +226,7 @@ const getSummary = async (req, res) => {
                             late_minutes: 0,
                             full_name: profile.full_name,
                             email: profile.email,
-                            profiles: { full_name: profile.full_name, email: profile.email }
+                            department_name: profile.department_name
                         });
                     }
                 }

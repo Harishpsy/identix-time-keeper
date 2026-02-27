@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import AttendanceStatusBadge from "@/components/dashboard/AttendanceStatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,44 +34,35 @@ function formatDurationMins(mins: number | null) {
 
 export default function Attendance() {
   const { user, role } = useAuth();
-  const [summaries, setSummaries] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [quickFilter, setQuickFilter] = useState<"today" | "yesterday" | "previous" | null>(
     role !== "employee" ? "today" : null
   );
-  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [year, mon] = month.split("-").map(Number);
-        const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
-        const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
+  const { data: summaries = [], isLoading: loading } = useQuery({
+    queryKey: ["attendance-summary", month],
+    queryFn: async () => {
+      const [year, mon] = month.split("-").map(Number);
+      const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
+      const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
 
-        const response = await apiClient.get("/attendance/summary", {
-          params: { start_date: start, end_date: end }
-        });
+      const response = await apiClient.get("/attendance/summary", {
+        params: { start_date: start, end_date: end }
+      });
 
-        // Map backend response to match frontend expectations
-        const results = response.data.map((s: any) => ({
-          ...s,
-          profiles: { full_name: s.full_name, email: s.email }
-        }));
+      return response.data.map((s: any) => ({
+        ...s,
+        profiles: { full_name: s.full_name, email: s.email }
+      }));
+    },
+  });
 
-        setSummaries(results);
-      } catch (err) {
-        toast.error("Failed to fetch attendance data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [month, user, role, refreshKey]);
+  const handleReprocessComplete = () => {
+    queryClient.invalidateQueries({ queryKey: ["attendance-summary"] });
+  };
 
   const getQuickFilterDate = (filter: "today" | "yesterday" | "previous") => {
     if (filter === "today") return format(new Date(), "yyyy-MM-dd");
@@ -208,7 +200,7 @@ export default function Attendance() {
         )}
         <div className="ml-auto flex gap-2" data-tour="attendance-export">
           {(role === "super_admin" || role === "admin") && (
-            <ReprocessDialog onComplete={() => setRefreshKey((k) => k + 1)} />
+            <ReprocessDialog onComplete={handleReprocessComplete} />
           )}
           <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>
             <FileText className="w-4 h-4 mr-1" /> PDF

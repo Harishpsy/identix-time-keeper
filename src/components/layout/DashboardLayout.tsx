@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { navItems, NavItem } from "@/lib/navigation";
@@ -27,6 +28,10 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const [runTour, setRunTour] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+
+  const isFetching = useIsFetching();
+  const isMutating = useIsMutating();
+  const isLoading = isFetching > 0 || isMutating > 0;
 
   // Show welcome modal once when user is newly onboarded (Active)
   useEffect(() => {
@@ -207,7 +212,12 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-64">
+      <main className="flex-1 ml-64 relative">
+        {isLoading && (
+          <div className="absolute top-0 left-0 right-0 h-1 z-50 overflow-hidden bg-primary/10">
+            <div className="h-full bg-primary animate-progress-indeterminate origin-left w-full" />
+          </div>
+        )}
         <div className="p-6 lg:p-8 max-w-7xl mx-auto">
           {children || <Outlet />}
         </div>

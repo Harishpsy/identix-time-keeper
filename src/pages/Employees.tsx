@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,12 +24,9 @@ import autoTable from "jspdf-autotable";
 
 export default function Employees() {
   const { role: currentUserRole } = useAuth();
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [shifts, setShifts] = useState<any[]>([]);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     biometric_id: "",
@@ -43,12 +41,10 @@ export default function Employees() {
   const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const [confirmStep, setConfirmStep] = useState(false);
   const [showCreatePassword, setShowCreatePassword] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -64,32 +60,101 @@ export default function Employees() {
     designation: "",
   });
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [profsRes, depsRes, shiftsRes] = await Promise.all([
-        apiClient.get("/profiles"),
-        apiClient.get("/profiles/departments"),
-        apiClient.get("/profiles/shifts"),
-      ]);
+  // Queries
+  const { data: employees = [], isLoading: loadingEmployees } = useQuery({
+    queryKey: ["employees"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/profiles");
+      return data;
+    },
+  });
 
-      setEmployees(profsRes.data);
-      setDepartments(depsRes.data);
-      setShifts(shiftsRes.data);
-    } catch (err) {
-      console.error("Failed to fetch data", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: departments = [] } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/profiles/departments");
+      return data;
+    },
+  });
 
-  useEffect(() => { fetchData(); }, []);
+  const { data: shifts = [] } = useQuery({
+    queryKey: ["shifts"],
+    queryFn: async () => {
+      const { data } = await apiClient.get("/profiles/shifts");
+      return data;
+    },
+  });
+
+  const loading = loadingEmployees;
+
+  // Mutations
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return apiClient.patch(`/profiles/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+    },
+  });
+
+  const createEmployeeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiClient.post("/auth/register", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Employee created successfully");
+      setDialogOpen(false);
+      setForm({
+        full_name: "",
+        email: "",
+        password: "",
+        biometric_id: "",
+        employee_id: "",
+        department_id: "",
+        shift_id: "",
+        role: "employee",
+        date_of_joining: "",
+        manager_id: "",
+        designation: ""
+      });
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to create employee");
+    },
+  });
+
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient.delete(`/profiles/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      toast.success("Employee deleted successfully");
+      setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to delete employee");
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: any) => {
+      return apiClient.post("/auth/reset-password", { userId, newPassword });
+    },
+    onSuccess: (_, variables) => {
+      toast.success(`Password reset for ${resetTarget?.name}`);
+      setResetPasswordOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to reset password");
+    },
+  });
 
   const toggleActive = async (id: string, isActive: boolean) => {
     try {
-      await apiClient.patch(`/profiles/${id}`, { is_active: !isActive });
+      await updateProfileMutation.mutateAsync({ id, data: { is_active: !isActive } });
       toast.success(`Employee ${isActive ? "deactivated" : "activated"}`);
-      fetchData();
     } catch (err) {
       toast.error("Failed to update status");
     }
@@ -97,9 +162,8 @@ export default function Employees() {
 
   const updateRole = async (userId: string, newRole: string) => {
     try {
-      await apiClient.patch(`/profiles/${userId}`, { role: newRole });
+      await updateProfileMutation.mutateAsync({ id: userId, data: { role: newRole } });
       toast.success("Role updated");
-      fetchData();
     } catch (err) {
       toast.error("Failed to update role");
     }
@@ -124,10 +188,9 @@ export default function Employees() {
 
   const saveEdit = async (id: string) => {
     try {
-      await apiClient.patch(`/profiles/${id}`, editForm);
+      await updateProfileMutation.mutateAsync({ id, data: editForm });
       toast.success("Profile updated");
       setEditingId(null);
-      fetchData();
     } catch (err) {
       toast.error("Failed to update profile");
     }
@@ -138,55 +201,16 @@ export default function Employees() {
       toast.error("Name, email and password are required");
       return;
     }
-    setCreating(true);
-    try {
-      await apiClient.post("/auth/register", form);
-      toast.success("Employee created successfully");
-      setDialogOpen(false);
-      setForm({
-        full_name: "",
-        email: "",
-        password: "",
-        biometric_id: "",
-        employee_id: "",
-        department_id: "",
-        shift_id: "",
-        role: "employee",
-        date_of_joining: "",
-        manager_id: "",
-        designation: ""
-      });
-      fetchData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to create employee");
-    } finally {
-      setCreating(false);
-    }
+    createEmployeeMutation.mutate(form);
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await apiClient.delete(`/profiles/${id}`);
-      toast.success("Employee deleted successfully");
-      setDeleteTarget(null);
-      fetchData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to delete employee");
-    }
+    deleteEmployeeMutation.mutate(id);
   };
 
   const handleResetPassword = async () => {
     if (!resetTarget || !newPassword.trim()) return;
-    setResetting(true);
-    try {
-      await apiClient.post("/auth/reset-password", { userId: resetTarget.id, newPassword: newPassword.trim() });
-      toast.success(`Password reset for ${resetTarget.name}`);
-      setResetPasswordOpen(false);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error || "Failed to reset password");
-    } finally {
-      setResetting(false);
-    }
+    resetPasswordMutation.mutate({ userId: resetTarget.id, newPassword: newPassword.trim() });
   };
 
   const filtered = employees.filter((e) =>
@@ -353,8 +377,8 @@ export default function Employees() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button className="w-full" onClick={handleCreate} disabled={creating}>
-                {creating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Button className="w-full" onClick={handleCreate} disabled={createEmployeeMutation.isPending}>
+                {createEmployeeMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Create Employee
               </Button>
             </div>

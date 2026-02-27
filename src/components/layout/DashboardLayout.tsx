@@ -108,7 +108,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
           <div>
             <h2 className="font-bold text-sm text-sidebar-foreground">{companyName}</h2>
             <p className="text-xs text-sidebar-foreground/60 capitalize">
-              {role?.replace("_", " ")} Panel
+              {role === "subadmin" ? "Manager" : role?.replace("_", " ")} Panel
             </p>
           </div>
         </div>

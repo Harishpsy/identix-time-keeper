@@ -12,6 +12,7 @@ const processDailySummary = async (userId, date) => {
     if (punches.length === 0) return;
 
     const firstIn = punches[0].timestamp;
+    const firstPunch = punches[0];
     const lastOut = punches.length > 1 ? punches[punches.length - 1].timestamp : null;
 
     // Calculate total break duration in minutes
@@ -87,23 +88,37 @@ const processDailySummary = async (userId, date) => {
     if (existing.length > 0) {
         // Update existing
         await pool.execute(
-            'UPDATE daily_summaries SET first_in = ?, last_out = ?, total_duration_minutes = ?, late_minutes = ?, status = ? WHERE id = ?',
-            [firstIn, lastOut, totalDurationMinutes, lateMinutes, status, existing[0].id]
+            `UPDATE daily_summaries SET 
+                first_in = ?, last_out = ?, total_duration_minutes = ?, late_minutes = ?, status = ?,
+                first_in_ip = ?, first_in_lat = ?, first_in_long = ?, first_in_device = ?, first_in_os = ?, first_in_browser = ?
+             WHERE id = ?`,
+            [
+                firstIn, lastOut, totalDurationMinutes, lateMinutes, status,
+                firstPunch.ip_address, firstPunch.latitude, firstPunch.longitude, firstPunch.device_name, firstPunch.os_name, firstPunch.browser_name,
+                existing[0].id
+            ]
         );
     } else {
         // Insert new
         const id = uuidv4();
         await pool.execute(
-            'INSERT INTO daily_summaries (id, user_id, date, first_in, last_out, total_duration_minutes, late_minutes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, userId, date, firstIn, lastOut, totalDurationMinutes, lateMinutes, status]
+            `INSERT INTO daily_summaries (
+                id, user_id, date, first_in, last_out, total_duration_minutes, late_minutes, status,
+                first_in_ip, first_in_lat, first_in_long, first_in_device, first_in_os, first_in_browser
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                id, userId, date, firstIn, lastOut, totalDurationMinutes, lateMinutes, status,
+                firstPunch.ip_address, firstPunch.latitude, firstPunch.longitude, firstPunch.device_name, firstPunch.os_name, firstPunch.browser_name
+            ]
         );
     }
 };
 
 const logPunch = async (req, res) => {
-    const { punch_type } = req.body;
+    const { punch_type, latitude, longitude, device_name, os_name, browser_name, location_name } = req.body;
     const userId = req.user.id;
     const userRole = req.user.role;
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip;
 
     // Do not save punches for super_admin
     if (userRole === 'super_admin') {
@@ -116,8 +131,8 @@ const logPunch = async (req, res) => {
     try {
         const id = uuidv4();
         await pool.execute(
-            'INSERT INTO attendance_raw (id, user_id, timestamp, punch_type) VALUES (?, ?, ?, ?)',
-            [id, userId, timestamp, punch_type || 'manual']
+            'INSERT INTO attendance_raw (id, user_id, timestamp, punch_type, ip_address, latitude, longitude, device_name, os_name, browser_name, location_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, userId, timestamp, punch_type || 'manual', ipAddress, latitude || null, longitude || null, device_name || null, os_name || null, browser_name || null, location_name || null]
         );
 
         // Auto-process daily summary after each punch

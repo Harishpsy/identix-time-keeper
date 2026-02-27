@@ -246,6 +246,7 @@ export default function LeaveRequests() {
                       <TableHead>Time (If Permission)</TableHead>
                       <TableHead>Reason</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Approved By</TableHead>
                       {(role === "super_admin" || role === "admin" || role === "subadmin") && <TableHead>Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
@@ -272,21 +273,36 @@ export default function LeaveRequests() {
                             {r.status}
                           </span>
                         </TableCell>
-                        {(role === "super_admin" || role === "admin" || role === "subadmin") && r.status === "pending" && (
+                        <TableCell>
+                          {r.processed_by_name ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">{r.processed_by_name}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase">{r.processed_by_role}</span>
+                              {r.processed_at && <span className="text-[10px] text-muted-foreground">{format(new Date(r.processed_at), "dd MMM HH:mm")}</span>}
+                            </div>
+                          ) : r.status !== "pending" ? (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs italic">Pending</span>
+                          )}
+                        </TableCell>
+                        {(role === "super_admin" || role === "admin" || role === "subadmin") && (
                           <TableCell>
-                            {(() => {
-                              const roleHierarchy: Record<string, number> = { super_admin: 4, admin: 3, subadmin: 2, employee: 1 };
-                              const canApprove = roleHierarchy[role || ""] > roleHierarchy[r.requester_role || "employee"] && r.user_id !== user?.id;
+                            {r.status === "pending" ? (
+                              (() => {
+                                const roleHierarchy: Record<string, number> = { super_admin: 4, admin: 3, subadmin: 2, employee: 1 };
+                                const canApprove = roleHierarchy[role || ""] > roleHierarchy[r.requester_role || "employee"] && r.user_id !== user?.id;
 
-                              if (!canApprove) return "-";
+                                if (!canApprove) return "-";
 
-                              return (
-                                <div className="flex gap-1">
-                                  <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "approved")}><Check className="w-4 h-4 text-success" /></Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "rejected")}><X className="w-4 h-4 text-destructive" /></Button>
-                                </div>
-                              );
-                            })()}
+                                return (
+                                  <div className="flex gap-1">
+                                    <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "approved")}><Check className="w-4 h-4 text-success" /></Button>
+                                    <Button variant="ghost" size="sm" onClick={() => handleStatusChange(r.id, "rejected")}><X className="w-4 h-4 text-destructive" /></Button>
+                                  </div>
+                                );
+                              })()
+                            ) : "—"}
                           </TableCell>
                         )}
                       </TableRow>
@@ -298,7 +314,7 @@ export default function LeaveRequests() {
           </Card>
         </TabsContent>
 
-        {(role === "admin" || role === "subadmin") && (
+        {(role === "super_admin" || role === "admin" || role === "subadmin") && (
           <TabsContent value="balances" className="mt-4">
             <Card className="border-border/50">
               <CardContent className="p-0">

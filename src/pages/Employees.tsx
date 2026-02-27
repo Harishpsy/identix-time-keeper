@@ -30,7 +30,7 @@ export default function Employees() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ biometric_id: "", department_id: "", shift_id: "", date_of_joining: "" });
+  const [editForm, setEditForm] = useState({ biometric_id: "", department_id: "", shift_id: "", date_of_joining: "", manager_id: "" });
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -51,6 +51,7 @@ export default function Employees() {
     shift_id: "",
     role: "employee",
     date_of_joining: "",
+    manager_id: "",
   });
 
   const fetchData = async () => {
@@ -101,6 +102,7 @@ export default function Employees() {
       department_id: emp.department_id || "",
       shift_id: emp.shift_id || "",
       date_of_joining: emp.date_of_joining ? format(new Date(emp.date_of_joining), "yyyy-MM-dd") : "",
+      manager_id: emp.manager_id || "",
     });
   };
 
@@ -129,7 +131,7 @@ export default function Employees() {
       await apiClient.post("/auth/register", form);
       toast.success("Employee created successfully");
       setDialogOpen(false);
-      setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "" });
+      setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "", manager_id: "" });
       fetchData();
     } catch (err: any) {
       toast.error(err.response?.data?.error || "Failed to create employee");
@@ -204,7 +206,7 @@ export default function Employees() {
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) {
-            setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "" });
+            setForm({ full_name: "", email: "", password: "", biometric_id: "", department_id: "", shift_id: "", role: "employee", date_of_joining: "", manager_id: "" });
             setShowCreatePassword(false);
           }
         }}>
@@ -284,13 +286,25 @@ export default function Employees() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="subadmin">Sub-Admin</SelectItem>
+                    <SelectItem value="subadmin">Manager (Sub-Admin)</SelectItem>
                     {currentUserRole === "super_admin" && (
                       <>
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="super_admin">Super Admin</SelectItem>
                       </>
                     )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Manager (Sub-Admin/Admin)</Label>
+                <Select value={form.manager_id} onValueChange={(val) => setForm({ ...form, manager_id: val })}>
+                  <SelectTrigger><SelectValue placeholder="Select Manager" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {employees.filter(e => e.role === 'subadmin' || e.role === 'admin' || e.role === 'super_admin').map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -313,160 +327,333 @@ export default function Employees() {
       <Card className="border-border/50" data-tour="employee-table">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Employee ID</TableHead>
-                  <TableHead>DOJ</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Shift</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow><TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell></TableRow>
-                ) : filtered.map((emp) => {
-                  const isEditing = editingId === emp.id;
-                  return (
-                    <TableRow key={emp.id}>
-                      <TableCell className="font-medium">{emp.full_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{emp.email}</TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Input
-                            value={editForm.biometric_id}
-                            onChange={(e) => setEditForm({ ...editForm, biometric_id: e.target.value })}
-                            className="w-24 h-8 font-mono text-sm"
-                            placeholder="ID"
-                          />
-                        ) : (
-                          <span className="font-mono text-sm">{emp.biometric_id || "—"}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className={cn("w-36 h-8 justify-start text-left text-sm font-normal", !editForm.date_of_joining && "text-muted-foreground")}>
-                                <CalendarIcon className="mr-1 h-3 w-3" />
-                                {editForm.date_of_joining ? format(parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()), "dd MMM yyyy") : "Pick date"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar mode="single" selected={editForm.date_of_joining ? parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()) : undefined} onSelect={(date) => setEditForm({ ...editForm, date_of_joining: date ? format(date, "yyyy-MM-dd") : "" })} initialFocus />
-                            </PopoverContent>
-                          </Popover>
-                        ) : (
-                          <span className="text-sm">{emp.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : "—"}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Select value={editForm.department_id} onValueChange={(val) => setEditForm({ ...editForm, department_id: val })}>
-                            <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select" /></SelectTrigger>
-                            <SelectContent>
-                              {departments.map((d) => (
-                                <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-sm">{getDeptName(emp.department_id)}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Select value={editForm.shift_id} onValueChange={(val) => setEditForm({ ...editForm, shift_id: val })}>
-                            <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select" /></SelectTrigger>
-                            <SelectContent>
-                              {shifts.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span className="text-sm">{getShiftName(emp.shift_id)}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={emp.role || "employee"}
-                          onValueChange={(val) => updateRole(emp.id, val)}
-                        >
-                          <SelectTrigger className="w-32 h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="super_admin">Super Admin</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="subadmin">Sub-Admin</SelectItem>
-                            <SelectItem value="employee">Employee</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={emp.is_active}
-                            onCheckedChange={() => {
-                              if (emp.is_active) {
-                                setDeactivateTarget({ id: emp.id, name: emp.full_name });
-                              } else {
-                                toggleActive(emp.id, emp.is_active);
-                              }
-                            }}
-                          />
-                          <span className={`text-xs font-medium ${emp.is_active ? "text-green-600" : "text-muted-foreground"}`}>
-                            {emp.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {isEditing ? (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={() => saveEdit(emp.id)}>
-                                <Check className="w-4 h-4 text-green-600" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                                <X className="w-4 h-4 text-destructive" />
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button variant="ghost" size="sm" onClick={() => startEdit(emp)} title="Edit">
-                                <Pencil className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
-                                <FileText className="w-4 h-4" />
-                              </Button>
-                              {(
-                                (emp.role !== "admin" && emp.role !== "super_admin") ||
-                                (currentUserRole === "super_admin" && emp.role === "admin")
-                              ) && (
-                                  <>
-                                    <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
-                                      <KeyRound className="w-4 h-4" />
+            {departments.map(dept => {
+              const deptEmployees = filtered.filter(e => e.department_id === dept.id);
+              if (deptEmployees.length === 0) return null;
+
+              return (
+                <div key={dept.id} className="mb-6 last:mb-0">
+                  <div className="bg-muted/30 px-4 py-2 border-y border-border/50">
+                    <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">{dept.name}</h3>
+                  </div>
+                  <Table>
+                    <TableHeader className="sr-only">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Employee ID</TableHead>
+                        <TableHead>DOJ</TableHead>
+                        <TableHead>Manager</TableHead>
+                        <TableHead>Shift</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {deptEmployees.map((emp) => {
+                        const isEditing = editingId === emp.id;
+                        return (
+                          <TableRow key={emp.id}>
+                            <TableCell className="font-medium">{emp.full_name}</TableCell>
+                            <TableCell className="text-muted-foreground">{emp.email}</TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Input
+                                  value={editForm.biometric_id}
+                                  onChange={(e) => setEditForm({ ...editForm, biometric_id: e.target.value })}
+                                  className="w-24 h-8 font-mono text-sm"
+                                  placeholder="ID"
+                                />
+                              ) : (
+                                <span className="font-mono text-sm">{emp.biometric_id || "—"}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" className={cn("w-36 h-8 justify-start text-left text-sm font-normal", !editForm.date_of_joining && "text-muted-foreground")}>
+                                      <CalendarIcon className="mr-1 h-3 w-3" />
+                                      {editForm.date_of_joining ? format(parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()), "dd MMM yyyy") : "Pick date"}
                                     </Button>
-                                    <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: emp.id, name: emp.full_name })} title="Delete Employee">
-                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={editForm.date_of_joining ? parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()) : undefined} onSelect={(date) => setEditForm({ ...editForm, date_of_joining: date ? format(date, "yyyy-MM-dd") : "" })} initialFocus />
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <span className="text-sm">{emp.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : "—"}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Select value={editForm.manager_id} onValueChange={(val) => setEditForm({ ...editForm, manager_id: val === 'none' ? "" : val })}>
+                                  <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select Manager" /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">None</SelectItem>
+                                    {employees.filter(e => e.id !== emp.id && (e.role === 'subadmin' || e.role === 'admin' || e.role === 'super_admin')).map((m) => (
+                                      <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span className="text-sm">{emp.manager_name || "—"}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <Select value={editForm.shift_id} onValueChange={(val) => setEditForm({ ...editForm, shift_id: val })}>
+                                  <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select" /></SelectTrigger>
+                                  <SelectContent>
+                                    {shifts.map((s) => (
+                                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <span className="text-sm">{getShiftName(emp.shift_id)}</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={emp.role || "employee"}
+                                onValueChange={(val) => updateRole(emp.id, val)}
+                              >
+                                <SelectTrigger className="w-32 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                  <SelectItem value="subadmin">Manager (Sub-Admin)</SelectItem>
+                                  <SelectItem value="employee">Employee</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={emp.is_active}
+                                  onCheckedChange={() => {
+                                    if (emp.is_active) {
+                                      setDeactivateTarget({ id: emp.id, name: emp.full_name });
+                                    } else {
+                                      toggleActive(emp.id, emp.is_active);
+                                    }
+                                  }}
+                                />
+                                <span className={`text-xs font-medium ${emp.is_active ? "text-green-600" : "text-muted-foreground"}`}>
+                                  {emp.is_active ? "Active" : "Inactive"}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {isEditing ? (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => saveEdit(emp.id)}>
+                                      <Check className="w-4 h-4 text-green-600" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                                      <X className="w-4 h-4 text-destructive" />
                                     </Button>
                                   </>
+                                ) : (
+                                  <>
+                                    <Button variant="ghost" size="sm" onClick={() => startEdit(emp)} title="Edit">
+                                      <Pencil className="w-4 h-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
+                                      <FileText className="w-4 h-4" />
+                                    </Button>
+                                    {(
+                                      (emp.role !== "admin" && emp.role !== "super_admin") ||
+                                      (currentUserRole === "super_admin" && emp.role === "admin")
+                                    ) && (
+                                        <>
+                                          <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
+                                            <KeyRound className="w-4 h-4" />
+                                          </Button>
+                                          <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: emp.id, name: emp.full_name })} title="Delete Employee">
+                                            <Trash2 className="w-4 h-4 text-destructive" />
+                                          </Button>
+                                        </>
+                                      )}
+                                  </>
                                 )}
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              );
+            })}
+
+            {/* Unassigned Department */}
+            {filtered.filter(e => !e.department_id).length > 0 && (
+              <div className="mb-6 last:mb-0">
+                <div className="bg-muted/30 px-4 py-2 border-y border-border/50">
+                  <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">Unassigned Department</h3>
+                </div>
+                <Table>
+                  <TableHeader className="sr-only">
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Employee ID</TableHead>
+                      <TableHead>DOJ</TableHead>
+                      <TableHead>Manager</TableHead>
+                      <TableHead>Shift</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.filter(e => !e.department_id).map((emp) => {
+                      const isEditing = editingId === emp.id;
+                      return (
+                        <TableRow key={emp.id}>
+                          <TableCell className="font-medium">{emp.full_name}</TableCell>
+                          <TableCell className="text-muted-foreground">{emp.email}</TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={editForm.biometric_id}
+                                onChange={(e) => setEditForm({ ...editForm, biometric_id: e.target.value })}
+                                className="w-24 h-8 font-mono text-sm"
+                                placeholder="ID"
+                              />
+                            ) : (
+                              <span className="font-mono text-sm">{emp.biometric_id || "—"}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className={cn("w-36 h-8 justify-start text-left text-sm font-normal", !editForm.date_of_joining && "text-muted-foreground")}>
+                                    <CalendarIcon className="mr-1 h-3 w-3" />
+                                    {editForm.date_of_joining ? format(parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()), "dd MMM yyyy") : "Pick date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={editForm.date_of_joining ? parse(editForm.date_of_joining, "yyyy-MM-dd", new Date()) : undefined} onSelect={(date) => setEditForm({ ...editForm, date_of_joining: date ? format(date, "yyyy-MM-dd") : "" })} initialFocus />
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              <span className="text-sm">{emp.date_of_joining ? format(new Date(emp.date_of_joining), "dd MMM yyyy") : "—"}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Select value={editForm.manager_id} onValueChange={(val) => setEditForm({ ...editForm, manager_id: val === 'none' ? "" : val })}>
+                                <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select Manager" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  {employees.filter(e => e.id !== emp.id && (e.role === 'subadmin' || e.role === 'admin' || e.role === 'super_admin')).map((m) => (
+                                    <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-sm">{emp.manager_name || "—"}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Select value={editForm.shift_id} onValueChange={(val) => setEditForm({ ...editForm, shift_id: val })}>
+                                <SelectTrigger className="w-32 h-8"><SelectValue placeholder="Select" /></SelectTrigger>
+                                <SelectContent>
+                                  {shifts.map((s) => (
+                                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-sm">{getShiftName(emp.shift_id)}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Select
+                              value={emp.role || "employee"}
+                              onValueChange={(val) => updateRole(emp.id, val)}
+                            >
+                              <SelectTrigger className="w-32 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="super_admin">Super Admin</SelectItem>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="subadmin">Manager (Sub-Admin)</SelectItem>
+                                <SelectItem value="employee">Employee</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={emp.is_active}
+                                onCheckedChange={() => {
+                                  if (emp.is_active) {
+                                    setDeactivateTarget({ id: emp.id, name: emp.full_name });
+                                  } else {
+                                    toggleActive(emp.id, emp.is_active);
+                                  }
+                                }}
+                              />
+                              <span className={`text-xs font-medium ${emp.is_active ? "text-green-600" : "text-muted-foreground"}`}>
+                                {emp.is_active ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {isEditing ? (
+                                <>
+                                  <Button variant="ghost" size="sm" onClick={() => saveEdit(emp.id)}>
+                                    <Check className="w-4 h-4 text-green-600" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={cancelEdit}>
+                                    <X className="w-4 h-4 text-destructive" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button variant="ghost" size="sm" onClick={() => startEdit(emp)} title="Edit">
+                                    <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => downloadEmployeePDF(emp.id, emp.full_name)} title="Download PDF Report">
+                                    <FileText className="w-4 h-4" />
+                                  </Button>
+                                  {(
+                                    (emp.role !== "admin" && emp.role !== "super_admin") ||
+                                    (currentUserRole === "super_admin" && emp.role === "admin")
+                                  ) && (
+                                      <>
+                                        <Button variant="ghost" size="sm" onClick={() => { setResetTarget({ id: emp.id, name: emp.full_name }); setResetPasswordOpen(true); setNewPassword(""); setShowNewPassword(false); }} title="Reset Password">
+                                          <KeyRound className="w-4 h-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setDeleteTarget({ id: emp.id, name: emp.full_name })} title="Delete Employee">
+                                          <Trash2 className="w-4 h-4 text-destructive" />
+                                        </Button>
+                                      </>
+                                    )}
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

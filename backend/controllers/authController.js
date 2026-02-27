@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const pool = require('../config/db');
 
 const register = async (req, res) => {
-    const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining } = req.body;
+    const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining, manager_id } = req.body;
 
     if (!email || !password || !full_name) {
         return res.status(400).json({ error: 'Email, password, and full name are required' });
@@ -37,7 +37,7 @@ const register = async (req, res) => {
             );
 
             await connection.execute(
-                'INSERT INTO profiles (id, full_name, email, biometric_id, department_id, shift_id, date_of_joining) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO profiles (id, full_name, email, biometric_id, department_id, shift_id, date_of_joining, manager_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     userId,
                     full_name,
@@ -45,7 +45,8 @@ const register = async (req, res) => {
                     biometric_id || null,
                     department_id || null,
                     shift_id || null,
-                    date_of_joining || null
+                    date_of_joining || null,
+                    manager_id || null
                 ]
             );
 

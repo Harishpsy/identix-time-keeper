@@ -22,6 +22,7 @@ const loanRoutes = require('./routes/loanRoutes');
 const holidayRoutes = require('./routes/holidayRoutes');
 
 const app = express();
+app.set('trust proxy', true);
 
 app.use(helmet());
 app.use(cors());

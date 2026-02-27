@@ -163,11 +163,67 @@ export default function CheckInOut() {
     }
   };
 
+  const getDeviceInfo = () => {
+    const ua = navigator.userAgent;
+    let os = "Unknown OS";
+    if (ua.indexOf("Win") !== -1) os = "Windows";
+    if (ua.indexOf("Mac") !== -1) os = "MacOS";
+    if (ua.indexOf("X11") !== -1) os = "UNIX";
+    if (ua.indexOf("Linux") !== -1) os = "Linux";
+    if (ua.indexOf("Android") !== -1) os = "Android";
+    if (ua.indexOf("iPhone") !== -1) os = "iOS";
+
+    let browser = "Unknown Browser";
+    if (ua.indexOf("Chrome") !== -1) browser = "Chrome";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("Safari") !== -1) browser = "Safari";
+    else if (ua.indexOf("Edge") !== -1) browser = "Edge";
+
+    return { os, browser };
+  };
+
   const handlePunch = async (punchType: string, label: string) => {
     if (!user) return;
     setLoading(true);
+
     try {
-      const { data } = await apiClient.post("/attendance/punch", { punch_type: punchType });
+      // 1. Get Location (IP is handled by backend)
+      let locationData: any = {};
+      try {
+        const position: any = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            timeout: 5000,
+            enableHighAccuracy: true
+          });
+        });
+        locationData = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        };
+      } catch (locErr: any) {
+        let msg = "Location tracking skipped.";
+        if (locErr.code === 1) msg = "Location permission denied. Please allow it for tracking.";
+        else if (locErr.code === 3) msg = "Location request timed out.";
+
+        console.warn("Geolocation failed:", locErr.message);
+        toast({
+          title: "Tracking Note",
+          description: msg,
+          variant: "default",
+        });
+      }
+
+      // 2. Get Device Info
+      const { os, browser } = getDeviceInfo();
+      const trackingData = {
+        ...locationData,
+        os_name: os,
+        browser_name: browser,
+        device_name: `${os} Desktop`, // Best approximation from browser
+        punch_type: punchType
+      };
+
+      const { data } = await apiClient.post("/attendance/punch", trackingData);
       const now = data.timestamp;
 
       toast({

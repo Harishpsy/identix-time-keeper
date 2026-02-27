@@ -13,10 +13,18 @@ const getLeaveRequests = async (req, res) => {
             JOIN user_roles r ON lr.user_id = r.user_id
         `;
         let params = [];
+        let whereClauses = [];
 
         if (role === 'employee') {
-            query += ' WHERE lr.user_id = ?';
+            whereClauses.push('lr.user_id = ?');
             params.push(userId);
+        } else if (role === 'subadmin') {
+            whereClauses.push('(lr.user_id = ? OR p.manager_id = ?)');
+            params.push(userId, userId);
+        }
+
+        if (whereClauses.length > 0) {
+            query += ' WHERE ' + whereClauses.join(' AND ');
         }
 
         query += ' ORDER BY lr.created_at DESC';
@@ -99,9 +107,40 @@ const updateLeaveStatus = async (req, res) => {
 
             const oldStatus = request.status;
 
+            if (oldStatus !== 'pending') {
+                await connection.rollback();
+                connection.release();
+                return res.status(403).json({ error: 'This request has already been finalized' });
+            }
+
+            const [processors] = await connection.execute('SELECT full_name FROM profiles WHERE id = ?', [adminId]);
+            let processorName = processors.length > 0 ? processors[0].full_name : null;
+
+            // Fallback for Super Admin or missing profile
+            if (!processorName) {
+                processorName = approverRole === 'super_admin' ? 'Super Admin' : (approverRole === 'admin' ? 'Admin' : 'Unknown');
+            }
+
             await connection.execute(
-                'UPDATE leave_requests SET status = ?, approved_by = ?, approved_at = ? WHERE id = ?',
-                [status, status === 'approved' ? adminId : null, status === 'approved' ? new Date() : null, id]
+                `UPDATE leave_requests SET 
+                    status = ?, 
+                    approved_by = ?, 
+                    approved_at = ?,
+                    processed_by = ?,
+                    processed_by_role = ?,
+                    processed_by_name = ?,
+                    processed_at = ?
+                 WHERE id = ?`,
+                [
+                    status,
+                    status === 'approved' ? adminId : null,
+                    status === 'approved' ? new Date() : null,
+                    adminId,
+                    approverRole,
+                    processorName,
+                    new Date(),
+                    id
+                ]
             );
 
             // Handle leave balance updates

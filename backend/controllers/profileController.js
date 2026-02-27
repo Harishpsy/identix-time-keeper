@@ -4,10 +4,12 @@ const { v4: uuidv4 } = require('uuid');
 const getProfiles = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT p.*, r.role, d.name as department_name, s.name as shift_name FROM profiles p ' +
+            'SELECT p.*, r.role, d.name as department_name, s.name as shift_name, pm.full_name as manager_name ' +
+            'FROM profiles p ' +
             'LEFT JOIN user_roles r ON p.id = r.user_id ' +
             'LEFT JOIN departments d ON p.department_id = d.id ' +
             'LEFT JOIN shifts s ON p.shift_id = s.id ' +
+            'LEFT JOIN profiles pm ON p.manager_id = pm.id ' +
             "WHERE r.role != 'super_admin' OR r.role IS NULL"
         );
         res.json(profiles);

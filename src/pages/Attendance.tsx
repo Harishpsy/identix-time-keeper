@@ -232,18 +232,19 @@ export default function Attendance() {
                   <TableHead>Duration</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Late (HH.MM)</TableHead>
+                  {role !== "employee" && <TableHead>Tracking & Device</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center py-8">
+                    <TableCell colSpan={role !== "employee" ? 8 : 6} className="text-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={role !== "employee" ? 7 : 6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={role !== "employee" ? 8 : 6} className="text-center text-muted-foreground py-8">
                       No records found
                     </TableCell>
                   </TableRow>
@@ -257,6 +258,32 @@ export default function Attendance() {
                       <TableCell>{formatDurationMins(s.total_duration_minutes)}</TableCell>
                       <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
                       <TableCell>{formatLateMinutes(s.late_minutes)}</TableCell>
+                      {role !== "employee" && (
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5 text-[10px] min-w-[120px]">
+                            <span className="font-mono text-muted-foreground">
+                              {s.first_in_ip === "::1" || s.first_in_ip === "127.0.0.1" ? "Localhost" : (s.first_in_ip || "—")}
+                            </span>
+                            <span className="font-medium text-foreground">{s.first_in_os || "—"} / {s.first_in_browser || "—"}</span>
+                            {s.first_in_lat && s.first_in_long ? (
+                              <a
+                                href={`https://www.google.com/maps?q=${s.first_in_lat},${s.first_in_long}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline font-medium flex items-center gap-1"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                View Location
+                              </a>
+                            ) : (
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                                Location Unavailable
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}

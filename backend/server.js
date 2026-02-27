@@ -22,12 +22,15 @@ const loanRoutes = require('./routes/payroll/loanRoutes');
 const holidayRoutes = require('./routes/management/holidayRoutes');
 const onboardingRoutes = require('./routes/admin/onboardingRoutes');
 
+const encryptionMiddleware = require('./middleware/encryptionMiddleware');
+
 const app = express();
 app.set('trust proxy', true);
 
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(encryptionMiddleware);
 app.use('/uploads', express.static(uploadsDir));
 
 // Routes

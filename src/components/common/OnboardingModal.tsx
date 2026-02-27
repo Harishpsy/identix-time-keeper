@@ -127,6 +127,24 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     };
 
     const handleSubmit = async () => {
+        // Validation
+        const phoneRegex = /^\d{10}$/;
+        if (!formData.phone_number || !phoneRegex.test(formData.phone_number)) {
+            toast.error("Please enter a valid 10-digit phone number");
+            setCurrentStep(0); // Go to personal step
+            return;
+        }
+        if (!formData.date_of_birth) {
+            toast.error("Date of Birth is required");
+            setCurrentStep(0);
+            return;
+        }
+        if (!formData.gender) {
+            toast.error("Gender is required");
+            setCurrentStep(0);
+            return;
+        }
+
         try {
             setSubmitting(true);
 
@@ -221,19 +239,23 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                             {currentStep === 0 && (
                                 <div className="grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="phone_number">Phone Number</Label>
+                                        <Label htmlFor="phone_number" className="flex gap-1">Phone Number <span className="text-destructive">*</span></Label>
                                         <Input
                                             id="phone_number"
                                             name="phone_number"
-                                            placeholder="+1 (555) 000-0000"
+                                            placeholder="10-digit mobile number"
                                             value={formData.phone_number}
-                                            onChange={handleInputChange}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                                setFormData(prev => ({ ...prev, phone_number: val }));
+                                            }}
+                                            maxLength={10}
                                             className="bg-muted/50"
                                         />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="date_of_birth">Date of Birth</Label>
+                                            <Label htmlFor="date_of_birth" className="flex gap-1">Date of Birth <span className="text-destructive">*</span></Label>
                                             <Input
                                                 id="date_of_birth"
                                                 name="date_of_birth"
@@ -244,7 +266,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                                             />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="gender">Gender</Label>
+                                            <Label htmlFor="gender" className="flex gap-1">Gender <span className="text-destructive">*</span></Label>
                                             <Select onValueChange={(v) => handleSelectChange('gender', v)} value={formData.gender}>
                                                 <SelectTrigger className="bg-muted/50">
                                                     <SelectValue placeholder="Select gender" />

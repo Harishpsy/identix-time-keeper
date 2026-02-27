@@ -15,7 +15,7 @@ import { format } from "date-fns";
 export default function MyProfile() {
     const { user, profile, role } = useAuth();
     const [saving, setSaving] = useState(false);
-    const [changingPassword, setChangingPassword] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
 
     // Personal details - editable
     const [form, setForm] = useState({
@@ -25,11 +25,8 @@ export default function MyProfile() {
         address: "",
     });
 
-    // Password change
-    const [passwords, setPasswords] = useState({
-        newPassword: "",
-        confirmPassword: "",
-    });
+    // Password change - no longer needed (contact admin)
+    // const [passwords, ...] removed
 
     // Pre-populate from profile
     useEffect(() => {
@@ -46,15 +43,31 @@ export default function MyProfile() {
     }, [profile]);
 
     const handleSave = async () => {
+        // Validation
+        const phoneRegex = /^\d{10}$/;
+        if (!form.phone_number || !phoneRegex.test(form.phone_number)) {
+            toast.error("Please enter a valid 10-digit phone number");
+            return;
+        }
+        if (!form.date_of_birth) {
+            toast.error("Date of Birth is required");
+            return;
+        }
+        if (!form.gender) {
+            toast.error("Gender is required");
+            return;
+        }
+
         setSaving(true);
         try {
             await apiClient.patch(`/profiles/me`, {
-                phone_number: form.phone_number || null,
-                date_of_birth: form.date_of_birth || null,
-                gender: form.gender || null,
+                phone_number: form.phone_number,
+                date_of_birth: form.date_of_birth,
+                gender: form.gender,
                 address: form.address || null,
             });
             toast.success("Profile updated successfully");
+            setIsEditing(false);
         } catch (err: any) {
             toast.error(err.response?.data?.error || "Failed to update profile");
         } finally {
@@ -62,32 +75,16 @@ export default function MyProfile() {
         }
     };
 
-    const handleChangePassword = async () => {
-        if (!passwords.newPassword.trim()) {
-            toast.error("New password cannot be empty");
-            return;
-        }
-        if (passwords.newPassword !== passwords.confirmPassword) {
-            toast.error("Passwords do not match");
-            return;
-        }
-        if (passwords.newPassword.length < 6) {
-            toast.error("Password must be at least 6 characters");
-            return;
-        }
-        setChangingPassword(true);
-        try {
-            await apiClient.post("/auth/reset-password", {
-                userId: user?.id,
-                newPassword: passwords.newPassword,
+    const handleCancel = () => {
+        if (profile) {
+            setForm({
+                phone_number: profile.phone_number || "",
+                date_of_birth: profile.date_of_birth ? profile.date_of_birth.split("T")[0] : "",
+                gender: profile.gender || "",
+                address: profile.address || "",
             });
-            toast.success("Password changed successfully");
-            setPasswords({ newPassword: "", confirmPassword: "" });
-        } catch (err: any) {
-            toast.error(err.response?.data?.error || "Failed to change password");
-        } finally {
-            setChangingPassword(false);
         }
+        setIsEditing(false);
     };
 
     const getRoleBadge = () => {
@@ -169,60 +166,94 @@ export default function MyProfile() {
                 </CardContent>
             </Card>
 
-            {/* Personal Details (editable) */}
+            {/* Personal Details */}
             <Card className="border-border/50">
                 <CardHeader className="pb-3">
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <User className="w-4 h-4 text-primary" />
-                        Personal Details
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <User className="w-4 h-4 text-primary" />
+                            Personal Details
+                        </CardTitle>
+                        {!isEditing && (
+                            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                                Edit
+                            </Button>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Phone Number</Label>
-                            <Input
-                                value={form.phone_number}
-                                onChange={(e) => setForm({ ...form, phone_number: e.target.value })}
-                                placeholder="+91 9876543210"
-                            />
+                    {isEditing ? (
+                        <>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="flex gap-1">Phone Number <span className="text-destructive">*</span></Label>
+                                    <Input
+                                        value={form.phone_number}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                            setForm({ ...form, phone_number: val });
+                                        }}
+                                        placeholder="10-digit mobile number"
+                                        maxLength={10}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="flex gap-1">Date of Birth <span className="text-destructive">*</span></Label>
+                                    <Input
+                                        type="date"
+                                        value={form.date_of_birth}
+                                        onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="flex gap-1">Gender <span className="text-destructive">*</span></Label>
+                                    <Select value={form.gender} onValueChange={(val) => setForm({ ...form, gender: val })}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select gender" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Male">Male</SelectItem>
+                                            <SelectItem value="Female">Female</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                            <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Address</Label>
+                                <Textarea
+                                    value={form.address}
+                                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                                    placeholder="Enter your full address"
+                                    className="min-h-[80px]"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button onClick={handleSave} disabled={saving} className="gap-2">
+                                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    Save Changes
+                                </Button>
+                                <Button variant="outline" onClick={handleCancel} disabled={saving}>
+                                    Cancel
+                                </Button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            {[
+                                { label: "Phone Number", value: form.phone_number },
+                                { label: "Date of Birth", value: form.date_of_birth ? format(new Date(form.date_of_birth), "dd MMM yyyy") : null },
+                                { label: "Gender", value: form.gender ? form.gender.charAt(0).toUpperCase() + form.gender.slice(1) : null },
+                                { label: "Address", value: form.address },
+                            ].map(({ label, value }) => (
+                                <div key={label} className="space-y-1">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+                                    <p className="font-medium">{value || "—"}</p>
+                                </div>
+                            ))}
                         </div>
-                        <div className="space-y-2">
-                            <Label>Date of Birth</Label>
-                            <Input
-                                type="date"
-                                value={form.date_of_birth}
-                                onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Gender</Label>
-                            <Select value={form.gender} onValueChange={(val) => setForm({ ...form, gender: val })}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select gender" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Male">Male</SelectItem>
-                                    <SelectItem value="Female">Female</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                    <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Address</Label>
-                        <Textarea
-                            value={form.address}
-                            onChange={(e) => setForm({ ...form, address: e.target.value })}
-                            placeholder="Enter your full address"
-                            className="min-h-[80px]"
-                        />
-                    </div>
-                    <Button onClick={handleSave} disabled={saving} className="gap-2">
-                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Save Changes
-                    </Button>
+                    )}
                 </CardContent>
             </Card>
 

@@ -165,11 +165,11 @@ const updateLeaveStatus = async (req, res) => {
 
                     let amount = 1;
                     if (request.type === 'permission' && request.start_time && request.end_time) {
-                        // Calculate hours between start_time and end_time
+                        // Store as MINUTES (integer) to avoid floating-point rounding errors
                         const start = new Date(`1970-01-01T${request.start_time}`);
                         const end = new Date(`1970-01-01T${request.end_time}`);
                         const diffMs = end - start;
-                        amount = Math.max(0, diffMs / (1000 * 60 * 60));
+                        amount = Math.max(0, Math.round(diffMs / (1000 * 60))); // minutes
                     }
 
                     // Ensure balance exists, use company defaults if it doesn't
@@ -225,7 +225,7 @@ const getLeaveBalances = async (req, res) => {
 
         // Fallback to company settings if no balance record exists
         const [settings] = await pool.execute('SELECT default_sick_leaves, default_casual_leaves, default_annual_leaves, default_permission_leaves FROM company_settings LIMIT 1');
-        const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 0 };
+        const s = settings[0] || { default_sick_leaves: 12, default_casual_leaves: 12, default_annual_leaves: 15, default_permission_leaves: 180 };
 
         res.json({
             user_id: userId,

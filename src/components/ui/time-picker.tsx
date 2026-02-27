@@ -152,11 +152,17 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
                     {/* Hours */}
                     <div className="flex-1 border-r">
                         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground text-center border-b">Hour</div>
-                        <div className="h-[180px] overflow-y-auto" ref={hourRef}>
+                        <div
+                            className="h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+                            ref={hourRef}
+                            onWheel={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                        >
                             <div className="p-1">
                                 {hours.map((h) => (
                                     <button
                                         key={h}
+                                        type="button"
                                         data-selected={parsed.hour === h}
                                         onClick={() => handleHourSelect(h)}
                                         className={cn(
@@ -176,11 +182,17 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
                     {/* Minutes */}
                     <div className="flex-1 border-r">
                         <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground text-center border-b">Min</div>
-                        <div className="h-[180px] overflow-y-auto" ref={minuteRef}>
+                        <div
+                            className="h-[180px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+                            ref={minuteRef}
+                            onWheel={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                        >
                             <div className="p-1">
                                 {minutes.map((m) => (
                                     <button
                                         key={m}
+                                        type="button"
                                         data-selected={parsed.minute === m}
                                         onClick={() => handleMinuteSelect(m)}
                                         className={cn(
@@ -204,6 +216,7 @@ export function TimePicker({ value, onChange, placeholder = "Select time", class
                             {(["AM", "PM"] as const).map((p) => (
                                 <button
                                     key={p}
+                                    type="button"
                                     onClick={() => handlePeriodToggle(p)}
                                     className={cn(
                                         "w-full px-3 py-2 text-sm rounded-md text-center font-medium transition-colors",

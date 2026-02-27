@@ -10,6 +10,11 @@ import { useTheme } from "@/components/theme/ThemeContext";
 import { GuideTour } from "@/components/common/GuideTour";
 import { OnboardingModal } from "@/components/common/OnboardingModal";
 import { WelcomeModal } from "@/components/common/WelcomeModal";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 export default function DashboardLayout({ children }: { children?: ReactNode }) {
   const { user, role, profile, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -21,6 +26,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const [companyName, setCompanyName] = useState("Identix");
   const [runTour, setRunTour] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
 
   // Show welcome modal once when user is newly onboarded (Active)
   useEffect(() => {
@@ -178,7 +184,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSignOut}
+            onClick={() => setShowSignOutConfirm(true)}
             data-tour="user-profile"
             className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
           >
@@ -214,6 +220,27 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
           onClose={() => setShowWelcome(false)}
         />
       )}
+
+      {/* Sign Out Confirmation */}
+      <AlertDialog open={showSignOutConfirm} onOpenChange={setShowSignOutConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out? You will need to log in again to access your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleSignOut}
+            >
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

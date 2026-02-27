@@ -22,6 +22,16 @@ const statusColors: Record<string, string> = {
   rejected: "bg-destructive/10 text-destructive",
 };
 
+// Format whole minutes to "Xh Ym" e.g. 70 → "1h 10m", 10 → "10m", 180 → "3h"
+const formatMinutes = (mins: number): string => {
+  const totalMins = Math.round(mins);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
 export default function LeaveRequests() {
   const { user, role } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
@@ -120,6 +130,10 @@ export default function LeaveRequests() {
       toast.error("End time must be after start time");
       return;
     }
+    if (!form.reason || form.reason.trim() === "") {
+      toast.error("Reason is required");
+      return;
+    }
     try {
       await apiClient.post("/leaves/apply", form);
       toast.success("Leave request submitted");
@@ -213,7 +227,14 @@ export default function LeaveRequests() {
                 <CardContent className="p-4">
                   <p className="capitalize text-sm text-muted-foreground">{type.label} Leave</p>
                   <p className="text-2xl font-bold">
-                    {total - used} / {total} {type.id === "permission" ? "HRS" : "Days"}
+                    {type.id === "permission"
+                      ? `${formatMinutes(used)} / ${formatMinutes(total)}`
+                      : `${used} / ${total} Days`}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {type.id === "permission"
+                      ? `${formatMinutes(total - used)} remaining`
+                      : `${total - used} days remaining`}
                   </p>
                 </CardContent>
               </Card>
@@ -527,8 +548,8 @@ export default function LeaveRequests() {
               </div>
             )}
             <div className="space-y-2">
-              <Label>Reason</Label>
-              <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} />
+              <Label>Reason <span className="text-destructive">*</span></Label>
+              <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Enter reason for leave" />
             </div>
             <Button className="w-full" onClick={handleSubmit}>Submit</Button>
           </div>

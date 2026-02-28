@@ -11,10 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Check, X, CalendarDays, Loader2, Settings, Info } from "lucide-react";
+import { Plus, Check, X, CalendarDays, Loader2, Settings, Info, ClipboardList } from "lucide-react";
 import { TimePicker } from "@/components/ui/time-picker";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { PageHeader } from "@/components/management/PageHeader";
+import { StatsCard } from "@/components/management/StatsCard";
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/10 text-warning",
@@ -205,39 +207,37 @@ export default function LeaveRequests() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Leave Management</h1>
-          <p className="text-muted-foreground mt-1">
-            {role === "employee" ? "Apply for leave and track your requests" : "Manage leave requests, balances and settings"}
-          </p>
-        </div>
+      <PageHeader
+        title="Leave Management"
+        description={role === "employee" ? "Apply for leave and track your requests" : "Manage leave requests, balances and settings"}
+        icon={ClipboardList}
+      >
         {(role === "employee" || role === "admin" || role === "subadmin") && (
           <Button onClick={() => setDialogOpen(true)} data-tour="apply-leave"><Plus className="w-4 h-4 mr-2" />Apply Leave</Button>
         )}
-      </div>
+      </PageHeader>
 
       {role === "employee" && leaveBalance && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" data-tour="leave-stats">
           {leaveTypes.filter(t => Boolean(t.enabled)).map((type) => {
             const used = leaveBalance[`${type.id}_used`] || 0;
             const total = leaveBalance[`${type.id}_total`] || 0;
+            const unit = type.id === "permission" ? "" : " Days";
+            const val = type.id === "permission"
+              ? `${formatMinutes(used)} / ${formatMinutes(total)}`
+              : `${used} / ${total}${unit}`;
+            const desc = type.id === "permission"
+              ? `${formatMinutes(total - used)} remaining`
+              : `${total - used} days remaining`;
+
             return (
-              <Card key={type.id}>
-                <CardContent className="p-4">
-                  <p className="capitalize text-sm text-muted-foreground">{type.label} Leave</p>
-                  <p className="text-2xl font-bold">
-                    {type.id === "permission"
-                      ? `${formatMinutes(used)} / ${formatMinutes(total)}`
-                      : `${used} / ${total} Days`}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {type.id === "permission"
-                      ? `${formatMinutes(total - used)} remaining`
-                      : `${total - used} days remaining`}
-                  </p>
-                </CardContent>
-              </Card>
+              <StatsCard
+                key={type.id}
+                title={`${type.label} Leave`}
+                value={val}
+                description={desc}
+                icon={CalendarDays}
+              />
             );
           })}
         </div>

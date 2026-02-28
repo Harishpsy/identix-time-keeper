@@ -23,6 +23,7 @@ import RolePermissions from "./pages/admin/RolePermissions";
 import MenuOrder from "./pages/admin/MenuOrder";
 import LoanManagement from "./pages/payroll/LoanManagement";
 import Holidays from "./pages/management/Holidays";
+import AddEmployee from "./pages/management/AddEmployee";
 import AttendanceDetails from "./pages/attendance/AttendanceDetails";
 import OnboardingDashboard from "./pages/admin/OnboardingDashboard";
 import MyProfile from "./pages/profile/MyProfile";
@@ -70,6 +71,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/attendance" element={<Attendance />} />
                 <Route path="/employees" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
+                <Route path="/employees/new" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AddEmployee /></ProtectedRoute>} />
                 <Route path="/departments" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />
                 <Route path="/shifts" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Shifts /></ProtectedRoute>} />
                 <Route path="/leave" element={<LeaveRequests />} />

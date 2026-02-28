@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Users, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, Loader2, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/management/PageHeader";
 
 export default function Departments() {
   const [departments, setDepartments] = useState<any[]>([]);
@@ -89,13 +90,13 @@ export default function Departments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Department Management</h1>
-          <p className="text-muted-foreground mt-1">Create and manage departments</p>
-        </div>
+      <PageHeader
+        title="Department Management"
+        description="Create and manage departments"
+        icon={Building2}
+      >
         <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" />Add Department</Button>
-      </div>
+      </PageHeader>
 
       <Card className="border-border/50">
         <CardContent className="p-0">

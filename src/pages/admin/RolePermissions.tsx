@@ -117,17 +117,17 @@ export default function RolePermissions() {
                         <div
                             key={mod.key}
                             className={`group relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 hover:border-primary/30 ${isEnabled
-                                ? "bg-primary/[0.02] border-primary/20 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]"
-                                : "bg-white border-slate-100 opacity-80 hover:opacity-100"
+                                ? "bg-primary/[0.02] border-primary/20 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] dark:bg-primary/[0.05]"
+                                : "bg-card border-border/40 opacity-80 hover:opacity-100"
                                 }`}
                         >
-                            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all ${isEnabled ? mod.color : "bg-slate-100 text-slate-400"}`}>
+                            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-all ${isEnabled ? mod.color : "bg-muted text-muted-foreground/60"}`}>
                                 {mod.icon}
                             </div>
 
                             <div className="flex-1 min-w-0">
-                                <h3 className="text-sm font-semibold truncate">{mod.label}</h3>
-                                <p className="text-[10px] text-slate-400 truncate">{mod.description}</p>
+                                <h3 className="text-sm font-semibold truncate text-foreground">{mod.label}</h3>
+                                <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -166,14 +166,14 @@ export default function RolePermissions() {
                         <Lock className="w-3.5 h-3.5" />
                         Infrastructure
                     </div>
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900">Permissions</h1>
-                    <p className="text-slate-500 text-sm">
+                    <h1 className="text-3xl font-black tracking-tight text-foreground">Permissions</h1>
+                    <p className="text-muted-foreground text-sm">
                         Manage module visibility across different organizational roles.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="px-4 py-2 bg-slate-50 rounded-lg border border-slate-100 text-xs font-medium text-slate-600 flex items-center gap-2">
+                    <div className="px-4 py-2 bg-muted/50 rounded-lg border border-border/50 text-xs font-medium text-muted-foreground flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Live Enforcement
                     </div>
@@ -182,14 +182,14 @@ export default function RolePermissions() {
 
             <Tabs defaultValue="employee" className="space-y-8">
                 <div className="flex justify-start px-2">
-                    <TabsList className="bg-slate-100/80 p-1 rounded-full border border-slate-200 backdrop-blur-sm">
-                        <TabsTrigger value="employee" className="rounded-full px-6 py-1.5 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+                    <TabsList className="bg-muted/80 p-1 rounded-full border border-border/60 backdrop-blur-sm">
+                        <TabsTrigger value="employee" className="rounded-full px-6 py-1.5 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all focus-visible:ring-0">
                             Employees
                         </TabsTrigger>
-                        <TabsTrigger value="subadmin" className="rounded-full px-6 py-1.5 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
-                            Sub-Admins
+                        <TabsTrigger value="subadmin" className="rounded-full px-6 py-1.5 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all focus-visible:ring-0">
+                            Managers
                         </TabsTrigger>
-                        <TabsTrigger value="admin" className="rounded-full px-6 py-1.5 text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+                        <TabsTrigger value="admin" className="rounded-full px-6 py-1.5 text-xs font-bold data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all focus-visible:ring-0">
                             Admins
                         </TabsTrigger>
                     </TabsList>
@@ -198,12 +198,12 @@ export default function RolePermissions() {
                 {["employee", "subadmin", "admin"].map((role) => (
                     <TabsContent key={role} value={role} className="mt-0 focus-visible:outline-none px-2">
                         <div className="space-y-6">
-                            <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-                                <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
-                                    {role.charAt(0).toUpperCase() + role.slice(1)} Privileges
-                                    <ChevronRight className="w-4 h-4 text-slate-300" />
+                            <div className="flex items-center justify-between pb-1 border-b border-border/50">
+                                <div className="flex items-center gap-2 text-sm font-bold text-foreground/90">
+                                    {role === "subadmin" ? "Manager" : role === "super_admin" ? "Super Admin" : role.charAt(0).toUpperCase() + role.slice(1)} Privileges
+                                    <ChevronRight className="w-4 h-4 text-muted-foreground/30" />
                                 </div>
-                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-none font-bold text-[10px]">
+                                <Badge variant="secondary" className="bg-muted text-muted-foreground border-none font-bold text-[10px]">
                                     {Object.values(permissions[role] || {}).filter(Boolean).length} Active
                                 </Badge>
                             </div>

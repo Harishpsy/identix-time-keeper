@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -65,9 +65,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Management Components
+import { StatsCard } from "@/components/management/StatsCard";
+import { StatusBadge } from "@/components/management/StatusBadge";
+import { RoleBadge } from "@/components/management/RoleBadge";
+import { EmployeeAvatar } from "@/components/management/EmployeeAvatar";
+import { PageHeader } from "@/components/management/PageHeader";
+import { EmployeeForm } from "@/components/management/EmployeeForm";
 
 // Types
 interface Employee {
@@ -103,112 +108,13 @@ interface Shift {
   end_time: string;
 }
 
-// Stats Card Component
-const StatsCard = ({ title, value, icon: Icon, description, trend }: any) => (
-  <Card className="relative overflow-hidden">
-    <CardContent className="p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <h3 className="text-2xl font-bold mt-1">{value}</h3>
-          {description && (
-            <p className="text-xs text-muted-foreground mt-1">{description}</p>
-          )}
-        </div>
-        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Icon className="w-6 h-6 text-primary" />
-        </div>
-      </div>
-      {trend && (
-        <div className="mt-4 flex items-center gap-1 text-xs">
-          <span className={trend > 0 ? "text-green-600" : "text-red-600"}>
-            {trend > 0 ? "+" : ""}{trend}%
-          </span>
-          <span className="text-muted-foreground">vs last month</span>
-        </div>
-      )}
-    </CardContent>
-  </Card>
-);
-
-// Employee Avatar Component
-const EmployeeAvatar = ({ name, email, avatar }: { name: string; email: string; avatar?: string }) => {
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  return (
-    <div className="flex items-center gap-3">
-      <Avatar className="h-10 w-10 border-2 border-background">
-        <AvatarImage src={avatar} />
-        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex flex-col">
-        <span className="font-medium text-sm">{name}</span>
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
-          <Mail className="w-3 h-3" />
-          {email}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-// Status Badge Component
-const StatusBadge = ({ isActive }: { isActive: boolean }) => (
-  <Badge
-    variant={isActive ? "secondary" : "outline"}
-    className={cn(
-      "gap-1 px-2 py-0.5 text-xs font-medium",
-      isActive
-        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800"
-        : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400 border-gray-200 dark:border-gray-800"
-    )}
-  >
-    {isActive ? (
-      <>
-        <CheckCircle2 className="w-3 h-3" />
-        Active
-      </>
-    ) : (
-      <>
-        <XCircle className="w-3 h-3" />
-        Inactive
-      </>
-    )}
-  </Badge>
-);
-
-// Role Badge Component
-const RoleBadge = ({ role }: { role: string }) => {
-  const config = {
-    super_admin: { color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400", label: "Super Admin" },
-    admin: { color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", label: "Admin" },
-    subadmin: { color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", label: "Manager" },
-    employee: { color: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400", label: "Employee" },
-  };
-
-  const { color, label } = config[role as keyof typeof config] || config.employee;
-
-  return (
-    <Badge variant="outline" className={cn("text-xs font-medium border-0", color)}>
-      {label}
-    </Badge>
-  );
-};
-
 export default function Employees() {
   const { role: currentUserRole } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // State
   const [search, setSearch] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -229,21 +135,6 @@ export default function Employees() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [bulkActionMode, setBulkActionMode] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-
-  const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-    biometric_id: "",
-    employee_id: "",
-    department_id: "",
-    shift_id: "",
-    role: "employee",
-    date_of_joining: "",
-    manager_id: "",
-    designation: "",
-    phone: "",
-  });
 
   // Queries
   const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
@@ -280,21 +171,6 @@ export default function Employees() {
     },
   });
 
-  const createEmployeeMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiClient.post("/auth/register", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employees"] });
-      toast.success("Employee created successfully");
-      setDialogOpen(false);
-      resetForm();
-    },
-    onError: (err: any) => {
-      toast.error(err.response?.data?.error || "Failed to create employee");
-    },
-  });
-
   const deleteEmployeeMutation = useMutation({
     mutationFn: async (id: string) => {
       return apiClient.delete(`/profiles/${id}`);
@@ -323,23 +199,6 @@ export default function Employees() {
       toast.error(err.response?.data?.error || "Failed to bulk update");
     },
   });
-
-  const resetForm = () => {
-    setForm({
-      full_name: "",
-      email: "",
-      password: "",
-      biometric_id: "",
-      employee_id: "",
-      department_id: "",
-      shift_id: "",
-      role: "employee",
-      date_of_joining: "",
-      manager_id: "",
-      designation: "",
-      phone: "",
-    });
-  };
 
   // Filtering and Sorting
   const filteredEmployees = employees
@@ -440,13 +299,6 @@ export default function Employees() {
     }
   };
 
-  const handleCreate = async () => {
-    if (!form.full_name.trim() || !form.email.trim() || !form.password.trim()) {
-      toast.error("Name, email and password are required");
-      return;
-    }
-    createEmployeeMutation.mutate(form);
-  };
 
   const handleDelete = async (id: string) => {
     deleteEmployeeMutation.mutate(id);
@@ -516,56 +368,24 @@ export default function Employees() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border">
-            <Users className="w-7 h-7 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Employee Management</h1>
-            <p className="text-muted-foreground">
-              Manage your workforce, roles, and permissions
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setBulkActionMode(!bulkActionMode)}
-            className={cn(bulkActionMode && "bg-primary/10 border-primary")}
-          >
-            <Settings2 className="w-4 h-4 mr-2" />
-            Bulk Actions
-          </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-tour="add-employee">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Employee
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Create New Employee</DialogTitle>
-                <DialogDescription>
-                  Add a new employee to your organization. They will receive an email with login instructions.
-                </DialogDescription>
-              </DialogHeader>
-              <EmployeeForm
-                form={form}
-                setForm={setForm}
-                departments={departments}
-                shifts={shifts}
-                employees={employees}
-                currentUserRole={currentUserRole}
-                onSubmit={handleCreate}
-                isPending={createEmployeeMutation.isPending}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+      <PageHeader
+        title="Employee Management"
+        description="Manage your workforce, roles, and permissions"
+        icon={Users}
+      >
+        <Button
+          variant="outline"
+          onClick={() => setBulkActionMode(!bulkActionMode)}
+          className={cn(bulkActionMode && "bg-primary/10 border-primary")}
+        >
+          <Settings2 className="w-4 h-4 mr-2" />
+          Bulk Actions
+        </Button>
+        <Button onClick={() => navigate("/employees/new")} data-tour="add-employee">
+          <UserPlus className="w-4 h-4 mr-2" />
+          Add Employee
+        </Button>
+      </PageHeader>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -684,7 +504,7 @@ export default function Employees() {
               )}
               {selectedStatus !== "all" && (
                 <Badge variant="secondary" className="gap-1">
-                  Status: {selectedStatus}
+                  Status: {selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}
                   <button onClick={() => setSelectedStatus("all")}>
                     <X className="w-3 h-3 ml-1" />
                   </button>
@@ -692,7 +512,11 @@ export default function Employees() {
               )}
               {selectedRole !== "all" && (
                 <Badge variant="secondary" className="gap-1">
-                  Role: {selectedRole}
+                  Role: {
+                    selectedRole === "subadmin" ? "Manager" :
+                      selectedRole === "super_admin" ? "Super Admin" :
+                        selectedRole.charAt(0).toUpperCase() + selectedRole.slice(1)
+                  }
                   <button onClick={() => setSelectedRole("all")}>
                     <X className="w-3 h-3 ml-1" />
                   </button>
@@ -1071,187 +895,3 @@ export default function Employees() {
   );
 }
 
-// Employee Form Component
-const EmployeeForm = ({ form, setForm, departments, shifts, employees, currentUserRole, onSubmit, isPending }: any) => (
-  <div className="space-y-8 py-4 px-1">
-    {/* Identity Section */}
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pb-2 border-b">
-        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-          <UserCircle className="w-4 h-4 text-primary" />
-        </div>
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-tight">Identity</h4>
-          <p className="text-[10px] text-muted-foreground uppercase font-medium">Personal Information</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5" data-tour="form-full-name">
-          <Label htmlFor="full_name" className="text-xs font-semibold text-muted-foreground">Legal Full Name *</Label>
-          <div className="relative group">
-            <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input id="full_name" className="pl-9 h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="John Alexander Doe" />
-          </div>
-        </div>
-        <div className="space-y-1.5" data-tour="form-email">
-          <Label htmlFor="email" className="text-xs font-semibold text-muted-foreground">Work Email Address *</Label>
-          <div className="relative group">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input id="email" type="email" className="pl-9 h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@company.io" />
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="phone" className="text-xs font-semibold text-muted-foreground">Mobile Contact</Label>
-          <div className="relative group">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input id="phone" className="pl-9 h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Joining Date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={cn("w-full h-10 px-3 rounded-xl bg-muted/30 border-transparent justify-start text-left font-medium text-sm hover:bg-muted/50", !form.date_of_joining && "text-muted-foreground")}>
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {form.date_of_joining ? format(new Date(form.date_of_joining), "dd MMM yyyy") : "Pick onboarding date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden shadow-2xl border-none">
-              <CalendarComponent mode="single" selected={form.date_of_joining ? new Date(form.date_of_joining) : undefined} onSelect={(date) => setForm({ ...form, date_of_joining: date ? format(date, "yyyy-MM-dd") : "" })} initialFocus />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-    </div>
-
-    {/* Professional Section */}
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pb-2 border-b">
-        <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-          <Briefcase className="w-4 h-4 text-orange-600" />
-        </div>
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-tight">Professional</h4>
-          <p className="text-[10px] text-muted-foreground uppercase font-medium">Organizational Context</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="employee_id" className="text-xs font-semibold text-muted-foreground">Internal ID</Label>
-          <Input id="employee_id" className="h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.employee_id} onChange={(e) => setForm({ ...form, employee_id: e.target.value })} placeholder="EMP-001" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="biometric_id" className="text-xs font-semibold text-muted-foreground">Biometric Key</Label>
-          <Input id="biometric_id" className="h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.biometric_id} onChange={(e) => setForm({ ...form, biometric_id: e.target.value })} placeholder="BIO-XXXX" />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="designation" className="text-xs font-semibold text-muted-foreground">Official Designation</Label>
-        <Input id="designation" className="h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })} placeholder="e.g. Senior Software Architect" />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Department Assignment</Label>
-          <Select value={form.department_id} onValueChange={(val) => setForm({ ...form, department_id: val })}>
-            <SelectTrigger className="h-10 rounded-xl bg-muted/30 border-transparent focus:ring-0">
-              <SelectValue placeholder="Select team" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-2xl">
-              {departments.map((d: any) => (
-                <SelectItem key={d.id} value={d.id} className="rounded-lg">{d.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground">Reporting Manager</Label>
-          <Select value={form.manager_id} onValueChange={(val) => setForm({ ...form, manager_id: val })}>
-            <SelectTrigger className="h-10 rounded-xl bg-muted/30 border-transparent focus:ring-0">
-              <SelectValue placeholder="Select lead" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-2xl">
-              <SelectItem value="none" className="rounded-lg">Direct Report</SelectItem>
-              {employees
-                .filter((e: any) => e.role === 'subadmin' || e.role === 'admin' || e.role === 'super_admin')
-                .map((m: any) => (
-                  <SelectItem key={m.id} value={m.id} className="rounded-lg">{m.full_name}</SelectItem>
-                ))
-              }
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold text-muted-foreground">Operational Shift</Label>
-        <Select value={form.shift_id} onValueChange={(val) => setForm({ ...form, shift_id: val })}>
-          <SelectTrigger className="h-10 rounded-xl bg-muted/30 border-transparent focus:ring-0">
-            <SelectValue placeholder="Assign working hours" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-none shadow-2xl">
-            {shifts.map((s: any) => (
-              <SelectItem key={s.id} value={s.id} className="rounded-lg">
-                <div className="flex flex-col">
-                  <span className="font-bold">{s.name}</span>
-                  <span className="text-[10px] text-muted-foreground uppercase">{s.start_time} - {s.end_time}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-
-    {/* Access Section */}
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pb-2 border-b">
-        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-          <Shield className="w-4 h-4 text-emerald-600" />
-        </div>
-        <div>
-          <h4 className="text-sm font-bold uppercase tracking-tight">Access</h4>
-          <p className="text-[10px] text-muted-foreground uppercase font-medium">Security & Permissions</p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5" data-tour="form-password">
-          <Label htmlFor="password" title="Initial Security Key (Password) *" className="text-xs font-semibold text-muted-foreground">Initial Security Key (Password) *</Label>
-          <div className="relative group">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input id="password" type="password" className="pl-9 h-10 rounded-xl bg-muted/30 border-transparent focus:bg-background transition-all" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="••••••••" />
-          </div>
-        </div>
-        <div className="space-y-1.5" data-tour="form-role">
-          <Label className="text-xs font-semibold text-muted-foreground">Platform Role Assignment</Label>
-          <Select value={form.role} onValueChange={(val) => setForm({ ...form, role: val })}>
-            <SelectTrigger className="h-10 rounded-xl bg-muted/30 border-transparent focus:ring-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-none shadow-2xl">
-              <SelectItem value="employee" className="rounded-lg">Employee Level</SelectItem>
-              <SelectItem value="subadmin" className="rounded-lg">Department Manager</SelectItem>
-              <SelectItem value="admin" className="rounded-lg">System Administrator</SelectItem>
-              {currentUserRole === "super_admin" && (
-                <SelectItem value="super_admin" className="rounded-lg">Platform Owner</SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    </div>
-
-    <div className="pt-4">
-      <Button className="w-full h-12 rounded-2xl shadow-xl shadow-primary/20 font-bold group" onClick={onSubmit} disabled={isPending}>
-        {isPending ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <>
-            <UserPlus className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-            Initialize Professional Profile
-          </>
-        )}
-      </Button>
-    </div>
-  </div>
-);

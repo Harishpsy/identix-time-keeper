@@ -63,7 +63,6 @@ DB_NAME=identix
 JWT_SECRET=your_jwt_secret_key
 NODE_ENV=development
 ```
-
 > [!IMPORTANT]
 > Make sure a MySQL database named `identix` exists before starting the backend. Create it with:
 > ```sql
@@ -75,7 +74,6 @@ Start the backend server:
 ```bash
 node server.js
 ```
-
 The API will be running at **http://localhost:5000**.
 
 ### 3. Setup the Frontend

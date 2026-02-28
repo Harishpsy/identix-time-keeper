@@ -1,14 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-
-@import url("https://fonts.googleapis.com/css2?family=Open+Sans&display=swap");
-
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap");
-
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap");
 
 @layer base {
   :root {
@@ -126,7 +122,8 @@
     -ms-user-select: none;
   }
 
-  input, textarea {
+  input,
+  textarea {
     user-select: auto;
     -webkit-user-select: auto;
     -moz-user-select: auto;
@@ -222,9 +219,17 @@
 }
 
 @keyframes progress-indeterminate {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(0%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .animate-progress-indeterminate {

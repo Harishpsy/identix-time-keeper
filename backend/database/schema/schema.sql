@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS profiles (
     email VARCHAR(255) NOT NULL UNIQUE,
     department_id CHAR(36),
     shift_id CHAR(36),
+    manager_id CHAR(36),
+    designation VARCHAR(255),
+    employee_id VARCHAR(50),
+    onboarding_status VARCHAR(50) DEFAULT 'Approve',
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -42,14 +46,15 @@ CREATE TABLE IF NOT EXISTS profiles (
     theme ENUM('light', 'dark') DEFAULT 'light',
     FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (department_id) REFERENCES departments(id),
-    FOREIGN KEY (shift_id) REFERENCES shifts(id)
+    FOREIGN KEY (shift_id) REFERENCES shifts(id),
+    FOREIGN KEY (manager_id) REFERENCES profiles(id) ON DELETE SET NULL
 );
 
 -- Create user_roles table
 CREATE TABLE IF NOT EXISTS user_roles (
     id CHAR(36) PRIMARY KEY,
     user_id CHAR(36) NOT NULL,
-    role ENUM('admin', 'subadmin', 'employee') NOT NULL,
+    role ENUM('super_admin', 'admin', 'subadmin', 'employee') NOT NULL,
     UNIQUE (user_id, role),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -86,6 +91,7 @@ CREATE TABLE IF NOT EXISTS leave_requests (
     id CHAR(36) PRIMARY KEY,
     user_id CHAR(36) NOT NULL,
     date DATE NOT NULL,
+    to_date DATE,
     type ENUM('sick', 'casual', 'annual', 'permission', 'other') NOT NULL DEFAULT 'casual',
     reason TEXT,
     status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
@@ -161,4 +167,15 @@ CREATE TABLE IF NOT EXISTS loan_repayments (
     method ENUM('payroll_deduction', 'manual') DEFAULT 'payroll_deduction',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
+);
+
+-- Create role_permissions table
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id CHAR(36) PRIMARY KEY,
+    role ENUM('super_admin', 'admin', 'subadmin', 'employee') NOT NULL,
+    module_key VARCHAR(255) NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE (role, module_key)
 );

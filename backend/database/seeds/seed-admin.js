@@ -3,26 +3,29 @@
  * 
  * Usage:  node database/seed-admin.js
  * 
- * Admin credentials after running:
- *   Email:    admin@identixhr.com
- *   Password: Admin@123
+ * Note: Credentials are read from INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD in .env
  */
 
 const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
-const pool = require('../config/db');
+const pool = require('../../config/db');
 
-const ADMIN_EMAIL = 'admin@identixhr.com';
-const ADMIN_PASSWORD = 'Admin@123';
-const ADMIN_NAME = 'Admin';
+const ADMIN_EMAIL = process.env.INITIAL_ADMIN_EMAIL;
+const ADMIN_PASSWORD = process.env.INITIAL_ADMIN_PASSWORD;
+const ADMIN_NAME = 'Super Admin';
+
+if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    console.error('❌ Error: INITIAL_ADMIN_EMAIL or INITIAL_ADMIN_PASSWORD not set in .env');
+    process.exit(1);
+}
 
 async function seedAdmin() {
     const connection = await pool.getConnection();
     try {
         // --- Step 1: Run schema.sql to ensure all tables exist ---
-        const schemaPath = path.join(__dirname, 'schema.sql');
+        const schemaPath = path.join(__dirname, '../schema/schema.sql');
         const schemaSql = fs.readFileSync(schemaPath, 'utf-8');
 
         // Split by semicolons and run each statement
@@ -71,19 +74,18 @@ async function seedAdmin() {
             [userId, ADMIN_NAME, ADMIN_EMAIL]
         );
 
-        // Insert into user_roles table with 'admin' role
+        // Insert into user_roles table with 'super_admin' role
         await connection.execute(
             'INSERT INTO user_roles (id, user_id, role) VALUES (?, ?, ?)',
-            [uuidv4(), userId, 'admin']
+            [uuidv4(), userId, 'super_admin']
         );
 
         await connection.commit();
 
-        console.log('  ✅ Admin user created successfully!');
+        console.log('  ✅ Initial super admin user created successfully!');
         console.log('  ─────────────────────────────────');
         console.log(`  Email:    ${ADMIN_EMAIL}`);
-        console.log(`  Password: ${ADMIN_PASSWORD}`);
-        console.log(`  Role:     admin`);
+        console.log(`  Role:     super_admin`);
         console.log(`  ID:       ${userId}\n`);
     } catch (err) {
         await connection.rollback();

@@ -73,7 +73,7 @@ export const EmployeeForm = ({
                         <Label className="text-xs font-semibold text-muted-foreground">Joining Date</Label>
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" className={cn("w-full h-10 px-3 rounded-xl bg-muted/50 border-border/50 shadow-sm hover:bg-muted/80 transition-colors", !form.date_of_joining && "text-muted-foreground")}>
+                                <Button variant="outline" className={cn("w-full h-10 px-3 rounded-xl bg-muted/50 border-border/50 shadow-sm hover:bg-muted/80 hover:text-foreground transition-colors", !form.date_of_joining && "text-muted-foreground")}>
                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                     {form.date_of_joining ? format(new Date(form.date_of_joining), "dd MMM yyyy") : "Pick onboarding date"}
                                 </Button>
@@ -151,10 +151,10 @@ export const EmployeeForm = ({
                         </SelectTrigger>
                         <SelectContent className="rounded-xl border-none shadow-2xl">
                             {shifts.map((s: any) => (
-                                <SelectItem key={s.id} value={s.id} className="rounded-lg">
+                                <SelectItem key={s.id} value={s.id} className="rounded-lg group">
                                     <div className="flex flex-col">
                                         <span className="font-bold">{s.name}</span>
-                                        <span className="text-[10px] text-muted-foreground uppercase">{s.start_time} - {s.end_time}</span>
+                                        <span className="text-[10px] text-muted-foreground uppercase group-focus:text-white/80 transition-colors">{s.start_time} - {s.end_time}</span>
                                     </div>
                                 </SelectItem>
                             ))}
@@ -205,7 +205,7 @@ export const EmployeeForm = ({
                             </SelectTrigger>
                             <SelectContent className="rounded-xl border-none shadow-2xl">
                                 <SelectItem value="employee" className="rounded-lg">Employee</SelectItem>
-                                <SelectItem value="subadmin" className="rounded-lg">Manager</SelectItem>
+                                <SelectItem value="subadmin" className="rounded-lg">Sub Admin</SelectItem>
                                 <SelectItem value="admin" className="rounded-lg">Admin</SelectItem>
                                 {currentUserRole === "super_admin" && (
                                     <SelectItem value="super_admin" className="rounded-lg">Super Admin</SelectItem>

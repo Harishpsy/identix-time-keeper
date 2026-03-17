@@ -1,16 +1,15 @@
 const CryptoJS = require('crypto-js');
 require('dotenv').config();
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
-const IS_ENCRYPTION_ENABLED = process.env.ENCRYPTION_ENABLED === 'true';
-
 const encrypt = (data) => {
-    if (!IS_ENCRYPTION_ENABLED || !ENCRYPTION_KEY) return data;
+    const key = process.env.ENCRYPTION_KEY;
+    const enabled = String(process.env.ENCRYPTION_ENABLED).toLowerCase() === 'true';
+    
+    if (!enabled || !key) return data;
 
     try {
         const textToEncrypt = typeof data === 'string' ? data : JSON.stringify(data);
-        const encrypted = CryptoJS.AES.encrypt(textToEncrypt, ENCRYPTION_KEY).toString();
-        return encrypted;
+        return CryptoJS.AES.encrypt(textToEncrypt, key).toString();
     } catch (error) {
         console.error('Encryption error:', error);
         return data;
@@ -18,11 +17,19 @@ const encrypt = (data) => {
 };
 
 const decrypt = (encryptedData) => {
-    if (!IS_ENCRYPTION_ENABLED || !ENCRYPTION_KEY || typeof encryptedData !== 'string') return encryptedData;
+    const key = process.env.ENCRYPTION_KEY;
+    const enabled = String(process.env.ENCRYPTION_ENABLED).toLowerCase() === 'true';
+
+    if (!enabled || !key || typeof encryptedData !== 'string') return encryptedData;
 
     try {
-        const bytes = CryptoJS.AES.decrypt(encryptedData, ENCRYPTION_KEY);
+        const bytes = CryptoJS.AES.decrypt(encryptedData, key);
         const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+
+        if (!decryptedText) {
+            console.error('Decryption failed: Empty result. Possible key mismatch.');
+            return encryptedData;
+        }
 
         try {
             return JSON.parse(decryptedText);

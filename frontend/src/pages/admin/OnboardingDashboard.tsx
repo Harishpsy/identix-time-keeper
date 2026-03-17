@@ -375,7 +375,7 @@ export default function OnboardingDashboard() {
                                                 {documents.map((doc) => (
                                                     <a
                                                         key={doc.id}
-                                                        href={`http://localhost:5000${doc.file_path}`}
+                                                        href={`${import.meta.env.VITE_API_URL.replace('/api', '')}${doc.file_path}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30 hover:bg-muted/60 transition-colors group"

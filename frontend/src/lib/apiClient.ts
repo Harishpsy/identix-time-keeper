@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { encrypt, decrypt } from './crypto';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://65.1.86.56/api';
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL,

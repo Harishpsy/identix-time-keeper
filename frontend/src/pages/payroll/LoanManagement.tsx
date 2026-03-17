@@ -49,7 +49,7 @@ const Loans = () => {
 
     const fetchLoans = async () => {
         try {
-            const response = await fetch("http://localhost:5000/api/loans", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/loans`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
             });
             const data = await response.json();
@@ -63,7 +63,7 @@ const Loans = () => {
 
     const fetchProfiles = async () => {
         try {
-            const response = await fetch("http://localhost:5000/api/profiles", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/profiles`, {
                 headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
             });
             const data = await response.json();
@@ -93,7 +93,7 @@ const Loans = () => {
                 body.targetUserId = targetUserId;
             }
 
-            const response = await fetch("http://localhost:5000/api/loans", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/loans`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -124,7 +124,7 @@ const Loans = () => {
                 body.repayment_start_date = adminStartDate;
             }
 
-            const response = await fetch(`http://localhost:5000/api/loans/${loanId}/status`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/loans/${loanId}/status`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",

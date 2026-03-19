@@ -158,6 +158,16 @@ const createPayroll = async (req, res) => {
     const data = req.body;
     const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(data);
 
+    // List of valid columns in 'payroll' table
+    const validFields = [
+        'user_id', 'month', 'basic_salary', 'hra', 'dearness_allowance',
+        'conveyance_allowance', 'medical_allowance', 'special_allowance',
+        'overtime', 'bonus', 'other_earnings', 'epf_employee', 'esi_employee',
+        'professional_tax', 'tds', 'loan_recovery', 'other_deductions',
+        'epf_employer', 'esi_employer', 'gross_earnings', 'total_deductions',
+        'net_salary', 'paid_days', 'lop_days', 'notes', 'released'
+    ];
+
     const fullData = {
         ...data,
         gross_earnings,
@@ -165,10 +175,18 @@ const createPayroll = async (req, res) => {
         net_salary
     };
 
+    // Filter to only valid fields
+    const filteredData = {};
+    for (const field of validFields) {
+        if (Object.prototype.hasOwnProperty.call(fullData, field)) {
+            filteredData[field] = fullData[field];
+        }
+    }
+
     const id = uuidv4();
-    const fields = ['id', ...Object.keys(fullData)];
+    const fields = ['id', ...Object.keys(filteredData)];
     const placeholders = fields.map(() => '?').join(', ');
-    const params = [id, ...Object.values(fullData)];
+    const params = [id, ...Object.values(filteredData)];
 
     try {
         await pool.execute(`INSERT INTO payroll (${fields.join(', ')}) VALUES (${placeholders})`, params);
@@ -185,7 +203,6 @@ const updatePayroll = async (req, res) => {
     const updates = req.body;
     delete updates.id;
 
-    // Recalculate totals if any money field is present
     const moneyFields = [
         'basic_salary', 'hra', 'dearness_allowance', 'conveyance_allowance',
         'medical_allowance', 'special_allowance', 'overtime', 'bonus',
@@ -197,18 +214,34 @@ const updatePayroll = async (req, res) => {
 
     let finalUpdates = { ...updates };
     if (hasMoneyUpdate) {
-        // We might not have all fields in 'updates' if it's a partial update
-        // But the frontend current sends all fields. Just in case, we'd need to fetch current record.
-        // For simplicity and since our frontend sends full payload for edits, we'll assume fields are there or 0.
         const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(updates);
         finalUpdates.gross_earnings = gross_earnings;
         finalUpdates.total_deductions = total_deductions;
         finalUpdates.net_salary = net_salary;
     }
 
-    const fields = Object.keys(finalUpdates);
+    // List of valid columns in 'payroll' table
+    const validFields = [
+        'user_id', 'month', 'basic_salary', 'hra', 'dearness_allowance',
+        'conveyance_allowance', 'medical_allowance', 'special_allowance',
+        'overtime', 'bonus', 'other_earnings', 'epf_employee', 'esi_employee',
+        'professional_tax', 'tds', 'loan_recovery', 'other_deductions',
+        'epf_employer', 'esi_employer', 'gross_earnings', 'total_deductions',
+        'net_salary', 'paid_days', 'lop_days', 'notes', 'released'
+    ];
+
+    // Filter to only valid fields
+    const filteredUpdates = {};
+    for (const field of validFields) {
+        if (Object.prototype.hasOwnProperty.call(finalUpdates, field)) {
+            filteredUpdates[field] = finalUpdates[field];
+        }
+    }
+
+    const fields = Object.keys(filteredUpdates);
+    if (fields.length === 0) return res.status(400).json({ error: 'No valid fields provided' });
     const setClause = fields.map(f => `${f} = ?`).join(', ');
-    const params = [...Object.values(finalUpdates), id];
+    const params = [...Object.values(filteredUpdates), id];
 
     try {
         await pool.execute(`UPDATE payroll SET ${setClause} WHERE id = ?`, params);

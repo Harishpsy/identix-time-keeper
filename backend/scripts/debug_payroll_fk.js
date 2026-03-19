@@ -2,7 +2,7 @@
  * DEBUG SCRIPT — Checks for data consistency between 'users' and 'profiles' tables.
  * Run with: node backend/scripts/debug_payroll_fk.js
  */
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mysql = require('mysql2/promise');
 
 const env = (process.env.NODE_ENV || 'development').trim();

@@ -610,8 +610,8 @@ export default function Employees() {
       {/* Employees Table */}
       <Card className="border-border/50 overflow-hidden">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto w-full">
+            <Table className="min-w-[900px]">
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   {bulkActionMode && (

@@ -272,10 +272,9 @@ export default function CheckInOut() {
     const hrs = Math.floor(totalSecs / 3600);
     const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
-    const msec = Math.floor((abs % 1000) / 10);
     const pad = (n: number) => n.toString().padStart(2, "0");
     const prefix = ms < 0 ? "-" : "";
-    return `${prefix}${pad(hrs)}:${pad(mins)}:${pad(secs)}:${pad(msec)}`;
+    return `${prefix}${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
   };
 
   return (
@@ -283,11 +282,11 @@ export default function CheckInOut() {
       <Card className="border-border/50" data-tour="check-in-out">
         <CardContent className="pt-6 space-y-4">
           {/* Row 1: Clock, Date, Stats */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Clock className="w-5 h-5" />
-                <span className="text-2xl font-mono font-semibold text-foreground whitespace-nowrap tabular-nums">
+                <span className="text-xl sm:text-2xl font-mono font-semibold text-foreground whitespace-nowrap tabular-nums">
                   {format(currentTime, "hh:mm:ss a")}
                 </span>
               </div>
@@ -297,7 +296,7 @@ export default function CheckInOut() {
             </div>
 
             {hasLoggedIn && (
-              <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex flex-wrap items-center gap-3">
                 {firstIn && (
                   <div className="text-sm text-muted-foreground whitespace-nowrap">
                     Login: <span className="font-medium text-foreground">{format(new Date(firstIn.timestamp), "hh:mm a")}</span>
@@ -341,13 +340,13 @@ export default function CheckInOut() {
           )}
 
           {/* Row 2: Action Buttons */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {!hasLoggedIn && (
               <Button
                 onClick={handleLoginClick}
                 disabled={loading}
                 size="lg"
-                className="min-w-[140px]"
+                className="w-full sm:w-auto min-w-[140px]"
               >
                 <LogIn className="w-4 h-4 mr-2" />
                 Login Time
@@ -365,7 +364,7 @@ export default function CheckInOut() {
                   disabled={loading}
                   size="lg"
                   variant="outline"
-                  className="min-w-[140px]"
+                  className="w-full sm:w-auto min-w-[140px]"
                 >
                   <Coffee className="w-4 h-4 mr-2" />
                   {isOnBreak ? "End Break" : "Take a Break"}
@@ -376,7 +375,7 @@ export default function CheckInOut() {
                   disabled={loading || isOnBreak}
                   size="lg"
                   variant="destructive"
-                  className="min-w-[140px]"
+                  className="w-full sm:w-auto min-w-[140px]"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout Time

@@ -257,8 +257,8 @@ export default function LeaveRequests() {
         <TabsContent value="requests" className="mt-4">
           <Card className="border-border/50" data-tour="leave-table">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto w-full">
+                <Table className="min-w-[750px]">
                   <TableHeader>
                     <TableRow>
                       {role !== "employee" && <TableHead>Employee</TableHead>}
@@ -339,8 +339,8 @@ export default function LeaveRequests() {
           <TabsContent value="balances" className="mt-4">
             <Card className="border-border/50">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
+                <div className="overflow-x-auto w-full">
+                  <Table className="min-w-[600px]">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Employee</TableHead>

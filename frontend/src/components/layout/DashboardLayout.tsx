@@ -6,7 +6,7 @@ import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { navItems, NavItem } from "@/lib/navigation";
-import { Fingerprint, LogOut, Moon, Sun, HelpCircle } from "lucide-react";
+import { Fingerprint, LogOut, Moon, Sun, HelpCircle, Menu, X } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeContext";
 import { GuideTour } from "@/components/common/GuideTour";
 import { OnboardingModal } from "@/components/common/OnboardingModal";
@@ -28,10 +28,14 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   const [runTour, setRunTour] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isFetching = useIsFetching();
   const isMutating = useIsMutating();
   const isLoading = isFetching > 0 || isMutating > 0;
+
+  // Auto-close sidebar on route change (mobile)
+  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   // Show welcome modal once when user is newly onboarded (Active)
   useEffect(() => {
@@ -123,18 +127,31 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
     <div className="flex min-h-screen">
       <GuideTour run={runTour} setRun={setRunTour} />
       <div className="bg-mesh" />
-      {/* Sidebar */}
-      <aside className="w-64 bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground flex flex-col fixed inset-y-0 left-0 z-30 border-r border-sidebar-border/50 glass">
+
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — UI unchanged on desktop, slides in on mobile */}
+      <aside className={`w-64 bg-sidebar/80 backdrop-blur-xl text-sidebar-foreground flex flex-col fixed inset-y-0 left-0 z-40 border-r border-sidebar-border/50 glass transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-5 flex items-center gap-3 border-b border-sidebar-border" data-tour="sidebar-brand">
-          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
             <Fingerprint className="w-5 h-5 text-sidebar-primary-foreground" />
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="font-bold text-sm text-sidebar-foreground">{companyName}</h2>
             <p className="text-xs text-sidebar-foreground/60 capitalize">
               {role === "subadmin" ? "Manager" : role?.replace("_", " ")} Panel
             </p>
           </div>
+          {/* Close button — only shown on mobile */}
+          <button className="lg:hidden p-1 rounded text-sidebar-foreground/60 hover:text-sidebar-foreground" onClick={() => setSidebarOpen(false)}>
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto" data-tour="sidebar-nav">
@@ -212,13 +229,30 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-64 relative">
+      <main className="flex-1 lg:ml-64 relative flex flex-col min-w-0">
+        {/* Mobile top bar — hamburger + brand (hidden on desktop) */}
+        <header className="lg:hidden sticky top-0 z-20 flex items-center gap-3 px-4 py-3 bg-background/80 backdrop-blur-md border-b border-border/50">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            aria-label="Open menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-md bg-sidebar-primary flex items-center justify-center">
+              <Fingerprint className="w-4 h-4 text-sidebar-primary-foreground" />
+            </div>
+            <span className="font-bold text-sm">{companyName}</span>
+          </div>
+        </header>
+
         {isLoading && (
           <div className="absolute top-0 left-0 right-0 h-1 z-50 overflow-hidden bg-primary/10">
             <div className="h-full bg-primary animate-progress-indeterminate origin-left w-full" />
           </div>
         )}
-        <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
           {children || <Outlet />}
         </div>
       </main>

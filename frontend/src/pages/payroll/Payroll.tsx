@@ -466,9 +466,9 @@ export default function Payroll() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Payroll Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Payroll Management</h1>
           <p className="text-muted-foreground mt-1">Indian payroll standard — manage employee salaries</p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -594,18 +594,18 @@ export default function Payroll() {
         </div>
       </div>
 
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-full" />
         </div>
-        <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-44" data-tour="payroll-month" />
+        <Input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full sm:w-44" data-tour="payroll-month" />
       </div>
 
       <Card className="border-border/50" data-tour="payroll-table">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto w-full">
+            <Table className="min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>

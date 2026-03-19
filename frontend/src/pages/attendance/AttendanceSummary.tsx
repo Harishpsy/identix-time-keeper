@@ -151,18 +151,18 @@ export default function AttendanceSummary() {
           <p className="text-muted-foreground mt-1">Monthly employee-wise attendance overview</p>
         </div>
 
-        <div className="flex flex-wrap gap-3 items-center">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center">
           <Input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="w-44"
+            className="w-full sm:w-44"
           />
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative w-full sm:flex-1 sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Search employee or department..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+            <Input placeholder="Search employee or department..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-full" />
           </div>
-          <div className="ml-auto flex gap-2">
+          <div className="flex gap-2 sm:ml-auto">
             <Button variant="outline" size="sm" onClick={downloadPDF} disabled={filtered.length === 0}>
               <FileText className="w-4 h-4 mr-1" /> PDF
             </Button>
@@ -174,8 +174,8 @@ export default function AttendanceSummary() {
 
         <Card className="border-border/50">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto w-full">
+              <Table className="min-w-[700px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Employee</TableHead>

@@ -158,16 +158,16 @@ export default function Attendance() {
         <p className="text-muted-foreground mt-1">View attendance details</p>
       </div>
 
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-start sm:items-center">
         <Input
           type="month"
           value={month}
           onChange={(e) => { setMonth(e.target.value); setQuickFilter(null); }}
-          className="w-auto"
+          className="w-full sm:w-auto"
           data-tour="attendance-month"
         />
         {role !== "employee" && (
-          <div className="flex gap-1" data-tour="attendance-filter">
+          <div className="flex gap-1 flex-wrap" data-tour="attendance-filter">
             {(["today", "yesterday", "previous"] as const).map((filter) => (
               <Button
                 key={filter}
@@ -185,17 +185,17 @@ export default function Attendance() {
           </div>
         )}
         {role !== "employee" && (
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative w-full sm:flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search employee..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 w-full"
             />
           </div>
         )}
-        <div className="ml-auto flex gap-2" data-tour="attendance-export">
+        <div className="flex gap-2 sm:ml-auto" data-tour="attendance-export">
           {(role === "super_admin" || role === "admin") && (
             <ReprocessDialog onComplete={handleReprocessComplete} />
           )}
@@ -210,8 +210,8 @@ export default function Attendance() {
 
       <Card className="border-border/50" data-tour="attendance-table">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto w-full">
+            <Table className="min-w-[680px]">
               <TableHeader>
                 <TableRow>
                   {role !== "employee" && <TableHead>Employee</TableHead>}

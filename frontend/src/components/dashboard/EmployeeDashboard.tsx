@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import StatCard from "./StatCard";
 import AttendanceStatusBadge from "./AttendanceStatusBadge";
@@ -44,7 +45,7 @@ export default function EmployeeDashboard() {
 
     const fetchData = async () => {
       try {
-        const { data } = await apiClient.get("/dashboard/employee");
+        const { data } = await apiClient.get(API.DASHBOARD.EMPLOYEE);
         setSummaries(data.summaries || []);
         setStats(data.stats || { present: 0, late: 0, leaveTaken: 0 });
       } catch (err) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -63,7 +64,7 @@ export default function LeaveRequests() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get("/leaves");
+      const response = await apiClient.get(API.LEAVES.LIST);
       setRequests(response.data);
     } catch (err) {
       console.error("Failed to fetch leaves", err);
@@ -74,7 +75,7 @@ export default function LeaveRequests() {
 
   const fetchBalance = async () => {
     try {
-      const response = await apiClient.get("/leaves/balances");
+      const response = await apiClient.get(API.LEAVES.BALANCES);
       setLeaveBalance(response.data);
     } catch (err) {
       console.error("Failed to fetch balance", err);
@@ -85,7 +86,7 @@ export default function LeaveRequests() {
     if (role === "super_admin" || role === "admin" || role === "subadmin") {
       setLoadingBalances(true);
       try {
-        const response = await apiClient.get("/leaves/balances/all");
+        const response = await apiClient.get(API.LEAVES.BALANCES_ALL);
         setAllBalances(response.data);
       } catch (err) {
         console.error("Failed to fetch all balances", err);
@@ -97,7 +98,7 @@ export default function LeaveRequests() {
 
   const fetchSettings = async () => {
     try {
-      const { data } = await apiClient.get("/settings");
+      const { data } = await apiClient.get(API.SETTINGS.GET);
       if (data) {
         setLeavesEnabled(data.leaves_enabled ?? true);
         setSickEnabled(data.sick_leave_enabled ?? true);
@@ -137,7 +138,7 @@ export default function LeaveRequests() {
       return;
     }
     try {
-      await apiClient.post("/leaves/apply", form);
+      await apiClient.post(API.LEAVES.APPLY, form);
       toast.success("Leave request submitted");
       setDialogOpen(false);
       setForm({ ...form, type: "", reason: "", start_time: "", end_time: "" });
@@ -149,7 +150,7 @@ export default function LeaveRequests() {
 
   const handleStatusChange = async (id: string, status: string) => {
     try {
-      await apiClient.patch(`/leaves/${id}/status`, { status });
+      await apiClient.patch(API.LEAVES.STATUS_BY_ID(id), { status });
       toast.success(`Request ${status}`);
       fetchRequests();
       fetchAllBalances();
@@ -164,7 +165,7 @@ export default function LeaveRequests() {
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      await apiClient.patch("/settings", {
+      await apiClient.patch(API.SETTINGS.UPDATE, {
         leaves_enabled: leavesEnabled,
         sick_leave_enabled: sickEnabled,
         casual_leave_enabled: casualEnabled,
@@ -188,7 +189,7 @@ export default function LeaveRequests() {
 
     setSyncing(true);
     try {
-      await apiClient.post("/leaves/balances/sync");
+      await apiClient.post(API.LEAVES.BALANCES_SYNC);
       toast.success("Leave balances synchronized for all employees");
       fetchAllBalances();
     } catch (err: any) {

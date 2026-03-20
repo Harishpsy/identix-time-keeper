@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Cake, CalendarHeart } from "lucide-react";
@@ -19,7 +20,7 @@ export default function UpcomingAnniversaries() {
   useEffect(() => {
     const fetchAnniversaries = async () => {
       try {
-        const { data } = await apiClient.get("/dashboard/anniversaries");
+        const { data } = await apiClient.get(API.DASHBOARD.ANNIVERSARIES);
         setEmployees(data || []);
       } catch (err) {
         console.error("Failed to fetch anniversaries", err);

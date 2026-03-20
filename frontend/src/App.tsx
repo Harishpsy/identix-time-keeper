@@ -28,10 +28,20 @@ import AttendanceDetails from "./pages/attendance/AttendanceDetails";
 import OnboardingDashboard from "./pages/admin/OnboardingDashboard";
 import MyProfile from "./pages/profile/MyProfile";
 import NotFound from "./pages/NotFound";
+import { isModuleLive } from "./lib/moduleConfig";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
+function ProtectedRoute({
+  children,
+  allowedRoles,
+  moduleKey,
+}: {
+  children: React.ReactNode;
+  allowedRoles?: string[];
+  /** If provided, also checks MODULE_CONFIG — redirects to "/" when module is disabled */
+  moduleKey?: string;
+}) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
@@ -43,6 +53,8 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode;
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  // Block if the module is turned off in the centralized MODULE_CONFIG
+  if (moduleKey && !isModuleLive(moduleKey)) return <Navigate to="/" replace />;
   if (allowedRoles && role && !allowedRoles.includes(role)) return <Navigate to="/" replace />;
 
   return <>{children}</>;
@@ -69,24 +81,24 @@ const App = () => (
               {/* Protected Routes with Persistent Layout */}
               <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Index />} />
-                <Route path="/attendance" element={<Attendance />} />
-                <Route path="/employees" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
-                <Route path="/employees/new" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AddEmployee /></ProtectedRoute>} />
-                <Route path="/departments" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />
-                <Route path="/shifts" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Shifts /></ProtectedRoute>} />
-                <Route path="/leave" element={<LeaveRequests />} />
-                <Route path="/payroll" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><Payroll /></ProtectedRoute>} />
-                <Route path="/loans" element={<LoanManagement />} />
-                <Route path="/my-payslips" element={<MyPayslips />} />
-                <Route path="/attendance-reset" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceReset /></ProtectedRoute>} />
-                <Route path="/attendance-summary" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceSummary /></ProtectedRoute>} />
-                <Route path="/attendance-summary/:userId/:month" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><AttendanceDetails /></ProtectedRoute>} />
-                <Route path="/company-branding" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><CompanyBranding /></ProtectedRoute>} />
-                <Route path="/menu-order" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><MenuOrder /></ProtectedRoute>} />
-                <Route path="/role-permissions" element={<ProtectedRoute allowedRoles={["super_admin", "admin"]}><RolePermissions /></ProtectedRoute>} />
-                <Route path="/onboarding" element={<ProtectedRoute allowedRoles={["super_admin", "admin", "subadmin", "employee"]}><OnboardingDashboard /></ProtectedRoute>} />
-                <Route path="/my-profile" element={<MyProfile />} />
-                <Route path="/holidays" element={<Holidays />} />
+                <Route path="/attendance" element={<ProtectedRoute moduleKey="attendance"><Attendance /></ProtectedRoute>} />
+                <Route path="/employees" element={<ProtectedRoute moduleKey="employees" allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
+                <Route path="/employees/new" element={<ProtectedRoute moduleKey="employees" allowedRoles={["super_admin", "admin"]}><AddEmployee /></ProtectedRoute>} />
+                <Route path="/departments" element={<ProtectedRoute moduleKey="departments" allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />
+                <Route path="/shifts" element={<ProtectedRoute moduleKey="shifts" allowedRoles={["super_admin", "admin"]}><Shifts /></ProtectedRoute>} />
+                <Route path="/leave" element={<ProtectedRoute moduleKey="leave_requests"><LeaveRequests /></ProtectedRoute>} />
+                <Route path="/payroll" element={<ProtectedRoute moduleKey="payroll" allowedRoles={["super_admin", "admin"]}><Payroll /></ProtectedRoute>} />
+                <Route path="/loans" element={<ProtectedRoute moduleKey="loans"><LoanManagement /></ProtectedRoute>} />
+                <Route path="/my-payslips" element={<ProtectedRoute moduleKey="my_payslips"><MyPayslips /></ProtectedRoute>} />
+                <Route path="/attendance-reset" element={<ProtectedRoute moduleKey="attendance_reset" allowedRoles={["super_admin", "admin"]}><AttendanceReset /></ProtectedRoute>} />
+                <Route path="/attendance-summary" element={<ProtectedRoute moduleKey="attendance_summary" allowedRoles={["super_admin", "admin"]}><AttendanceSummary /></ProtectedRoute>} />
+                <Route path="/attendance-summary/:userId/:month" element={<ProtectedRoute moduleKey="attendance_summary" allowedRoles={["super_admin", "admin"]}><AttendanceDetails /></ProtectedRoute>} />
+                <Route path="/company-branding" element={<ProtectedRoute moduleKey="company_branding" allowedRoles={["super_admin", "admin"]}><CompanyBranding /></ProtectedRoute>} />
+                <Route path="/menu-order" element={<ProtectedRoute moduleKey="menu_order" allowedRoles={["super_admin", "admin"]}><MenuOrder /></ProtectedRoute>} />
+                <Route path="/role-permissions" element={<ProtectedRoute moduleKey="role_permissions" allowedRoles={["super_admin", "admin"]}><RolePermissions /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<ProtectedRoute moduleKey="onboarding" allowedRoles={["super_admin", "admin", "subadmin", "employee"]}><OnboardingDashboard /></ProtectedRoute>} />
+                <Route path="/my-profile" element={<ProtectedRoute moduleKey="my_profile"><MyProfile /></ProtectedRoute>} />
+                <Route path="/holidays" element={<ProtectedRoute moduleKey="holidays"><Holidays /></ProtectedRoute>} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

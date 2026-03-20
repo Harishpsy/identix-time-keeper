@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export default function Shifts() {
   const fetchShifts = async () => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get("/profiles/shifts");
+      const { data } = await apiClient.get(API.PROFILES.SHIFTS);
       setShifts(data || []);
     } catch (err) {
       toast.error("Failed to fetch shifts");
@@ -37,10 +38,10 @@ export default function Shifts() {
 
     try {
       if (editing) {
-        await apiClient.patch(`/profiles/shifts/${editing.id}`, form);
+        await apiClient.patch(API.PROFILES.SHIFT_BY_ID(editing.id), form);
         toast.success("Shift updated");
       } else {
-        await apiClient.post("/profiles/shifts", form);
+        await apiClient.post(API.PROFILES.SHIFTS, form);
         toast.success("Shift created");
       }
       setDialogOpen(false);
@@ -54,7 +55,7 @@ export default function Shifts() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await apiClient.delete(`/profiles/shifts/${deleteTarget.id}`);
+      await apiClient.delete(API.PROFILES.SHIFT_BY_ID(deleteTarget.id));
       toast.success("Shift deleted");
       fetchShifts();
     } catch (err) {

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { CalendarDays, FileText, Upload, Save, FileDown, Loader2 } from "lucide-react";
 
 export default function Holidays() {
@@ -26,7 +27,7 @@ export default function Holidays() {
     const fetchHolidays = async () => {
         setLoading(true);
         try {
-            const { data } = await apiClient.get(`/holidays?year=${year}`);
+            const { data } = await apiClient.get(API.HOLIDAYS.BY_YEAR(year));
             setDetails(data.details || "");
             setPdfUrl(data.has_pdf ? "present" : null); // We just need to know if it exists
         } catch (err) {
@@ -40,7 +41,7 @@ export default function Holidays() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await apiClient.post("/holidays", { year, details, pdf_url: pdfUrl });
+            await apiClient.post(API.HOLIDAYS.CREATE, { year, details, pdf_url: pdfUrl });
             toast({ title: "Success", description: "Holidays updated successfully" });
         } catch (err) {
             console.error("Failed to save holidays", err);
@@ -64,7 +65,7 @@ export default function Holidays() {
         formData.append("pdf", file);
 
         try {
-            await apiClient.post(`/holidays/upload-pdf?year=${year}`, formData, {
+            await apiClient.post(API.HOLIDAYS.UPLOAD_PDF(year), formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             setPdfUrl("present");
@@ -82,7 +83,7 @@ export default function Holidays() {
         try {
             setPdfUrl(null);
             // Auto-save the removal
-            await apiClient.post("/holidays", { year, details, remove_pdf: true });
+            await apiClient.post(API.HOLIDAYS.CREATE, { year, details, remove_pdf: true });
             toast({ title: "Removed", description: "Holiday PDF removed from database" });
         } catch (err) {
             console.error("Failed to remove PDF", err);
@@ -92,7 +93,7 @@ export default function Holidays() {
 
     const handleDownloadPdf = async () => {
         try {
-            const response = await apiClient.get(`/holidays/download/${year}`, {
+            const response = await apiClient.get(API.HOLIDAYS.DOWNLOAD(year), {
                 responseType: 'blob'
             });
 

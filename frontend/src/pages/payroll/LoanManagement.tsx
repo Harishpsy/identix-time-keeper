@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,10 +51,7 @@ const Loans = () => {
 
     const fetchLoans = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/loans`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            const data = await response.json();
+            const { data } = await apiClient.get(API.LOANS.LIST);
             setLoans(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching loans:", error);
@@ -63,10 +62,7 @@ const Loans = () => {
 
     const fetchProfiles = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/profiles`, {
-                headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-            });
-            const data = await response.json();
+            const { data } = await apiClient.get(API.PROFILES.LIST);
             setProfiles(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Error fetching profiles:", error);
@@ -93,16 +89,8 @@ const Loans = () => {
                 body.targetUserId = targetUserId;
             }
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/loans`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-                body: JSON.stringify(body),
-            });
-
-            if (response.ok) {
+            const response = await apiClient.post(API.LOANS.CREATE, body);
+            if (response.status === 200 || response.status === 201) {
                 toast({ title: "Success", description: role === 'admin' || role === 'super_admin' ? "Loan added" : "Loan request submitted" });
                 setIsRequestModalOpen(false);
                 fetchLoans();
@@ -124,16 +112,8 @@ const Loans = () => {
                 body.repayment_start_date = adminStartDate;
             }
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/loans/${loanId}/status`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-                body: JSON.stringify(body),
-            });
-
-            if (response.ok) {
+            const response = await apiClient.patch(API.LOANS.STATUS_BY_ID(loanId), body);
+            if (response.status === 200) {
                 toast({ title: "Success", description: `Loan ${status}` });
                 setIsApproveModalOpen(false);
                 fetchLoans();

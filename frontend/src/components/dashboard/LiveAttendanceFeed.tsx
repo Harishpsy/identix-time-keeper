@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -18,7 +19,7 @@ export default function LiveAttendanceFeed() {
   const fetchRecent = async () => {
     try {
       const today = format(new Date(), "yyyy-MM-dd");
-      const { data } = await apiClient.get("/attendance/recent", { params: { date: today } });
+      const { data } = await apiClient.get(API.ATTENDANCE.RECENT, { params: { date: today } });
       if (data?.punches && data?.profiles) {
         const profileMap = new Map(data.profiles.map((p: any) => [p.id, p.full_name]));
         const recentPunches = (data.punches as any[])

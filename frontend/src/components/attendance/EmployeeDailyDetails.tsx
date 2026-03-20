@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -92,7 +93,7 @@ export default function EmployeeDailyDetails({ open, onOpenChange, userId, userN
         const start = format(startOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
         const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
 
-        const { data } = await apiClient.get("/attendance/summary", {
+        const { data } = await apiClient.get(API.ATTENDANCE.SUMMARY, {
           params: { start_date: start, end_date: end },
         });
 

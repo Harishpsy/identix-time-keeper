@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 
 type AppRole = "super_admin" | "admin" | "subadmin" | "employee";
 
@@ -30,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async () => {
     try {
-      const response = await apiClient.get("/auth/me");
+      const response = await apiClient.get(API.AUTH.ME);
       const data = response.data;
       setUser({ id: data.id, email: data.email, role: data.role });
       setRole(data.role);
@@ -54,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const response = await apiClient.post("/auth/login", { email, password });
+      const response = await apiClient.post(API.AUTH.LOGIN, { email, password });
       const { token, user: userData } = response.data;
       localStorage.setItem("token", token);
       setUser(userData);
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      await apiClient.post("/auth/register", { email, password, full_name: fullName });
+      await apiClient.post(API.AUTH.REGISTER, { email, password, full_name: fullName });
       return { error: null };
     } catch (err: any) {
       return { error: err.response?.data?.error || "Registration failed" };

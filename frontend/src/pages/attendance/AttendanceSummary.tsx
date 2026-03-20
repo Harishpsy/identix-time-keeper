@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,7 @@ export default function AttendanceSummary() {
 
     try {
       const [summariesRes] = await Promise.all([
-        apiClient.get("/attendance/summary", { params: { start_date: start, end_date: end } }),
+        apiClient.get(API.ATTENDANCE.SUMMARY, { params: { start_date: start, end_date: end } }),
       ]);
 
       const dailyData = summariesRes.data;

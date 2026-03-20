@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient, { API_BASE_URL } from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -49,7 +50,7 @@ export default function MyPayslips() {
     if (!user) return;
     const fetchPayroll = async () => {
       try {
-        const { data } = await apiClient.get("/payroll");
+        const { data } = await apiClient.get(API.PAYROLL.LIST);
         setRecords((data as unknown as PayrollRecord[]) || []);
       } catch (err) {
         toast.error("Failed to fetch payslips");
@@ -64,7 +65,7 @@ export default function MyPayslips() {
 
     // Fetch company branding
     try {
-      const { data: brandingData } = await apiClient.get("/settings");
+      const { data: brandingData } = await apiClient.get(API.SETTINGS.GET);
       const companyName = brandingData?.company_name || "PAYSLIP";
       const companyAddress = brandingData?.company_address || "";
       const logoUrl = brandingData?.logo_url || "";

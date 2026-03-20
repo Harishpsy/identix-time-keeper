@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, GripVertical } from "lucide-react";
@@ -85,7 +86,7 @@ export default function MenuOrder() {
     const fetchSettings = async () => {
         try {
             setLoading(true);
-            const { data } = await apiClient.get("/settings");
+            const { data } = await apiClient.get(API.SETTINGS.GET);
             if (data && data.sidebar_order) {
                 try {
                     const savedOrder = JSON.parse(data.sidebar_order);
@@ -123,7 +124,7 @@ export default function MenuOrder() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await apiClient.patch("/settings", {
+            await apiClient.patch(API.SETTINGS.UPDATE, {
                 sidebar_order: JSON.stringify(orderedModules),
             });
             toast.success("Sidebar menu order saved");

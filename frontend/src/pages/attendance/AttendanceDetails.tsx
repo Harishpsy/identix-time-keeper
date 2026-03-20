@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -87,8 +88,8 @@ export default function AttendanceDetails() {
                 const end = format(endOfMonth(new Date(y, m - 1)), "yyyy-MM-dd");
 
                 const [detailsRes, profilesRes] = await Promise.all([
-                    apiClient.get("/attendance/summary", { params: { start_date: start, end_date: end } }),
-                    apiClient.get("/profiles"),
+                    apiClient.get(API.ATTENDANCE.SUMMARY, { params: { start_date: start, end_date: end } }),
+                    apiClient.get(API.PROFILES.LIST),
                 ]);
 
                 // Get employee name

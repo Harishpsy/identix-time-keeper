@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient, { API_BASE_URL } from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -97,8 +98,8 @@ export default function Payroll() {
     const monthDate = `${selectedMonth}-01`;
     try {
       const [{ data: payrollData }, { data: profileData }] = await Promise.all([
-        apiClient.get("/payroll", { params: { month: monthDate } }),
-        apiClient.get("/profiles"),
+        apiClient.get(API.PAYROLL.LIST, { params: { month: monthDate } }),
+        apiClient.get(API.PROFILES.LIST),
       ]);
       setRecords((payrollData as unknown as PayrollRecord[]) || []);
       setEmployees(profileData || []);
@@ -132,7 +133,7 @@ export default function Payroll() {
 
     try {
       // Fetch company branding
-      const { data: brandingData } = await apiClient.get("/settings");
+      const { data: brandingData } = await apiClient.get(API.SETTINGS.GET);
       const companyName = brandingData?.company_name || "PAYSLIP";
       const companyAddress = brandingData?.company_address || "";
       let logoUrl = brandingData?.logo_url || "";
@@ -296,7 +297,7 @@ export default function Payroll() {
     const s = (v: any) => (v ?? 0).toString();
 
     try {
-      const { data } = await apiClient.get("/payroll", { params: { user_id: userId, limit: 1 } });
+      const { data } = await apiClient.get(API.PAYROLL.LIST, { params: { user_id: userId, limit: 1 } });
       if (data && data.length > 0) {
         const prev = data[0] as unknown as PayrollRecord;
         setForm({
@@ -411,9 +412,9 @@ export default function Payroll() {
 
     try {
       if (editingId) {
-        await apiClient.patch(`/payroll/${editingId}`, payload);
+        await apiClient.patch(API.PAYROLL.BY_ID(editingId), payload);
       } else {
-        await apiClient.post("/payroll", payload);
+        await apiClient.post(API.PAYROLL.CREATE, payload);
       }
       toast.success(editingId ? "Payroll updated" : "Payroll created");
       setDialogOpen(false);
@@ -428,7 +429,7 @@ export default function Payroll() {
 
   const handleDelete = async (id: string) => {
     try {
-      await apiClient.delete(`/payroll/${id}`);
+      await apiClient.delete(API.PAYROLL.BY_ID(id));
       toast.success("Deleted");
       fetchData();
     } catch (err) {
@@ -440,7 +441,7 @@ export default function Payroll() {
     setGenerating(true);
     const monthDate = `${selectedMonth}-01`;
     try {
-      const { data } = await apiClient.post("/payroll/generate", { month: monthDate });
+      const { data } = await apiClient.post(API.PAYROLL.GENERATE, { month: monthDate });
       toast.success(data.message);
       fetchData();
     } catch (err: any) {
@@ -481,7 +482,7 @@ export default function Payroll() {
             onClick={async () => {
               const monthDate = `${selectedMonth}-01`;
               try {
-                await apiClient.post("/payroll/release-all", { month: monthDate });
+                await apiClient.post(API.PAYROLL.RELEASE_ALL, { month: monthDate });
                 toast.success("All payslips released for " + format(parse(selectedMonth, "yyyy-MM", new Date()), "MMMM yyyy"));
                 fetchData();
               } catch (err) {
@@ -647,7 +648,7 @@ export default function Payroll() {
                             onClick={async () => {
                               const newVal = !rec.released;
                               try {
-                                await apiClient.patch(`/payroll/${rec.id}`, { released: newVal });
+                               await apiClient.patch(API.PAYROLL.BY_ID(rec.id), { released: newVal });
                                 toast.success(newVal ? "Payslip released to employee" : "Payslip release revoked");
                                 fetchData();
                               } catch (err) {

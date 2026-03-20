@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient, { API_BASE_URL } from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,7 @@ export default function CompanyBranding() {
 
   const fetchSettings = async () => {
     try {
-      const { data } = await apiClient.get("/settings");
+      const { data } = await apiClient.get(API.SETTINGS.GET);
       if (data) {
         setSettingsId(data.id);
         setCompanyName(data.company_name || "");
@@ -56,7 +57,7 @@ export default function CompanyBranding() {
     formData.append("logo", file);
 
     try {
-      const { data } = await apiClient.post("/settings/logo", formData, {
+      const { data } = await apiClient.post(API.SETTINGS.UPLOAD_LOGO, formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
       setLogoUrl(data.url);
@@ -84,7 +85,7 @@ export default function CompanyBranding() {
     };
 
     try {
-      await apiClient.patch("/settings", payload);
+      await apiClient.patch(API.SETTINGS.UPDATE, payload);
       toast.success("Company branding saved");
     } catch (err: any) {
       toast.error("Failed to save: " + (err.response?.data?.error || err.message));

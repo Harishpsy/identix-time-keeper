@@ -4,6 +4,7 @@ import { useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 import { navItems, NavItem } from "@/lib/navigation";
 import { Fingerprint, LogOut, Moon, Sun, HelpCircle, Menu, X } from "lucide-react";
@@ -51,7 +52,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const { data } = await apiClient.get("/settings");
+        const { data } = await apiClient.get(API.SETTINGS.GET);
         if (data) {
           setLeavesEnabled(data.leaves_enabled ?? true);
           setCompanyName("IdentixHR");
@@ -69,7 +70,7 @@ export default function DashboardLayout({ children }: { children?: ReactNode }) 
     };
     const fetchPermissions = async () => {
       try {
-        const { data } = await apiClient.get("/role-permissions");
+        const { data } = await apiClient.get(API.ROLE_PERMISSIONS.LIST);
         setRolePermissions(data || {});
       } catch (err) {
         console.error("Failed to fetch role permissions", err);

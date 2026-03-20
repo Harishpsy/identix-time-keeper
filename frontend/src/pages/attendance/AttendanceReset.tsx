@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export default function AttendanceReset() {
 
   // Fetch all shifts and build a map of shift_id -> end time
   useEffect(() => {
-    apiClient.get("/profiles/shifts").then(({ data }) => {
+    apiClient.get(API.PROFILES.SHIFTS).then(({ data }) => {
       if (data && data.length > 0) {
         const map: Record<string, Date> = {};
         data.forEach((shift: any) => {
@@ -88,7 +89,7 @@ export default function AttendanceReset() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const { data } = await apiClient.get("/attendance/recent", { params: { date: today } });
+      const { data } = await apiClient.get(API.ATTENDANCE.RECENT, { params: { date: today } });
       const { profiles, punches: rawPunches } = data;
 
       const punchMap = new Map<string, any[]>();
@@ -128,7 +129,7 @@ export default function AttendanceReset() {
       if (logoutPunches.length === 0) return;
 
       const logoutIds = logoutPunches.map((p) => p.id);
-      await apiClient.post("/attendance/delete-punches", { ids: logoutIds });
+      await apiClient.post(API.ATTENDANCE.DELETE_PUNCHES, { ids: logoutIds });
 
       toast.success("Logout Reset", {
         description: `${employee.fullName}'s logout punch has been removed.`,

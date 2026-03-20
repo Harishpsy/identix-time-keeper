@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
 import { useAuth } from "@/hooks/useAuth";
+import { API } from "@/lib/endpoints";
 
 type Theme = "light" | "dark";
 
@@ -32,7 +33,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setThemeState(newTheme);
         if (user) {
             try {
-                await apiClient.patch("/profiles/update-theme", { theme: newTheme });
+                await apiClient.patch(API.PROFILES.UPDATE_THEME, { theme: newTheme });
             } catch (error) {
                 console.error("Failed to update theme on server", error);
             }

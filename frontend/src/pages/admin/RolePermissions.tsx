@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import {
     Clock,
     CalendarDays,
@@ -61,7 +62,7 @@ export default function RolePermissions() {
 
     const fetchPermissions = async () => {
         try {
-            const { data } = await apiClient.get("/role-permissions");
+            const { data } = await apiClient.get(API.ROLE_PERMISSIONS.LIST);
             setPermissions(data);
         } catch (err) {
             console.error("Failed to fetch permissions", err);
@@ -81,7 +82,7 @@ export default function RolePermissions() {
         }));
 
         try {
-            await apiClient.put("/role-permissions", {
+            await apiClient.put(API.ROLE_PERMISSIONS.UPDATE, {
                 role,
                 module_key: moduleKey,
                 is_enabled: enabled,

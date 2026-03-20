@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -149,7 +150,7 @@ export default function Employees() {
   const { data: employees = [], isLoading: loadingEmployees } = useQuery<Employee[]>({
     queryKey: ["employees"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/profiles");
+      const { data } = await apiClient.get(API.PROFILES.LIST);
       return data;
     },
   });
@@ -157,7 +158,7 @@ export default function Employees() {
   const { data: departments = [] } = useQuery<Department[]>({
     queryKey: ["departments"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/profiles/departments");
+      const { data } = await apiClient.get(API.PROFILES.DEPARTMENTS);
       return data;
     },
   });
@@ -165,7 +166,7 @@ export default function Employees() {
   const { data: shifts = [] } = useQuery<Shift[]>({
     queryKey: ["shifts"],
     queryFn: async () => {
-      const { data } = await apiClient.get("/profiles/shifts");
+      const { data } = await apiClient.get(API.PROFILES.SHIFTS);
       return data;
     },
   });
@@ -173,7 +174,7 @@ export default function Employees() {
   // Mutations
   const updateProfileMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      return apiClient.patch(`/profiles/${id}`, data);
+      return apiClient.patch(API.PROFILES.BY_ID(id), data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -182,7 +183,7 @@ export default function Employees() {
 
   const deleteEmployeeMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiClient.delete(`/profiles/${id}`);
+      return apiClient.delete(API.PROFILES.BY_ID(id));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -196,7 +197,7 @@ export default function Employees() {
 
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ ids, data }: { ids: string[]; data: any }) => {
-      return apiClient.post("/profiles/bulk-update", { ids, data });
+      return apiClient.post(API.PROFILES.BULK_UPDATE, { ids, data });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employees"] });
@@ -211,7 +212,7 @@ export default function Employees() {
   
   const resetPasswordMutation = useMutation({
     mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
-      return apiClient.post("/auth/reset-password", { userId, newPassword });
+      return apiClient.post(API.AUTH.RESET_PASSWORD, { userId, newPassword });
     },
     onSuccess: () => {
       toast.success("Password updated successfully");
@@ -335,7 +336,7 @@ export default function Employees() {
     const end = format(endOfMonth(now), "yyyy-MM-dd");
 
     try {
-      const response = await apiClient.get("/attendance/summary", {
+      const response = await apiClient.get(API.ATTENDANCE.SUMMARY, {
         params: { user_id: empId, start_date: start, end_date: end }
       });
       const records = response.data;

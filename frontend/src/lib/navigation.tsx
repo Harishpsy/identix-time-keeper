@@ -16,6 +16,7 @@ import {
     UserPlus,
     UserCircle,
 } from "lucide-react";
+import { isModuleLive } from "./moduleConfig";
 
 export interface NavItem {
     label: string;
@@ -25,7 +26,8 @@ export interface NavItem {
     moduleKey: string; // maps to role_permissions.module_key
 }
 
-export const navItems: NavItem[] = [
+/** All defined nav items — filtered below by the module controller */
+const allNavItems: NavItem[] = [
     { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "dashboard" },
 
     // Operations
@@ -56,3 +58,13 @@ export const navItems: NavItem[] = [
     { label: "Role Permissions", href: "/role-permissions", icon: <Shield className="w-5 h-5" />, roles: ["super_admin", "admin"], moduleKey: "role_permissions" },
     { label: "Menu Order", href: "/menu-order", icon: <GripVertical className="w-5 h-5" />, roles: ["super_admin", "admin"], moduleKey: "menu_order" },
 ];
+
+/**
+ * Exported nav items — only includes modules that are `enabled: true`
+ * in the centralized MODULE_CONFIG (src/lib/moduleConfig.ts).
+ *
+ * Flip any module to `false` there and it disappears from the sidebar.
+ */
+export const navItems: NavItem[] = allNavItems.filter(
+    (item) => isModuleLive(item.moduleKey)
+);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -41,7 +42,7 @@ export default function OnboardingDashboard() {
         if (role === 'employee') return;
         setLoading(true);
         try {
-            const { data } = await apiClient.get("/onboarding/dashboard");
+            const { data } = await apiClient.get(API.ONBOARDING.DASHBOARD);
             setOnboardings(data);
         } catch (err) {
             console.error("Failed to fetch onboarding data", err);
@@ -61,7 +62,7 @@ export default function OnboardingDashboard() {
             return;
         }
         setDocsLoading(true);
-        apiClient.get(`/onboarding/documents/${selectedRequest.id}`)
+        apiClient.get(API.ONBOARDING.DOCUMENTS(selectedRequest.id))
             .then(({ data }) => setDocuments(data))
             .catch(() => setDocuments([]))
             .finally(() => setDocsLoading(false));
@@ -71,7 +72,7 @@ export default function OnboardingDashboard() {
         if (!selectedRequest) return;
         setVerifying(true);
         try {
-            await apiClient.post("/onboarding/verify", {
+            await apiClient.post(API.ONBOARDING.VERIFY, {
                 userId: selectedRequest.id,
                 status,
                 notes: verificationNotes

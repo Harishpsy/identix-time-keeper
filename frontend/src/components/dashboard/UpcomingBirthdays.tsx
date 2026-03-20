@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Cake, Gift, Sparkles } from "lucide-react";
@@ -19,7 +20,7 @@ export default function UpcomingBirthdays() {
   useEffect(() => {
     const fetchBirthdays = async () => {
       try {
-        const { data } = await apiClient.get("/dashboard/birthdays");
+        const { data } = await apiClient.get(API.DASHBOARD.BIRTHDAYS);
         setEmployees(data || []);
       } catch (err) {
         console.error("Failed to fetch birthdays", err);

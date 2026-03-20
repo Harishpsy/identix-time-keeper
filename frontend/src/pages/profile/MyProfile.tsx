@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,7 +61,7 @@ export default function MyProfile() {
 
         setSaving(true);
         try {
-            await apiClient.patch(`/profiles/me`, {
+            await apiClient.patch(API.PROFILES.ME, {
                 phone: form.phone,
                 date_of_birth: form.date_of_birth,
                 gender: form.gender,

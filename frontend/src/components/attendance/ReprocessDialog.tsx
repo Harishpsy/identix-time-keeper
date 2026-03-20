@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RefreshCw, Loader2 } from "lucide-react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { toast } from "sonner";
 import { format, eachDayOfInterval, parseISO } from "date-fns";
 
@@ -35,7 +36,7 @@ export default function ReprocessDialog({ onComplete }: { onComplete?: () => voi
     for (const day of days) {
       const dateStr = format(day, "yyyy-MM-dd");
       try {
-        await apiClient.post("/attendance/reprocess", { date: dateStr });
+        await apiClient.post(API.ATTENDANCE.REPROCESS, { date: dateStr });
         successCount++;
       } catch {
         errorCount++;

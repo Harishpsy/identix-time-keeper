@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -61,7 +62,7 @@ export default function CheckInOut() {
       return;
     }
     apiClient
-      .get(`/profiles/shifts/${profile.shift_id}`)
+      .get(API.PROFILES.SHIFT_BY_ID(profile.shift_id))
       .then(({ data }) => {
         if (data) setShiftConfig({
           total_working_hours: data.total_working_hours ?? 9,
@@ -77,7 +78,7 @@ export default function CheckInOut() {
     if (!user) return;
     const today = format(new Date(), "yyyy-MM-dd");
     try {
-      const { data } = await apiClient.get("/attendance/my-punches", { params: { date: today } });
+      const { data } = await apiClient.get(API.ATTENDANCE.MY_PUNCHES, { params: { date: today } });
       setTodayPunches(data || []);
     } catch (err) {
       console.error("Failed to fetch punches", err);
@@ -143,7 +144,7 @@ export default function CheckInOut() {
           leaveData.end_time = now;
         }
 
-        await apiClient.post("/leaves/apply", leaveData);
+        await apiClient.post(API.LEAVES.APPLY, leaveData);
         toast({
           title: choice === "permission" ? "Permission Request Sent" : "Half Day Request Sent",
           description: "Your request has been sent to admin for approval.",
@@ -223,7 +224,7 @@ export default function CheckInOut() {
         punch_type: punchType
       };
 
-      const { data } = await apiClient.post("/attendance/punch", trackingData);
+      const { data } = await apiClient.post(API.ATTENDANCE.PUNCH, trackingData);
       const now = data.timestamp;
 
       toast({

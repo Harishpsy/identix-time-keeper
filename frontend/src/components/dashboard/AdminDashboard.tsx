@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import StatCard from "./StatCard";
 import LiveAttendanceFeed from "./LiveAttendanceFeed";
@@ -49,8 +50,8 @@ export default function AdminDashboard() {
   const fetchData = useCallback(async () => {
     try {
       const [statsRes, leaveRes] = await Promise.all([
-        apiClient.get("/dashboard/admin/stats"),
-        apiClient.get("/dashboard/admin/leave"),
+        apiClient.get(API.DASHBOARD.ADMIN_STATS),
+        apiClient.get(API.DASHBOARD.ADMIN_LEAVE),
       ]);
 
       setStats(statsRes.data);
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
 
       // Fetch personal attendance data only if not super_admin
       if (role !== "super_admin") {
-        const { data: personalData } = await apiClient.get("/dashboard/employee");
+        const { data: personalData } = await apiClient.get(API.DASHBOARD.EMPLOYEE);
         setPersonalSummaries(personalData.summaries || []);
         setPersonalStats(personalData.stats || { present: 0, late: 0, leaveTaken: 0 });
       }

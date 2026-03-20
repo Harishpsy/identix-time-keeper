@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { UserPlus, ArrowLeft } from "lucide-react";
@@ -54,7 +55,7 @@ export default function AddEmployee() {
     const { data: departments = [] } = useQuery<Department[]>({
         queryKey: ["departments"],
         queryFn: async () => {
-            const { data } = await apiClient.get("/profiles/departments");
+            const { data } = await apiClient.get(API.PROFILES.DEPARTMENTS);
             return data;
         },
     });
@@ -62,7 +63,7 @@ export default function AddEmployee() {
     const { data: shifts = [] } = useQuery<Shift[]>({
         queryKey: ["shifts"],
         queryFn: async () => {
-            const { data } = await apiClient.get("/profiles/shifts");
+            const { data } = await apiClient.get(API.PROFILES.SHIFTS);
             return data;
         },
     });
@@ -70,14 +71,14 @@ export default function AddEmployee() {
     const { data: employees = [] } = useQuery<Employee[]>({
         queryKey: ["employees"],
         queryFn: async () => {
-            const { data } = await apiClient.get("/profiles");
+            const { data } = await apiClient.get(API.PROFILES.LIST);
             return data;
         },
     });
 
     const createEmployeeMutation = useMutation({
         mutationFn: async (data: any) => {
-            return apiClient.post("/auth/register", data);
+            return apiClient.post(API.AUTH.REGISTER, data);
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["employees"] });

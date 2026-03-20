@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -25,8 +26,8 @@ export default function Departments() {
     setLoading(true);
     try {
       const [{ data: deps }, { data: profiles }] = await Promise.all([
-        apiClient.get("/profiles/departments"),
-        apiClient.get("/profiles"),
+        apiClient.get(API.PROFILES.DEPARTMENTS),
+        apiClient.get(API.PROFILES.LIST),
       ]);
       setDepartments(deps || []);
       const counts: Record<string, number> = {};
@@ -50,10 +51,10 @@ export default function Departments() {
 
     try {
       if (editing) {
-        await apiClient.patch(`/profiles/departments/${editing.id}`, { name: name.trim() });
+        await apiClient.patch(API.PROFILES.DEPARTMENT_BY_ID(editing.id), { name: name.trim() });
         toast.success("Department updated");
       } else {
-        await apiClient.post("/profiles/departments", { name: name.trim() });
+        await apiClient.post(API.PROFILES.DEPARTMENTS, { name: name.trim() });
         toast.success("Department created");
       }
       setDialogOpen(false);
@@ -67,7 +68,7 @@ export default function Departments() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await apiClient.delete(`/profiles/departments/${deleteTarget.id}`);
+      await apiClient.delete(API.PROFILES.DEPARTMENT_BY_ID(deleteTarget.id));
       toast.success("Department deleted");
       fetchDepartments();
     } catch (err) {

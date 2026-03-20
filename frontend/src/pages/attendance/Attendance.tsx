@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import apiClient from "@/lib/apiClient";
+import { API } from "@/lib/endpoints";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -49,7 +50,7 @@ export default function Attendance() {
       const start = format(new Date(year, mon - 1, 1), "yyyy-MM-dd");
       const end = format(endOfMonth(new Date(year, mon - 1, 1)), "yyyy-MM-dd");
 
-      const response = await apiClient.get("/attendance/summary", {
+      const response = await apiClient.get(API.ATTENDANCE.SUMMARY, {
         params: { start_date: start, end_date: end }
       });
 

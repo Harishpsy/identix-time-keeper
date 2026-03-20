@@ -20,9 +20,24 @@ const processDailySummary = async (userId, date) => {
     const breakStarts = punches.filter(p => p.punch_type === 'break_start');
     const breakEnds = punches.filter(p => p.punch_type === 'break_end');
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = date === todayStr;
+
     for (let i = 0; i < breakStarts.length; i++) {
         const start = new Date(breakStarts[i].timestamp);
-        const end = breakEnds[i] ? new Date(breakEnds[i].timestamp) : null;
+        let end = breakEnds[i] ? new Date(breakEnds[i].timestamp) : null;
+        
+        if (!end && i === breakStarts.length - 1 && breakStarts.length > breakEnds.length) {
+            // Ongoing break
+            if (isToday) {
+                end = new Date(); // Use current time
+            } else if (lastOut) {
+                // For past days, if break_end is missing, use last_out if it's after start
+                const potentialEnd = new Date(lastOut);
+                if (potentialEnd > start) end = potentialEnd;
+            }
+        }
+        
         if (end) {
             totalBreakMinutes += Math.floor((end - start) / 60000);
         }

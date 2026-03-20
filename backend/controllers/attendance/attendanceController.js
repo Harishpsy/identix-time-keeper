@@ -16,7 +16,7 @@ const processDailySummary = async (userId, date) => {
     const lastOut = punches.length > 1 ? punches[punches.length - 1].timestamp : null;
 
     // Calculate total break duration in minutes
-    let totalBreakMinutes = 0;
+    let totalBreakMs = 0;
     const breakStarts = punches.filter(p => p.punch_type === 'break_start');
     const breakEnds = punches.filter(p => p.punch_type === 'break_end');
 
@@ -32,16 +32,17 @@ const processDailySummary = async (userId, date) => {
             if (isToday) {
                 end = new Date(); // Use current time
             } else if (lastOut) {
-                // For past days, if break_end is missing, use last_out if it's after start
                 const potentialEnd = new Date(lastOut);
                 if (potentialEnd > start) end = potentialEnd;
             }
         }
         
         if (end) {
-            totalBreakMinutes += Math.floor((end - start) / 60000);
+            totalBreakMs += (end - start);
         }
     }
+
+    const totalBreakMinutes = Math.floor(totalBreakMs / 60000);
 
     // Calculate duration in minutes (Total time - Break time)
     let totalDurationMinutes = null;

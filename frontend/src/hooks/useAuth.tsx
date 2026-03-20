@@ -7,6 +7,7 @@ interface User {
   id: string;
   email: string;
   role: AppRole;
+  gender?: 'male' | 'female' | 'other';
 }
 
 interface AuthContextType {

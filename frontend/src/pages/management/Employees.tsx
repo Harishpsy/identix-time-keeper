@@ -115,7 +115,6 @@ export default function Employees() {
 
   // State
   const [search, setSearch] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedRole, setSelectedRole] = useState<string>("all");
@@ -130,9 +129,19 @@ export default function Employees() {
     designation: "",
     employee_id: "",
     phone: "",
+    full_name: "",
+    email: "",
+    role: "employee",
+    is_active: true,
+    gender: "",
+    date_of_birth: "",
   });
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<Employee | null>(null);
+  const [editTarget, setEditTarget] = useState<Employee | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [bulkActionMode, setBulkActionMode] = useState(false);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
@@ -197,6 +206,20 @@ export default function Employees() {
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error || "Failed to bulk update");
+    },
+  });
+  
+  const resetPasswordMutation = useMutation({
+    mutationFn: async ({ userId, newPassword }: { userId: string; newPassword: string }) => {
+      return apiClient.post("/auth/reset-password", { userId, newPassword });
+    },
+    onSuccess: () => {
+      toast.success("Password updated successfully");
+      setPasswordTarget(null);
+      setNewPassword("");
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || "Failed to reset password");
     },
   });
 
@@ -272,8 +295,10 @@ export default function Employees() {
   };
 
   const startEdit = (emp: Employee) => {
-    setEditingId(emp.id);
+    setEditTarget(emp);
     setEditForm({
+      full_name: emp.full_name || "",
+      email: emp.email || "",
       biometric_id: emp.biometric_id?.toString() || "",
       department_id: emp.department_id || "",
       shift_id: emp.shift_id || "",
@@ -282,18 +307,18 @@ export default function Employees() {
       designation: emp.designation || "",
       employee_id: emp.employee_id || "",
       phone: emp.phone || "",
+      role: emp.role || "employee",
+      is_active: emp.is_active,
+      gender: (emp as any).gender || "",
+      date_of_birth: (emp as any).date_of_birth ? format(new Date((emp as any).date_of_birth), "yyyy-MM-dd") : "",
     });
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
   };
 
   const saveEdit = async (id: string) => {
     try {
       await updateProfileMutation.mutateAsync({ id, data: editForm });
       toast.success("Profile updated");
-      setEditingId(null);
+      setEditTarget(null);
     } catch (err) {
       toast.error("Failed to update profile");
     }
@@ -682,7 +707,6 @@ export default function Employees() {
                   </TableRow>
                 ) : (
                   filteredEmployees.map((emp) => {
-                    const isEditing = editingId === emp.id;
                     return (
                       <TableRow key={emp.id} className="group hover:bg-muted/50">
                         {bulkActionMode && (
@@ -710,59 +734,15 @@ export default function Employees() {
                           </code>
                         </TableCell>
                         <TableCell>
-                          {isEditing ? (
-                            <Input
-                              value={editForm.designation}
-                              onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
-                              className="w-32 h-8 text-sm"
-                            />
-                          ) : (
-                            <span className="text-sm">{emp.designation || "—"}</span>
-                          )}
+                          <span className="text-sm">{emp.designation || "—"}</span>
                         </TableCell>
                         <TableCell>
-                          {isEditing ? (
-                            <Select
-                              value={editForm.department_id}
-                              onValueChange={(val) => setEditForm({ ...editForm, department_id: val })}
-                            >
-                              <SelectTrigger className="w-32 h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {departments.map(d => (
-                                  <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Badge variant="outline" className="font-normal">
-                              {emp.department_name || "—"}
-                            </Badge>
-                          )}
+                          <Badge variant="outline" className="font-normal">
+                            {emp.department_name || "—"}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                          {isEditing ? (
-                            <Select
-                              value={editForm.manager_id}
-                              onValueChange={(val) => setEditForm({ ...editForm, manager_id: val })}
-                            >
-                              <SelectTrigger className="w-32 h-8">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">None</SelectItem>
-                                {employees
-                                  .filter(e => e.id !== emp.id && (e.role === 'subadmin' || e.role === 'admin' || e.role === 'super_admin'))
-                                  .map(m => (
-                                    <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
-                                  ))
-                                }
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span className="text-sm">{emp.manager_name || "—"}</span>
-                          )}
+                          <span className="text-sm">{emp.manager_name || "—"}</span>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="font-normal">
@@ -789,22 +769,6 @@ export default function Employees() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {isEditing ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => saveEdit(emp.id)}
-                                  disabled={updateProfileMutation.isPending}
-                                >
-                                  <Check className="w-4 h-4 text-green-600" />
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={cancelEdit}>
-                                  <X className="w-4 h-4 text-destructive" />
-                                </Button>
-                              </>
-                            ) : (
-                              <>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -828,6 +792,10 @@ export default function Employees() {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => setPasswordTarget(emp)}>
+                                      <Lock className="w-4 h-4 mr-2" />
+                                      Change Password
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem>
                                       <Mail className="w-4 h-4 mr-2" />
                                       Send Email
@@ -850,8 +818,6 @@ export default function Employees() {
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
-                              </>
-                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -891,6 +857,94 @@ export default function Employees() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!passwordTarget} onOpenChange={(open) => !open && setPasswordTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              Set a new password for <span className="font-medium text-foreground">{passwordTarget?.full_name}</span>.
+              The user will need to use this new password for their next login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={isPasswordVisible ? "text" : "password"}
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+                >
+                  {isPasswordVisible ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                Minimum 6 characters recommended for better security.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setPasswordTarget(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => passwordTarget && resetPasswordMutation.mutate({ userId: passwordTarget.id, newPassword })}
+              disabled={!newPassword || newPassword.length < 4 || resetPasswordMutation.isPending}
+            >
+              {resetPasswordMutation.isPending && (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              )}
+              Update Password
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-black italic">
+              <Pencil className="w-6 h-6 text-primary" />
+              EDIT PROFILE
+            </DialogTitle>
+            <DialogDescription>
+              Update information for <span className="font-bold text-foreground">{editTarget?.full_name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <EmployeeForm
+            form={editForm}
+            setForm={setEditForm}
+            departments={departments}
+            shifts={shifts}
+            employees={employees}
+            currentUserRole={currentUserRole}
+            onSubmit={() => editTarget && saveEdit(editTarget.id)}
+            isPending={updateProfileMutation.isPending}
+            isEdit={true}
+            submitText="Update Employee Profile"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

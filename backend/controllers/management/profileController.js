@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const getProfiles = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT p.id, p.full_name, p.email, p.employee_id, p.designation, p.is_active, p.department_id, p.shift_id, ' +
+            'SELECT p.id, p.full_name, p.email, p.employee_id, p.designation, p.is_active, p.department_id, p.shift_id, p.phone, p.gender, p.date_of_birth, p.date_of_joining, ' +
             'r.role, d.name as department_name, s.name as shift_name, pm.full_name as manager_name ' +
             'FROM profiles p ' +
             'LEFT JOIN user_roles r ON p.id = r.user_id ' +
@@ -36,15 +36,26 @@ const updateProfile = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
+    const email = updates.email;
+    const role = updates.role;
     delete updates.id;
     delete updates.email;
-
-    // Handle role update separately (stored in user_roles table)
-    const role = updates.role;
     delete updates.role;
 
     try {
-        // Update profile fields if any
+        // Update users table for email
+        if (email) {
+            await pool.execute('UPDATE users SET email = ? WHERE id = ?', [email, id]);
+            // Also update email in profiles if it's mirrored there
+            await pool.execute('UPDATE profiles SET email = ? WHERE id = ?', [email, id]);
+        }
+
+        // Update role in user_roles table
+        if (role) {
+            await pool.execute('UPDATE user_roles SET role = ? WHERE user_id = ?', [role, id]);
+        }
+
+        // Update profile fields if any (including is_active if it exists in profiles)
         const fields = Object.keys(updates);
         if (fields.length > 0) {
             // Convert empty strings to null for date/nullable fields

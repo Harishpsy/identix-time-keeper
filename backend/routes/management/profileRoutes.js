@@ -35,13 +35,13 @@ router.get('/:id', authMiddleware, getProfileById);
 // Self-update: any authenticated user can update their own personal details
 router.patch('/me', authMiddleware, async (req, res) => {
     const userId = req.user.id;
-    const { phone_number, date_of_birth, gender, address } = req.body;
+    const { phone, date_of_birth, gender, address } = req.body;
     const pool = require('../../config/db');
     try {
         await pool.execute(
-            'UPDATE profiles SET phone_number = ?, date_of_birth = ?, gender = ?, address = ? WHERE id = ?',
+            'UPDATE profiles SET phone = ?, date_of_birth = ?, gender = ?, address = ? WHERE id = ?',
             [
-                phone_number || null,
+                phone || null,
                 date_of_birth || null,
                 gender || null,
                 address || null,

@@ -46,6 +46,8 @@ export default function AddEmployee() {
         manager_id: "",
         designation: "",
         phone: "",
+        gender: "",
+        date_of_birth: "",
     });
 
     // Queries (same as in Employees.tsx)

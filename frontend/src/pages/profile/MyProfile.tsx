@@ -19,7 +19,7 @@ export default function MyProfile() {
 
     // Personal details - editable
     const [form, setForm] = useState({
-        phone_number: "",
+        phone: "",
         date_of_birth: "",
         gender: "",
         address: "",
@@ -32,7 +32,7 @@ export default function MyProfile() {
     useEffect(() => {
         if (profile) {
             setForm({
-                phone_number: profile.phone_number || "",
+                phone: profile.phone || "",
                 date_of_birth: profile.date_of_birth
                     ? profile.date_of_birth.split("T")[0]
                     : "",
@@ -45,7 +45,7 @@ export default function MyProfile() {
     const handleSave = async () => {
         // Validation
         const phoneRegex = /^\d{10}$/;
-        if (!form.phone_number || !phoneRegex.test(form.phone_number)) {
+        if (!form.phone || !phoneRegex.test(form.phone)) {
             toast.error("Please enter a valid 10-digit phone number");
             return;
         }
@@ -61,7 +61,7 @@ export default function MyProfile() {
         setSaving(true);
         try {
             await apiClient.patch(`/profiles/me`, {
-                phone_number: form.phone_number,
+                phone: form.phone,
                 date_of_birth: form.date_of_birth,
                 gender: form.gender,
                 address: form.address || null,
@@ -78,7 +78,7 @@ export default function MyProfile() {
     const handleCancel = () => {
         if (profile) {
             setForm({
-                phone_number: profile.phone_number || "",
+                phone: profile.phone || "",
                 date_of_birth: profile.date_of_birth ? profile.date_of_birth.split("T")[0] : "",
                 gender: profile.gender || "",
                 address: profile.address || "",
@@ -188,10 +188,10 @@ export default function MyProfile() {
                                 <div className="space-y-2">
                                     <Label className="flex gap-1">Phone Number <span className="text-destructive">*</span></Label>
                                     <Input
-                                        value={form.phone_number}
+                                        value={form.phone}
                                         onChange={(e) => {
                                             const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                            setForm({ ...form, phone_number: val });
+                                            setForm({ ...form, phone: val });
                                         }}
                                         placeholder="10-digit mobile number"
                                         maxLength={10}
@@ -212,10 +212,9 @@ export default function MyProfile() {
                                             <SelectValue placeholder="Select gender" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="Male">Male</SelectItem>
-                                            <SelectItem value="Female">Female</SelectItem>
-                                            <SelectItem value="Other">Other</SelectItem>
-                                            <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                                            <SelectItem value="male">Male</SelectItem>
+                                            <SelectItem value="female">Female</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -242,7 +241,7 @@ export default function MyProfile() {
                     ) : (
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             {[
-                                { label: "Phone Number", value: form.phone_number },
+                                { label: "Phone Number", value: form.phone },
                                 { label: "Date of Birth", value: form.date_of_birth ? format(new Date(form.date_of_birth), "dd MMM yyyy") : null },
                                 { label: "Gender", value: form.gender ? form.gender.charAt(0).toUpperCase() + form.gender.slice(1) : null },
                                 { label: "Address", value: form.address },

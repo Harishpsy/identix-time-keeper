@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const pool = require('../../config/db');
 
 const register = async (req, res) => {
-    const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining, manager_id, designation, employee_id } = req.body;
+    const { email, password, full_name, biometric_id, department_id, shift_id, role, date_of_joining, manager_id, designation, employee_id, gender, phone, date_of_birth } = req.body;
 
     if (!email || !password || !full_name) {
         return res.status(400).json({ error: 'Email, password, and full name are required' });
@@ -37,7 +37,7 @@ const register = async (req, res) => {
             );
 
             await connection.execute(
-                'INSERT INTO profiles (id, full_name, email, biometric_id, department_id, shift_id, date_of_joining, manager_id, designation, employee_id, onboarding_status, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO profiles (id, full_name, email, biometric_id, department_id, shift_id, date_of_joining, manager_id, designation, employee_id, onboarding_status, is_active, gender, phone, date_of_birth) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
                 [
                     userId,
                     full_name,
@@ -50,7 +50,10 @@ const register = async (req, res) => {
                     designation || null,
                     employee_id || null,
                     'Draft',
-                    false // Deactivated until onboarding completion/approval
+                    false, // Deactivated until onboarding completion/approval
+                    gender || '',
+                    phone || null,
+                    date_of_birth || null
                 ]
             );
 

@@ -921,17 +921,22 @@ export default function Employees() {
 
       {/* Edit Employee Dialog */}
       <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl font-black italic">
-              <Pencil className="w-6 h-6 text-primary" />
-              EDIT PROFILE
-            </DialogTitle>
-            <DialogDescription>
-              Update information for <span className="font-bold text-foreground">{editTarget?.full_name}</span>
-            </DialogDescription>
-          </DialogHeader>
-          <EmployeeForm
+        <DialogContent className="sm:max-w-[800px] h-[90vh] flex flex-col glass border-white/20 shadow-2xl rounded-[2rem] p-0 overflow-hidden">
+          <div className="flex-none bg-white/80 backdrop-blur-md border-b border-border/50 px-8 py-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3 text-3xl font-black italic tracking-tighter text-primary">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Pencil className="w-6 h-6 text-primary" />
+                </div>
+                EDIT PROFILE
+              </DialogTitle>
+              <DialogDescription className="text-sm font-medium text-muted-foreground mt-1">
+                Update records for <span className="font-bold text-foreground bg-primary/5 px-2 py-0.5 rounded-lg">{editTarget?.full_name}</span>
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
+            <EmployeeForm
             form={editForm}
             setForm={setEditForm}
             departments={departments}
@@ -943,6 +948,7 @@ export default function Employees() {
             isEdit={true}
             submitText="Update Employee Profile"
           />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

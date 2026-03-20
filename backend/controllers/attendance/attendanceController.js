@@ -63,6 +63,7 @@ const processDailySummary = async (userId, date) => {
     const [profiles] = await pool.execute('SELECT shift_id FROM profiles WHERE id = ?', [userId]);
     const [userRoles] = await pool.execute('SELECT role FROM user_roles WHERE user_id = ?', [userId]);
     const userRole = userRoles.length > 0 ? userRoles[0].role : 'employee';
+    let status = 'present';
 
     let shift = null;
     if (profiles.length > 0 && profiles[0].shift_id) {

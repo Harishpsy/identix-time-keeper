@@ -53,7 +53,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
-        phone_number: user?.phone_number || '',
+        phone: user?.phone || '',
         date_of_birth: user?.date_of_birth ? user.date_of_birth.split('T')[0] : '',
         gender: user?.gender || '',
         address: user?.address || '',
@@ -67,7 +67,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
         if (isOpen) {
             setCurrentStep(0);
             setFormData({
-                phone_number: user?.phone_number || '',
+                phone: user?.phone || '',
                 date_of_birth: user?.date_of_birth ? user.date_of_birth.split('T')[0] : '',
                 gender: user?.gender || '',
                 address: user?.address || '',
@@ -129,7 +129,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
     const handleSubmit = async () => {
         // Validation
         const phoneRegex = /^\d{10}$/;
-        if (!formData.phone_number || !phoneRegex.test(formData.phone_number)) {
+        if (!formData.phone || !phoneRegex.test(formData.phone)) {
             toast.error("Please enter a valid 10-digit phone number");
             setCurrentStep(0); // Go to personal step
             return;
@@ -239,15 +239,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                             {currentStep === 0 && (
                                 <div className="grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="phone_number" className="flex gap-1">Phone Number <span className="text-destructive">*</span></Label>
+                                        <Label htmlFor="phone" className="flex gap-1">Phone Number <span className="text-destructive">*</span></Label>
                                         <Input
-                                            id="phone_number"
-                                            name="phone_number"
+                                            id="phone"
+                                            name="phone"
                                             placeholder="10-digit mobile number"
-                                            value={formData.phone_number}
+                                            value={formData.phone}
                                             onChange={(e) => {
                                                 const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                                setFormData(prev => ({ ...prev, phone_number: val }));
+                                                setFormData(prev => ({ ...prev, phone: val }));
                                             }}
                                             maxLength={10}
                                             className="bg-muted/50"

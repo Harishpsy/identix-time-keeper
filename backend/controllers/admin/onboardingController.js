@@ -22,19 +22,19 @@ const getOnboardingStatus = async (req, res) => {
 };
 
 const updateOnboardingProfile = async (req, res) => {
-    let { phone_number, date_of_birth, gender, address } = req.body;
+    let { phone, date_of_birth, gender, address } = req.body;
     const userId = req.user.id;
 
     // Convert empty strings to null for nullable DB fields
-    phone_number = phone_number || null;
+    phone = phone || null;
     date_of_birth = date_of_birth || null;
     gender = gender || null;
     address = address || null;
 
     try {
         await pool.execute(
-            'UPDATE profiles SET phone_number = ?, date_of_birth = ?, gender = ?, address = ?, onboarding_status = ? WHERE id = ?',
-            [phone_number, date_of_birth, gender, address, 'Pending Submission', userId]
+            'UPDATE profiles SET phone = ?, date_of_birth = ?, gender = ?, address = ?, onboarding_status = ? WHERE id = ?',
+            [phone, date_of_birth, gender, address, 'Pending Submission', userId]
         );
 
         await logAudit(userId, 'Profile details updated', userId, req.user.full_name || 'Employee');
@@ -119,7 +119,7 @@ const submitOnboarding = async (req, res) => {
 const getOnboardingDashboard = async (req, res) => {
     try {
         let query = `
-            SELECT p.id, p.full_name, p.email, p.phone_number, p.gender, p.onboarding_status, p.employee_id, d.name as department_name, p.created_at
+            SELECT p.id, p.full_name, p.email, p.phone, p.gender, p.onboarding_status, p.employee_id, d.name as department_name, p.created_at
             FROM profiles p
             LEFT JOIN departments d ON p.department_id = d.id
             JOIN user_roles r ON p.id = r.user_id

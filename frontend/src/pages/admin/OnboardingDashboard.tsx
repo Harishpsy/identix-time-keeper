@@ -335,7 +335,7 @@ export default function OnboardingDashboard() {
                                             <CardContent className="text-sm space-y-1">
                                                 <p><span className="text-muted-foreground">Name:</span> {selectedRequest.full_name}</p>
                                                 <p><span className="text-muted-foreground">Email:</span> {selectedRequest.email}</p>
-                                                <p><span className="text-muted-foreground">Mobile:</span> {selectedRequest.phone_number || '—'}</p>
+                                                <p><span className="text-muted-foreground">Mobile:</span> {selectedRequest.phone || '—'}</p>
                                                 <p><span className="text-muted-foreground">Gender:</span> {selectedRequest.gender || '—'}</p>
                                             </CardContent>
                                         </Card>

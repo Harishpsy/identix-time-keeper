@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const getProfiles = async (req, res) => {
     try {
         const [profiles] = await pool.execute(
-            'SELECT p.id, p.full_name, p.email, p.employee_id, p.designation, p.is_active, p.department_id, p.shift_id, p.phone, p.gender, p.date_of_birth, p.date_of_joining, ' +
+            'SELECT p.id, p.full_name, p.email, p.employee_id, p.biometric_id, p.designation, p.is_active, p.department_id, p.shift_id, p.phone, p.gender, p.date_of_birth, p.date_of_joining, ' +
             'r.role, d.name as department_name, s.name as shift_name, pm.full_name as manager_name ' +
             'FROM profiles p ' +
             'LEFT JOIN user_roles r ON p.id = r.user_id ' +
@@ -80,7 +80,13 @@ const updateProfile = async (req, res) => {
 
         res.json({ success: true });
     } catch (err) {
-        console.error(err);
+        console.error('Profile update error:', err);
+        if (err.code === 'ER_DUP_ENTRY') {
+            const field = err.sqlMessage.includes('biometric_id') ? 'Biometric Key' : 
+                          err.sqlMessage.includes('email') ? 'Email' : 
+                          err.sqlMessage.includes('employee_id') ? 'Employee ID' : 'field';
+            return res.status(400).json({ error: `Duplicate entry: This ${field} is already in use.` });
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
 };
@@ -280,4 +286,3 @@ const updateTheme = async (req, res) => {
 };
 
 module.exports = { getProfiles, getProfileById, updateProfile, deleteProfile, getDepartments, createDepartment, updateDepartment, deleteDepartment, getShifts, createShift, updateShift, deleteShift, getShiftById, updateTheme };
-

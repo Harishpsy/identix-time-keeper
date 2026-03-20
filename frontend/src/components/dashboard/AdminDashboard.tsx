@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import UpcomingAnniversaries from "./UpcomingAnniversaries";
+import UpcomingBirthdays from "./UpcomingBirthdays";
 import CheckInOut from "./CheckInOut";
 
 
@@ -136,9 +137,10 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <LiveAttendanceFeed />
         <UpcomingAnniversaries />
+        <UpcomingBirthdays />
       </div>
 
       {role !== "super_admin" && (

@@ -144,6 +144,50 @@ const getAnniversaries = async (req, res) => {
     }
 };
 
+const getBirthdays = async (req, res) => {
+    try {
+        const [profiles] = await pool.execute(
+            'SELECT p.id, p.full_name, p.date_of_birth FROM profiles p ' +
+            'JOIN user_roles r ON p.id = r.user_id ' +
+            "WHERE p.is_active = true AND p.date_of_birth IS NOT NULL AND r.role != 'super_admin'"
+        );
+
+        const today = new Date();
+        const currentYear = today.getFullYear();
+
+        const upcoming = profiles.map(p => {
+            const dob = new Date(p.date_of_birth);
+            
+            // This year's birthday
+            let birthday = new Date(currentYear, dob.getMonth(), dob.getDate());
+
+            // If passed, next year
+            if (birthday < new Date(new Date().setHours(0, 0, 0, 0))) {
+                birthday = new Date(currentYear + 1, dob.getMonth(), dob.getDate());
+            }
+
+            const diffMs = birthday.getTime() - new Date().setHours(0, 0, 0, 0);
+            const daysUntil = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+            return {
+                id: p.id,
+                fullName: p.full_name,
+                dateOfBirth: p.date_of_birth,
+                daysUntil,
+                ageNext: birthday.getFullYear() - dob.getFullYear()
+            };
+        })
+            .filter(e => e.daysUntil <= 30) // Next 30 days
+            .sort((a, b) => a.daysUntil - b.daysUntil)
+            .slice(0, 5);
+
+        res.json(upcoming);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 const getEmployeeDashboard = async (req, res) => {
     const userId = req.user.id;
     try {
@@ -170,5 +214,5 @@ const getEmployeeDashboard = async (req, res) => {
     }
 };
 
-module.exports = { getAdminStats, getTodayLeave, getAnniversaries, getEmployeeDashboard };
+module.exports = { getAdminStats, getTodayLeave, getAnniversaries, getBirthdays, getEmployeeDashboard };
 

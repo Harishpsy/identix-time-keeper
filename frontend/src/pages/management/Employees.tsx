@@ -425,14 +425,12 @@ export default function Employees() {
           value={stats.active}
           icon={CheckCircle2}
           description={`${Math.round((stats.active / stats.total) * 100)}% of total`}
-          trend={5}
         />
         <StatsCard
           title="Inactive"
           value={stats.inactive}
           icon={XCircle}
           description="Needs attention"
-          trend={-2}
         />
         <StatsCard
           title="Managers"
@@ -795,18 +793,6 @@ export default function Employees() {
                                     <DropdownMenuItem onClick={() => setPasswordTarget(emp)}>
                                       <Lock className="w-4 h-4 mr-2" />
                                       Change Password
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                      <Mail className="w-4 h-4 mr-2" />
-                                      Send Email
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                      <Calendar className="w-4 h-4 mr-2" />
-                                      View Schedule
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                      <Copy className="w-4 h-4 mr-2" />
-                                      Duplicate
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem

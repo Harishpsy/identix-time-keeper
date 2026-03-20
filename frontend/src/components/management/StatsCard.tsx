@@ -6,10 +6,9 @@ interface StatsCardProps {
     value: string | number;
     icon: LucideIcon;
     description?: string;
-    trend?: number;
 }
 
-export const StatsCard = ({ title, value, icon: Icon, description, trend }: StatsCardProps) => (
+export const StatsCard = ({ title, value, icon: Icon, description }: StatsCardProps) => (
     <Card className="relative overflow-hidden">
         <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -24,14 +23,6 @@ export const StatsCard = ({ title, value, icon: Icon, description, trend }: Stat
                     <Icon className="w-6 h-6 text-primary" />
                 </div>
             </div>
-            {trend !== undefined && (
-                <div className="mt-4 flex items-center gap-1 text-xs">
-                    <span className={trend > 0 ? "text-green-600" : "text-red-600"}>
-                        {trend > 0 ? "+" : ""}{trend}%
-                    </span>
-                    <span className="text-muted-foreground">vs last month</span>
-                </div>
-            )}
         </CardContent>
     </Card>
 );

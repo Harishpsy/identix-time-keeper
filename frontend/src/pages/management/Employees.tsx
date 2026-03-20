@@ -921,18 +921,30 @@ export default function Employees() {
 
       {/* Edit Employee Dialog */}
       <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
-        <DialogContent className="sm:max-w-[800px] h-[90vh] flex flex-col glass border-white/20 shadow-2xl rounded-[2rem] p-0 overflow-hidden">
-          <div className="flex-none bg-white/80 backdrop-blur-md border-b border-border/50 px-8 py-6">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3 text-3xl font-black italic tracking-tighter text-primary">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Pencil className="w-6 h-6 text-primary" />
+        <DialogContent className="sm:max-w-[800px] h-[90vh] flex flex-col bg-white/95 dark:bg-slate-950/95 backdrop-blur-2xl border-white/20 shadow-2xl rounded-[2rem] p-0 overflow-hidden">
+          <div className="flex-none px-8 py-8 border-b border-border/40 bg-white/50 dark:bg-slate-900/50">
+            <DialogHeader className="space-y-0">
+              <div className="flex items-center gap-5">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                  <div className="relative w-14 h-14 rounded-[1.25rem] bg-white dark:bg-slate-900 border border-border/50 shadow-2xl flex items-center justify-center overflow-hidden transition-all duration-500 group-hover:scale-105 group-hover:rotate-3 shadow-primary/10">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/20 opacity-50" />
+                    <Pencil className="w-6 h-6 text-primary relative z-10 transition-transform duration-500 group-hover:scale-110" />
+                  </div>
                 </div>
-                EDIT PROFILE
-              </DialogTitle>
-              <DialogDescription className="text-sm font-medium text-muted-foreground mt-1">
-                Update records for <span className="font-bold text-foreground bg-primary/5 px-2 py-0.5 rounded-lg">{editTarget?.full_name}</span>
-              </DialogDescription>
+                <div className="space-y-1">
+                  <DialogTitle className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                    Edit Profile
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse hidden sm:block" />
+                  </DialogTitle>
+                  <DialogDescription className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <span>Updating records for</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[11px] font-extrabold text-primary uppercase tracking-widest shadow-sm">
+                      {editTarget?.full_name}
+                    </span>
+                  </DialogDescription>
+                </div>
+              </div>
             </DialogHeader>
           </div>
           <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">

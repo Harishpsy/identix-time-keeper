@@ -51,9 +51,15 @@ const processDailySummary = async (userId, date) => {
         if (totalDurationMinutes < 0) totalDurationMinutes = 0;
     }
 
+    // Check for approved half_day or on_leave requests
+    const [approvedLeaves] = await pool.execute(
+        "SELECT type FROM leave_requests WHERE user_id = ? AND date = ? AND status = 'approved' AND type IN ('half_day', 'on_leave') LIMIT 1",
+        [userId, date]
+    );
+    const leaveStatus = approvedLeaves.length > 0 ? approvedLeaves[0].type : null;
+
     // Get user's shift to calculate late minutes
     let lateMinutes = 0;
-    let status = 'present';
     const [profiles] = await pool.execute('SELECT shift_id FROM profiles WHERE id = ?', [userId]);
     const [userRoles] = await pool.execute('SELECT role FROM user_roles WHERE user_id = ?', [userId]);
     const userRole = userRoles.length > 0 ? userRoles[0].role : 'employee';
@@ -65,33 +71,47 @@ const processDailySummary = async (userId, date) => {
             shift = shifts[0];
         }
     } else if (userRole === 'admin' || userRole === 'super_admin') {
-        // Fallback for admins
         shift = {
             start_time: '09:00:00',
-            grace_period_mins: 15
+            end_time: '18:00:00',
+            grace_period_mins: 15,
+            max_break_minutes: 60
         };
     }
 
-    if (shift) {
-        // Compare first_in time with shift start_time + grace_period
+    if (shift && leaveStatus !== 'on_leave') {
         const firstInDate = new Date(firstIn);
-        const [shiftHour, shiftMin] = shift.start_time.split(':').map(Number);
-        const shiftStart = new Date(firstInDate);
-        shiftStart.setHours(shiftHour, shiftMin + (shift.grace_period_mins || 0), 0, 0);
+        // Helper: get minutes from midnight for a HH:mm:ss string
+        const timeToMins = (t) => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        };
 
-        if (firstInDate > shiftStart) {
-            lateMinutes = Math.floor((firstInDate - shiftStart) / 60000);
+        let expectedStartMins = timeToMins(shift.start_time);
+
+        if (leaveStatus === 'half_day' && shift.end_time) {
+            const startMins = timeToMins(shift.start_time);
+            const endMins = timeToMins(shift.end_time);
+            const duration = endMins - startMins;
+            // Add half shift + break time
+            expectedStartMins += (duration / 2) + (shift.max_break_minutes || 0);
+        }
+
+        // Add grace period
+        expectedStartMins += (shift.grace_period_mins || 0);
+
+        // Get actual arrival minutes from midnight (in IST/Server Local time)
+        // Since we are comparing to shift times (which are local), we should use local hours
+        const actualMins = firstInDate.getHours() * 60 + firstInDate.getMinutes();
+
+        if (actualMins > expectedStartMins) {
+            lateMinutes = actualMins - expectedStartMins;
             status = 'late';
         }
     }
 
-    // Check for approved half_day or on_leave requests — override status if found
-    const [approvedLeaves] = await pool.execute(
-        "SELECT type FROM leave_requests WHERE user_id = ? AND date = ? AND status = 'approved' AND type IN ('half_day') LIMIT 1",
-        [userId, date]
-    );
-    if (approvedLeaves.length > 0) {
-        status = approvedLeaves[0].type;
+    if (leaveStatus) {
+        status = leaveStatus;
     }
 
     // Check if summary already exists

@@ -91,13 +91,14 @@ export default function Attendance() {
   const downloadCSV = () => {
     const isEmp = role === "employee";
     const headers = isEmp
-      ? ["Date", "First In", "Last Out", "Duration", "Status", "Late Mins"]
-      : ["Employee", "Date", "First In", "Last Out", "Duration", "Status", "Late Mins"];
+      ? ["Date", "First In", "Last Out", "Break", "Duration", "Status", "Late Mins"]
+      : ["Employee", "Date", "First In", "Last Out", "Break", "Duration", "Status", "Late Mins"];
     const rows = filtered.map((s) => {
       const row = [
         s.date,
         s.first_in ? format(new Date(s.first_in), "HH:mm") : "",
         s.last_out ? format(new Date(s.last_out), "HH:mm") : "",
+        formatDurationMins(s.break_duration_minutes),
         formatDurationMins(s.total_duration_minutes),
         s.status,
         formatLateMinutes(s.late_minutes),
@@ -125,14 +126,15 @@ export default function Attendance() {
     doc.text(monthLabel, 14, 28);
 
     const head = isEmp
-      ? [["Date", "First In", "Last Out", "Duration", "Status", "Late (mins)"]]
-      : [["Employee", "Date", "First In", "Last Out", "Duration", "Status", "Late (mins)"]];
+      ? [["Date", "First In", "Last Out", "Break", "Duration", "Status", "Late (mins)"]]
+      : [["Employee", "Date", "First In", "Last Out", "Break", "Duration", "Status", "Late (mins)"]];
 
     const body = filtered.map((s) => {
       const row = [
         format(new Date(s.date), "dd MMM yyyy"),
         s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—",
         s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—",
+        formatDurationMins(s.break_duration_minutes),
         formatDurationMins(s.total_duration_minutes),
         s.status,
         formatLateMinutes(s.late_minutes),
@@ -219,6 +221,7 @@ export default function Attendance() {
                   <TableHead>Date</TableHead>
                   <TableHead>First In</TableHead>
                   <TableHead>Last Out</TableHead>
+                  <TableHead>Break</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Late (HH.MM)</TableHead>
@@ -228,13 +231,13 @@ export default function Attendance() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={role !== "employee" ? 8 : 6} className="text-center py-8">
+                    <TableCell colSpan={role !== "employee" ? 9 : 7} className="text-center py-8">
                       <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ) : paginated.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={role !== "employee" ? 8 : 6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={role !== "employee" ? 9 : 7} className="text-center text-muted-foreground py-8">
                       No records found
                     </TableCell>
                   </TableRow>
@@ -245,6 +248,7 @@ export default function Attendance() {
                       <TableCell>{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
                       <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
+                      <TableCell>{formatDurationMins(s.break_duration_minutes)}</TableCell>
                       <TableCell>{formatDurationMins(s.total_duration_minutes)}</TableCell>
                       <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
                       <TableCell>{formatLateMinutes(s.late_minutes)}</TableCell>

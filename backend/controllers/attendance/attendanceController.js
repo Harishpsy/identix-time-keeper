@@ -238,6 +238,7 @@ const getSummary = async (req, res) => {
                             first_in: null,
                             last_out: null,
                             total_duration_minutes: null,
+                            break_duration_minutes: 0,
                             late_minutes: 0,
                             full_name: profile.full_name,
                             email: profile.email,

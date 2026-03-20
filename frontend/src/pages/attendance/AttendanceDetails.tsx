@@ -15,6 +15,7 @@ interface DailyRecord {
     first_in: string | null;
     last_out: string | null;
     total_duration_minutes: number | null;
+    break_duration_minutes: number | null;
     late_minutes: number | null;
 }
 
@@ -105,6 +106,7 @@ export default function AttendanceDetails() {
                         first_in: d.first_in,
                         last_out: d.last_out,
                         total_duration_minutes: d.total_duration_minutes,
+                        break_duration_minutes: d.break_duration_minutes,
                         late_minutes: d.late_minutes,
                     }))
                     .sort((a: DailyRecord, b: DailyRecord) => b.date.localeCompare(a.date));
@@ -148,6 +150,7 @@ export default function AttendanceDetails() {
                                     <TableHead>Status</TableHead>
                                     <TableHead>Check In</TableHead>
                                     <TableHead>Check Out</TableHead>
+                                    <TableHead>Break</TableHead>
                                     <TableHead>Duration</TableHead>
                                     <TableHead>Late (min)</TableHead>
                                 </TableRow>
@@ -155,14 +158,14 @@ export default function AttendanceDetails() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-12">
+                                        <TableCell colSpan={7} className="text-center py-12">
                                             <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
                                             <p className="text-sm text-muted-foreground mt-2">Loading attendance records...</p>
                                         </TableCell>
                                     </TableRow>
                                 ) : records.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                        <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                                             No records found for this period.
                                         </TableCell>
                                     </TableRow>
@@ -179,6 +182,7 @@ export default function AttendanceDetails() {
                                             </TableCell>
                                             <TableCell className="tabular-nums">{formatTime(r.first_in)}</TableCell>
                                             <TableCell className="tabular-nums">{formatTime(r.last_out)}</TableCell>
+                                            <TableCell className="tabular-nums">{formatDuration(r.break_duration_minutes)}</TableCell>
                                             <TableCell className="tabular-nums">{formatDuration(r.total_duration_minutes)}</TableCell>
                                             <TableCell className="tabular-nums text-destructive">
                                                 {r.late_minutes && r.late_minutes > 0 ? formatLateMinutes(r.late_minutes) : "—"}

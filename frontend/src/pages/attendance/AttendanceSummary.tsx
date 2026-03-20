@@ -22,6 +22,7 @@ interface EmployeeSummary {
   absent: number;
   halfDay: number;
   onLeave: number;
+  totalBreak: number;
   total: number;
 }
 
@@ -54,6 +55,7 @@ export default function AttendanceSummary() {
             absent: 0,
             halfDay: 0,
             onLeave: 0,
+            totalBreak: 0,
             total: 0,
             name: r.full_name,
             email: r.email,
@@ -66,6 +68,10 @@ export default function AttendanceSummary() {
         else if (r.status === "absent") counts[r.user_id].absent++;
         else if (r.status === "half_day") counts[r.user_id].halfDay++;
         else if (r.status === "on_leave") counts[r.user_id].onLeave++;
+        
+        if (r.break_duration_minutes) {
+          counts[r.user_id].totalBreak += r.break_duration_minutes;
+        }
       });
 
       const result: EmployeeSummary[] = Object.keys(counts).map((uid) => ({
@@ -78,6 +84,7 @@ export default function AttendanceSummary() {
         absent: counts[uid].absent,
         halfDay: counts[uid].halfDay,
         onLeave: counts[uid].onLeave,
+        totalBreak: counts[uid].totalBreak,
         total: counts[uid].total,
       }));
 
@@ -107,13 +114,14 @@ export default function AttendanceSummary() {
       absent: acc.absent + s.absent,
       halfDay: acc.halfDay + s.halfDay,
       onLeave: acc.onLeave + s.onLeave,
+      totalBreak: acc.totalBreak + s.totalBreak,
     }),
-    { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0 }
+    { present: 0, late: 0, absent: 0, halfDay: 0, onLeave: 0, totalBreak: 0 }
   );
 
   const downloadCSV = () => {
-    const headers = ["Employee", "Department", "Present", "Late", "Half Day", "Absent", "On Leave", "Total Days"];
-    const rows = filtered.map((s) => [s.name, s.department, s.present, s.late, s.halfDay, s.absent, s.onLeave, s.total]);
+    const headers = ["Employee", "Department", "Present", "Late", "Half Day", "Absent", "On Leave", "Total Break (mins)", "Total Days"];
+    const rows = filtered.map((s) => [s.name, s.department, s.present, s.late, s.halfDay, s.absent, s.onLeave, s.totalBreak, s.total]);
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -133,11 +141,11 @@ export default function AttendanceSummary() {
 
     autoTable(doc, {
       startY: 35,
-      head: [["Employee", "Department", "Present", "Late", "Half Day", "Absent", "On Leave", "Total"]],
-      body: filtered.map((s) => [s.name, s.department, s.present, s.late, s.halfDay, s.absent, s.onLeave, s.total]),
+      head: [["Employee", "Department", "Present", "Late", "Half Day", "Absent", "On Leave", "Total Break", "Total"]],
+      body: filtered.map((s) => [s.name, s.department, s.present, s.late, s.halfDay, s.absent, s.onLeave, `${Math.floor(s.totalBreak / 60)}h ${s.totalBreak % 60}m`, s.total]),
       styles: { fontSize: 9 },
       headStyles: { fillColor: [41, 128, 185] },
-      foot: [["Total", "", totals.present, totals.late, totals.halfDay, totals.absent, totals.onLeave, ""]],
+      foot: [["Total", "", totals.present, totals.late, totals.halfDay, totals.absent, totals.onLeave, `${Math.floor(totals.totalBreak / 60)}h ${totals.totalBreak % 60}m`, ""]],
       showFoot: "lastPage",
     });
 
@@ -186,17 +194,18 @@ export default function AttendanceSummary() {
                     <TableHead className="text-center">Half Day</TableHead>
                     <TableHead className="text-center">Absent</TableHead>
                     <TableHead className="text-center">On Leave</TableHead>
+                    <TableHead className="text-center">Total Break</TableHead>
                     <TableHead className="text-center">Total Days</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell>
+                      <TableCell colSpan={9} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" /></TableCell>
                     </TableRow>
                   ) : filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No data found</TableCell>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No data found</TableCell>
                     </TableRow>
                   ) : (
                     filtered.map((s) => (
@@ -222,6 +231,9 @@ export default function AttendanceSummary() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="secondary" className="min-w-[2rem] justify-center">{s.onLeave}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center tabular-nums text-sm">
+                          {Math.floor(s.totalBreak / 60)}h {s.totalBreak % 60}m
                         </TableCell>
                         <TableCell className="text-center font-medium">{s.total}</TableCell>
                       </TableRow>

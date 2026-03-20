@@ -310,7 +310,7 @@ export default function CheckInOut() {
                 )}
                 <div className={`flex items-center gap-1 text-sm whitespace-nowrap ${breakExceeded ? "text-destructive" : "text-muted-foreground"}`}>
                   <Coffee className="w-3.5 h-3.5" />
-                  Break: <span className={`font-medium tabular-nums ${breakExceeded ? "text-destructive" : "text-foreground"}`}>{formatDuration(remainingBreakMs)}</span>
+                  Break Left: <span className={`font-medium tabular-nums ${breakExceeded ? "text-destructive" : "text-foreground"}`}>{formatDuration(remainingBreakMs)}</span>
                 </div>
                 {firstIn && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">

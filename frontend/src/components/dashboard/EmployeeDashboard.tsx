@@ -17,6 +17,7 @@ interface DailySummaryRow {
   first_in: string | null;
   last_out: string | null;
   total_duration_minutes: number | null;
+  break_duration_minutes: number | null;
   late_minutes: number | null;
 }
 
@@ -87,6 +88,7 @@ export default function EmployeeDashboard() {
                     <TableHead>First In</TableHead>
                     <TableHead>Last Out</TableHead>
                     <TableHead>Duration</TableHead>
+                    <TableHead>Break</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Late (HH.MM)</TableHead>
                   </TableRow>
@@ -98,6 +100,7 @@ export default function EmployeeDashboard() {
                       <TableCell>{s.first_in ? format(new Date(s.first_in), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{s.last_out ? format(new Date(s.last_out), "hh:mm a") : "—"}</TableCell>
                       <TableCell>{formatDuration(s.total_duration_minutes)}</TableCell>
+                      <TableCell>{formatDuration(s.break_duration_minutes)}</TableCell>
                       <TableCell><AttendanceStatusBadge status={s.status} /></TableCell>
                       <TableCell className="tabular-nums">{formatLateMinutes(s.late_minutes)}</TableCell>
                     </TableRow>

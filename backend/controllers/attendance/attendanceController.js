@@ -89,11 +89,11 @@ const processDailySummary = async (userId, date) => {
         // Update existing
         await pool.execute(
             `UPDATE daily_summaries SET 
-                first_in = ?, last_out = ?, total_duration_minutes = ?, late_minutes = ?, status = ?,
+                first_in = ?, last_out = ?, total_duration_minutes = ?, break_duration_minutes = ?, late_minutes = ?, status = ?,
                 first_in_ip = ?, first_in_lat = ?, first_in_long = ?, first_in_device = ?, first_in_os = ?, first_in_browser = ?
              WHERE id = ?`,
             [
-                firstIn, lastOut, totalDurationMinutes, lateMinutes, status,
+                firstIn, lastOut, totalDurationMinutes, totalBreakMinutes, lateMinutes, status,
                 firstPunch.ip_address, firstPunch.latitude, firstPunch.longitude, firstPunch.device_name, firstPunch.os_name, firstPunch.browser_name,
                 existing[0].id
             ]
@@ -103,11 +103,11 @@ const processDailySummary = async (userId, date) => {
         const id = uuidv4();
         await pool.execute(
             `INSERT INTO daily_summaries (
-                id, user_id, date, first_in, last_out, total_duration_minutes, late_minutes, status,
+                id, user_id, date, first_in, last_out, total_duration_minutes, break_duration_minutes, late_minutes, status,
                 first_in_ip, first_in_lat, first_in_long, first_in_device, first_in_os, first_in_browser
-             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                id, userId, date, firstIn, lastOut, totalDurationMinutes, lateMinutes, status,
+                id, userId, date, firstIn, lastOut, totalDurationMinutes, totalBreakMinutes, lateMinutes, status,
                 firstPunch.ip_address, firstPunch.latitude, firstPunch.longitude, firstPunch.device_name, firstPunch.os_name, firstPunch.browser_name
             ]
         );

@@ -2,7 +2,11 @@ const pool = require('../../config/db');
 const { v4: uuidv4 } = require('uuid');
 
 const calculatePayrollTotals = (data) => {
-    const gross_earnings = (
+    const paid_days = Number(data.paid_days) || 30;
+    const lop_days = Number(data.lop_days) || 0;
+    const factor = Math.max(0, (paid_days - lop_days) / (paid_days || 1));
+
+    const full_gross = (
         Number(data.basic_salary || 0) +
         Number(data.hra || 0) +
         Number(data.dearness_allowance || 0) +
@@ -13,6 +17,9 @@ const calculatePayrollTotals = (data) => {
         Number(data.bonus || 0) +
         Number(data.other_earnings || 0)
     );
+
+    const gross_earnings = full_gross * factor;
+
     const total_deductions = (
         Number(data.epf_employee || 0) +
         Number(data.esi_employee || 0) +
@@ -23,6 +30,62 @@ const calculatePayrollTotals = (data) => {
     );
     const net_salary = gross_earnings - total_deductions;
     return { gross_earnings, total_deductions, net_salary };
+};
+
+// Helper: Calculate paid_days and lop_days automatically
+const getCalculatedDays = async (userId, month) => {
+    try {
+        const [yearStr, monthStr] = month.split('-');
+        const year = parseInt(yearStr, 10);
+        const m = parseInt(monthStr, 10);
+        const total_days = new Date(year, m, 0).getDate();
+
+        const [profiles] = await pool.execute('SELECT date_of_joining FROM profiles WHERE id = ?', [userId]);
+        const joinDate = profiles.length > 0 && profiles[0].date_of_joining ? new Date(profiles[0].date_of_joining) : null;
+
+        const [holidaysRow] = await pool.execute('SELECT details FROM holidays WHERE year = ?', [year]);
+        let holidayDates = [];
+        if (holidaysRow.length > 0 && holidaysRow[0].details) {
+            try {
+                const hList = JSON.parse(holidaysRow[0].details);
+                holidayDates = hList.map(h => h.date);
+            } catch (e) {}
+        }
+
+        const [summaries] = await pool.execute(
+            'SELECT date, status FROM daily_summaries WHERE user_id = ? AND date LIKE ?',
+            [userId, `${month}-%`]
+        );
+
+        let lop_days = 0;
+        for (const row of summaries) {
+            if (row.status === 'absent') {
+                const dateObj = new Date(row.date);
+                if (joinDate && dateObj < joinDate) continue;
+                if (dateObj.getDay() === 0) continue; // Skip Sundays
+                const dateStr = dateObj.toISOString().split('T')[0];
+                if (holidayDates.includes(dateStr)) continue; // Skip holidays
+
+                lop_days++;
+            }
+        }
+
+        return { paid_days: total_days, lop_days };
+    } catch (err) {
+        console.error("Error calculating days:", err);
+        return { paid_days: 30, lop_days: 0 };
+    }
+};
+
+const calculateDays = async (req, res) => {
+    const { user_id, month } = req.query;
+    if (!user_id || !month) return res.status(400).json({ error: 'user_id and month are required' });
+    try {
+        const result = await getCalculatedDays(user_id, month);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 const getPayroll = async (req, res) => {
@@ -105,11 +168,15 @@ const generatePayroll = async (req, res) => {
                     }
                 }
 
+                const { paid_days, lop_days } = await getCalculatedDays(emp.user_id, month);
+
                 // Prepare data for calculation
                 // Carry forward all components from previous month
                 const dataToCalc = {
                     ...record,
-                    loan_recovery: total_loan_recovery
+                    loan_recovery: total_loan_recovery,
+                    paid_days,
+                    lop_days
                 };
                 const { gross_earnings, total_deductions, net_salary } = calculatePayrollTotals(dataToCalc);
 
@@ -127,7 +194,7 @@ const generatePayroll = async (req, res) => {
                     record.conveyance_allowance, record.medical_allowance, record.special_allowance,
                     record.overtime, record.bonus, record.other_earnings, record.epf_employee, record.esi_employee,
                     record.professional_tax, record.tds, total_loan_recovery, record.other_deductions,
-                    gross_earnings, total_deductions, net_salary, record.paid_days, 0, 'Auto-generated'
+                    gross_earnings, total_deductions, net_salary, paid_days, lop_days, 'Auto-generated'
                 ]);
 
                 // Record repayments and update loan status if complete
@@ -274,5 +341,4 @@ const releaseAllPayroll = async (req, res) => {
     }
 };
 
-module.exports = { getPayroll, generatePayroll, createPayroll, updatePayroll, deletePayroll, releaseAllPayroll };
-
+module.exports = { getPayroll, generatePayroll, createPayroll, updatePayroll, deletePayroll, releaseAllPayroll, calculateDays };

@@ -67,6 +67,7 @@ export const API = {
     CREATE:         "/payroll",
     GENERATE:       "/payroll/generate",
     RELEASE_ALL:    "/payroll/release-all",
+    CALCULATE_DAYS: "/payroll/calculate-days",
   },
 
   // ── Loans ────────────────────────────────────────────────

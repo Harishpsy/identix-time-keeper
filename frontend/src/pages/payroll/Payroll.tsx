@@ -346,7 +346,11 @@ export default function Payroll() {
     const s = (v: any) => (v ?? 0).toString();
 
     try {
-      const { data } = await apiClient.get(API.PAYROLL.LIST, { params: { user_id: userId, limit: 1 } });
+      const [{ data }, { data: daysData }] = await Promise.all([
+        apiClient.get(API.PAYROLL.LIST, { params: { user_id: userId, limit: 1 } }),
+        apiClient.get(API.PAYROLL.CALCULATE_DAYS, { params: { user_id: userId, month: selectedMonth } })
+      ]);
+
       if (data && data.length > 0) {
         const prev = data[0] as unknown as PayrollRecord;
         setForm({
@@ -369,11 +373,19 @@ export default function Payroll() {
           other_deductions: s(prev.other_deductions),
           epf_employer: s(prev.epf_employer),
           esi_employer: s(prev.esi_employer),
-          paid_days: s(prev.paid_days),
-          lop_days: "0",
+          paid_days: s(daysData?.paid_days || prev.paid_days),
+          lop_days: s(daysData?.lop_days || 0),
           notes: "",
         });
-        toast.info("Salary details carried forward from previous month. Adjust as needed.");
+        toast.info("Salary details carried forward with auto-calculated days.");
+      } else {
+        setForm((prev) => ({
+          ...prev,
+          user_id: userId,
+          paid_days: s(daysData?.paid_days || 30),
+          lop_days: s(daysData?.lop_days || 0),
+        }));
+        toast.info("Auto-calculated days for the selected month.");
       }
     } catch (err) {
       console.error(err);

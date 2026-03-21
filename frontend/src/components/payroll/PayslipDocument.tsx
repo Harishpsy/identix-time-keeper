@@ -273,7 +273,17 @@ export default function PayslipDocument({ record, employeeName, employeeEmail, e
             }}>
               Share
             </Button>
-            <Button className="h-8 bg-[#185FA5] hover:bg-[#124b82] text-white text-[12px] font-medium px-4" onClick={() => window.print()}>
+            <Button className="h-8 bg-[#185FA5] hover:bg-[#124b82] text-white text-[12px] font-medium px-4" onClick={() => {
+              const originalTitle = document.title;
+              const sanitizedName = employeeName.replace(/[^a-zA-Z0-9]/g, '_');
+              const sanitizedId = employeeId.replace(/[^a-zA-Z0-9]/g, '_');
+              const sanitizedMonth = monthLabel.replace(/[^a-zA-Z0-9]/g, '_');
+              document.title = `${sanitizedName}_${sanitizedId}_${sanitizedMonth}`;
+              window.print();
+              setTimeout(() => {
+                document.title = originalTitle;
+              }, 100);
+            }}>
               Download PDF
             </Button>
           </div>

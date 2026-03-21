@@ -26,6 +26,7 @@ import Holidays from "./pages/management/Holidays";
 import AddEmployee from "./pages/management/AddEmployee";
 import AttendanceDetails from "./pages/attendance/AttendanceDetails";
 import OnboardingDashboard from "./pages/admin/OnboardingDashboard";
+import AccessCard from "./pages/attendance/AccessCard";
 import MyProfile from "./pages/profile/MyProfile";
 import NotFound from "./pages/NotFound";
 import { isModuleLive } from "./lib/moduleConfig";
@@ -82,6 +83,7 @@ const App = () => (
               <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Index />} />
                 <Route path="/attendance" element={<ProtectedRoute moduleKey="attendance"><Attendance /></ProtectedRoute>} />
+                <Route path="/access-card" element={<ProtectedRoute moduleKey="access_card"><AccessCard /></ProtectedRoute>} />
                 <Route path="/employees" element={<ProtectedRoute moduleKey="employees" allowedRoles={["super_admin", "admin"]}><Employees /></ProtectedRoute>} />
                 <Route path="/employees/new" element={<ProtectedRoute moduleKey="employees" allowedRoles={["super_admin", "admin"]}><AddEmployee /></ProtectedRoute>} />
                 <Route path="/departments" element={<ProtectedRoute moduleKey="departments" allowedRoles={["super_admin", "admin"]}><Departments /></ProtectedRoute>} />

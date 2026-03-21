@@ -43,6 +43,7 @@ export const MODULE_CONFIG: Record<string, ModuleConfig> = {
   company_branding:   { enabled: true,  label: "Company Branding" },
   role_permissions:   { enabled: true,  label: "Role Permissions" },
   menu_order:         { enabled: true,  label: "Menu Order" },
+  access_card:        { enabled: true,  label: "Access Card" },
 };
 
 /**

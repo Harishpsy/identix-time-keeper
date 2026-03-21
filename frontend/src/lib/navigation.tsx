@@ -15,6 +15,7 @@ import {
     GripVertical,
     UserPlus,
     UserCircle,
+    IdCard,
 } from "lucide-react";
 import { isModuleLive } from "./moduleConfig";
 
@@ -49,6 +50,7 @@ const allNavItems: NavItem[] = [
 
     // Reports & Profile
     { label: "Attendance Summary", href: "/attendance-summary", icon: <BarChart3 className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "attendance_summary" },
+    { label: "Access Card", href: "/access-card", icon: <IdCard className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "access_card" },
     { label: "My Profile", href: "/my-profile", icon: <UserCircle className="w-5 h-5" />, roles: ["super_admin", "admin", "subadmin", "employee"], moduleKey: "my_profile" },
 
     // Administration
